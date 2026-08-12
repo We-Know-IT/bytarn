@@ -23,7 +23,7 @@ export default function AterstallLosenordPage() {
                 <strong className="text-gray-700">{email}</strong>.
               </p>
               <Link
-                href="/(auth)/logga-in"
+                href="/logga-in"
                 className="inline-flex items-center gap-2 text-sm text-emerald-600 hover:underline"
               >
                 <ArrowLeft size={14} />
@@ -61,7 +61,7 @@ export default function AterstallLosenordPage() {
 
               <div className="text-center mt-6">
                 <Link
-                  href="/(auth)/logga-in"
+                  href="/logga-in"
                   className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
                 >
                   <ArrowLeft size={14} />

@@ -127,7 +127,7 @@ export default function RegistreraPage() {
 
             <button
               disabled={!agreed || !form.name || !form.email || form.password.length < 8}
-              onClick={() => alert('Auth är inte kopplad till backend ännu.')}
+              onClick={() => window.location.href = '/onboarding'}
               className="w-full py-3.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Skapa konto
@@ -136,7 +136,7 @@ export default function RegistreraPage() {
 
           <p className="text-center text-sm text-gray-500 mt-6">
             Har du redan konto?{' '}
-            <Link href="/(auth)/logga-in" className="text-emerald-600 font-medium hover:underline">
+            <Link href="/logga-in" className="text-emerald-600 font-medium hover:underline">
               Logga in
             </Link>
           </p>

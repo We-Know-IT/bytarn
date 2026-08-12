@@ -174,7 +174,7 @@ export default function HomePage() {
             Skapa ett konto gratis och lägg upp din annons på några minuter.
           </p>
           <Link
-            href="/(auth)/registrera"
+            href="/registrera"
             className="inline-flex items-center gap-2 px-8 py-4 bg-white text-emerald-700 font-bold rounded-xl hover:bg-emerald-50 transition-colors shadow-lg"
           >
             Kom igång gratis

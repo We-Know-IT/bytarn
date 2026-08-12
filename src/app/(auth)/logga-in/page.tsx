@@ -51,7 +51,7 @@ export default function LoggaInPage() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-sm font-medium text-gray-700">Lösenord</label>
-                <Link href="/(auth)/aterstall-losenord" className="text-xs text-emerald-600 hover:underline">
+                <Link href="/aterstall-losenord" className="text-xs text-emerald-600 hover:underline">
                   Glömt lösenord?
                 </Link>
               </div>
@@ -83,7 +83,7 @@ export default function LoggaInPage() {
 
           <p className="text-center text-sm text-gray-500 mt-6">
             Inget konto?{' '}
-            <Link href="/(auth)/registrera" className="text-emerald-600 font-medium hover:underline">
+            <Link href="/registrera" className="text-emerald-600 font-medium hover:underline">
               Registrera dig gratis
             </Link>
           </p>
