@@ -1,11 +1,94 @@
 @import "tailwindcss";
 
+@theme {
+  /* Override emerald scale to deep forest green — affects all emerald-* classes */
+  --color-emerald-50: #EBF3EE;
+  --color-emerald-100: #D4E9DA;
+  --color-emerald-200: #A9D3B5;
+  --color-emerald-300: #7DBD90;
+  --color-emerald-400: #52A76B;
+  --color-emerald-500: #2C8C51;
+  --color-emerald-600: #1B4F3C;
+  --color-emerald-700: #143D2E;
+  --color-emerald-800: #0D2B21;
+  --color-emerald-900: #071913;
+
+  /* Gold accent for premium touches */
+  --color-gold-50: #FBF4E6;
+  --color-gold-100: #F4E2B5;
+  --color-gold-300: #D4A853;
+  --color-gold-500: #C49035;
+  --color-gold-700: #9A6E1E;
+
+  /* Warm sand — page background */
+  --color-sand-50: #F7F5F1;
+  --color-sand-100: #EDEBE6;
+  --color-sand-200: #DDD9D2;
+
+  /* Font families */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-playfair), Georgia, "Times New Roman", serif;
+}
+
+/* Base */
+body {
+  background-color: #F7F5F1;
+  color: #1A1A1A;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Display font class */
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Premium transitions */
+* {
+  transition-property: background-color, border-color, color, box-shadow, transform, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Card hover lift */
+.card-hover {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(27, 79, 60, 0.12);
+}
+
+/* Link underline animation */
+.link-underline {
+  position: relative;
+}
+.link-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: currentColor;
+  transition: width 200ms ease;
+}
+.link-underline:hover::after {
+  width: 100%;
+}
+
 /* Leaflet popup overrides */
 .leaflet-popup-content-wrapper {
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
   padding: 0;
   overflow: hidden;
+  border: 1px solid #EDEBE6;
 }
 
 .leaflet-popup-content {
@@ -14,5 +97,18 @@
 }
 
 .leaflet-popup-tip-container {
+  display: none;
+}
+
+.leaflet-container {
+  font-family: var(--font-sans);
+}
+
+/* Scrollbar hide utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
