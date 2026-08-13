@@ -1,141 +1,159 @@
 'use client'
 
 import Link from 'next/link'
-import { Heart, MapPin, Home } from 'lucide-react'
+import { Heart, Home } from 'lucide-react'
 import { useState } from 'react'
 import type { Listing } from '@/types'
-import { formatRent, formatDate, cn } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 interface ListingCardProps {
   listing: Listing
   compact?: boolean
 }
 
+function matchPercent(matchCount: number): number | null {
+  if (matchCount <= 0) return null
+  return Math.min(97, 76 + matchCount * 5)
+}
+
 export default function ListingCard({ listing, compact = false }: ListingCardProps) {
   const [favorited, setFavorited] = useState(false)
   const [imgError, setImgError] = useState(false)
+  const pct = matchPercent(listing.matchCount)
 
   return (
     <Link href={`/annonser/${listing.id}`} className="group block">
-      <article className="bg-white rounded-2xl overflow-hidden border hover:border-emerald-200 transition-all duration-200 card-hover" style={{ borderColor: '#DDD9D2' }}>
-
-        {/* Image */}
-        <div className="relative overflow-hidden bg-sand-100" style={{ aspectRatio: '4/3', backgroundColor: '#EDEBE6' }}>
+      <article
+        className="bg-white card-lift"
+        style={{
+          borderRadius: 20,
+          boxShadow: '0 2px 8px rgba(15,30,24,0.04), 0 16px 40px rgba(15,30,24,0.08)',
+          border: '1px solid rgba(21,63,50,0.06)',
+          overflow: 'hidden',
+        }}
+      >
+        {/* ─── Image ─── */}
+        <div className="relative overflow-hidden" style={{ aspectRatio: '4/3', backgroundColor: '#E3EBE2' }}>
           {!imgError && listing.images[0] ? (
             <img
               src={listing.images[0]}
               alt={listing.title}
-              className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500 ease-out"
+              className="w-full h-full object-cover img-zoom"
               onError={() => setImgError(true)}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <Home size={36} className="text-sand-200" style={{ color: '#DDD9D2' }} />
+              <Home size={36} style={{ color: '#A8B9A4' }} />
             </div>
           )}
 
-          {/* Top row: status + favorite */}
-          <div className="absolute top-3 inset-x-3 flex items-start justify-between">
-            {listing.status !== 'aktiv' && (
-              <span className={cn(
-                'text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm',
-                listing.status === 'pausad'
-                  ? 'bg-white/90 text-amber-700'
-                  : 'bg-white/90 text-gray-500'
-              )}>
-                {listing.status === 'pausad' ? 'Pausad' : 'Avslutad'}
-              </span>
-            )}
-            <div className="ml-auto" />
-            <button
-              onClick={(e) => {
-                e.preventDefault()
-                setFavorited(!favorited)
-              }}
-              className={cn(
-                'w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm',
-                favorited
-                  ? 'bg-red-500 text-white'
-                  : 'bg-white/90 text-gray-500 hover:text-red-400 hover:bg-white'
-              )}
+          {/* Match badge — top left */}
+          {pct !== null && (
+            <div
+              className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-semibold text-white"
+              style={{ backgroundColor: '#153F32' }}
             >
-              <Heart size={14} fill={favorited ? 'currentColor' : 'none'} />
-            </button>
-          </div>
-
-          {/* Match badge */}
-          {listing.matchCount > 0 && (
-            <div className="absolute bottom-3 left-3 flex items-center gap-1.5 bg-white/95 backdrop-blur-sm text-xs font-semibold px-2.5 py-1.5 rounded-full shadow-sm" style={{ color: '#C49035' }}>
-              <span>🤝</span>
-              <span>{listing.matchCount} match</span>
+              <span>♥</span>
+              <span>{pct}% match</span>
             </div>
           )}
+
+          {/* Status badge (if no match badge) */}
+          {pct === null && listing.status !== 'aktiv' && (
+            <div className="absolute top-3 left-3 px-2.5 py-1.5 rounded-full text-[11px] font-semibold bg-white/90 text-amber-700">
+              {listing.status === 'pausad' ? 'Pausad' : 'Avslutad'}
+            </div>
+          )}
+
+          {/* Favorite — top right */}
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              setFavorited(!favorited)
+            }}
+            className={cn(
+              'absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200',
+              favorited
+                ? 'bg-red-500 text-white shadow-md'
+                : 'bg-white/90 text-[#9EA69D] hover:text-red-400 hover:bg-white shadow-sm'
+            )}
+            aria-label={favorited ? 'Ta bort från favoriter' : 'Spara som favorit'}
+          >
+            <Heart size={14} fill={favorited ? 'currentColor' : 'none'} />
+          </button>
 
           {/* Image count */}
           {listing.images.length > 1 && (
-            <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
+            <div className="absolute bottom-3 right-3 bg-black/35 text-white text-[11px] px-2 py-0.5 rounded-full font-medium">
               1/{listing.images.length}
             </div>
           )}
         </div>
 
-        {/* Content */}
-        <div className={cn('p-4', compact && 'p-3')}>
-          {/* Location */}
-          <div className="flex items-center gap-1 mb-1.5">
-            <MapPin size={11} className="text-gray-400 flex-shrink-0" />
-            <span className="text-xs text-gray-400 font-medium tracking-wide uppercase">
-              {listing.district}
-            </span>
-          </div>
+        {/* ─── Content ─── */}
+        <div className={cn('p-4', compact && 'p-3.5')}>
+          {/* District */}
+          <p
+            className="text-[10px] font-semibold uppercase tracking-[0.10em] mb-1.5"
+            style={{ color: '#A8B9A4' }}
+          >
+            {listing.district}, Stockholm
+          </p>
 
           {/* Title */}
-          <h3 className={cn(
-            'font-semibold text-gray-900 line-clamp-2 leading-snug mb-2',
-            compact ? 'text-sm' : 'text-[15px]'
-          )}>
+          <h3
+            className={cn(
+              'font-semibold leading-snug mb-2.5 line-clamp-2',
+              compact ? 'text-[14px]' : 'text-[16px]'
+            )}
+            style={{ color: '#15211E' }}
+          >
             {listing.title}
           </h3>
 
-          {/* Specs row */}
-          <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
-            <span>{listing.rooms} rok</span>
-            <span className="text-gray-300">·</span>
-            <span>{listing.area} m²</span>
-            {listing.floor !== undefined && (
+          {/* Specs */}
+          <p className="text-[13px] mb-4" style={{ color: '#6D716C' }}>
+            {listing.area} m²
+            <span className="mx-1.5" style={{ color: '#D9C2A3' }}>·</span>
+            {new Intl.NumberFormat('sv-SE').format(listing.rent)} kr/mån
+            {listing.balcony && (
               <>
-                <span className="text-gray-300">·</span>
-                <span>vån {listing.floor}</span>
+                <span className="mx-1.5" style={{ color: '#D9C2A3' }}>·</span>
+                Balkong
               </>
             )}
-          </div>
+          </p>
 
-          {/* Price + date */}
-          <div className="flex items-end justify-between">
-            <div>
-              <span className="text-[17px] font-bold text-emerald-600 leading-none">
-                {new Intl.NumberFormat('sv-SE').format(listing.rent)}
-              </span>
-              <span className="text-xs text-gray-400 ml-1">kr/mån</span>
-            </div>
-            <span className="text-xs text-gray-400">{formatDate(listing.createdAt)}</span>
-          </div>
-
-          {/* Interested count — compact strip */}
-          {!compact && listing.interestedCount > 0 && (
-            <div className="mt-3 pt-3 border-t flex items-center justify-between" style={{ borderColor: '#EDEBE6' }}>
-              <div className="flex -space-x-1.5">
-                {[47, 12, 32].map((n) => (
-                  <img
-                    key={n}
-                    src={`https://i.pravatar.cc/28?img=${n}`}
-                    className="w-5 h-5 rounded-full ring-1 ring-white object-cover"
-                    alt=""
-                  />
-                ))}
+          {/* Footer */}
+          {!compact && (
+            <div
+              className="flex items-center justify-between pt-3.5 border-t"
+              style={{ borderColor: 'rgba(21,63,50,0.08)' }}
+            >
+              <div className="flex items-center gap-2">
+                {listing.interestedCount > 0 && (
+                  <>
+                    <div className="flex -space-x-1.5">
+                      {[47, 12, 32].slice(0, Math.min(listing.interestedCount, 3)).map((n) => (
+                        <img
+                          key={n}
+                          src={`https://i.pravatar.cc/28?img=${n}`}
+                          className="w-6 h-6 rounded-full ring-2 ring-white object-cover"
+                          alt=""
+                        />
+                      ))}
+                    </div>
+                    <span className="text-[12px]" style={{ color: '#9EA69D' }}>
+                      {listing.interestedCount} potentiella byten
+                    </span>
+                  </>
+                )}
               </div>
-              <span className="text-xs text-gray-400">
-                {listing.interestedCount} intresserade
+              <span
+                className="text-[11px] font-semibold uppercase tracking-wide"
+                style={{ color: '#C8D0C5' }}
+              >
+                {listing.rooms} rok
               </span>
             </div>
           )}

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, Playfair_Display } from 'next/font/google'
+import { Inter, Instrument_Serif } from 'next/font/google'
 import './globals.css'
 import Navbar from '@/components/Navbar'
 
@@ -9,11 +9,11 @@ const inter = Inter({
   display: 'swap',
 })
 
-const playfair = Playfair_Display({
+const instrumentSerif = Instrument_Serif({
   subsets: ['latin'],
-  variable: '--font-playfair',
+  variable: '--font-instrument',
   style: ['normal', 'italic'],
-  weight: ['400', '700'],
+  weight: '400',
   display: 'swap',
 })
 
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="sv">
-      <body className={`${inter.variable} ${playfair.variable} font-sans`}>
+      <body className={`${inter.variable} ${instrumentSerif.variable} font-sans`}>
         <Navbar />
         <main className="min-h-screen">
           {children}
