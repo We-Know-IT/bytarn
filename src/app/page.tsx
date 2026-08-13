@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowRight, Shield, Zap, Users, Home, Star } from 'lucide-react'
+import { ArrowRight, Shield, Zap, Users, Star } from 'lucide-react'
 import { MOCK_LISTINGS } from '@/lib/mock-data'
 import ListingCard from '@/components/ListingCard'
 import { formatRent } from '@/lib/utils'
@@ -364,11 +364,21 @@ export default function HomePage() {
 
             {/* Brand */}
             <div className="sm:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#1B4F3C' }}>
-                  <Home size={14} className="text-white" />
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#1B4F3C' }}>
+                  <svg width="20" height="20" viewBox="0 0 28 27" fill="none">
+                    <path d="M14 3L22 11V22H6V11L14 3Z" stroke="white" strokeWidth="1.8" strokeLinejoin="round"/>
+                    <path d="M22 11V3" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                    <path d="M19.5 5.5L22 3L24.5 5.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M6 22V25" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                    <path d="M3.5 23L6 25L8.5 23" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    <rect x="9.5" y="13" width="3.5" height="3.5" rx="0.5" fill="white" fillOpacity="0.75"/>
+                    <rect x="15" y="13" width="3.5" height="3.5" rx="0.5" fill="white" fillOpacity="0.75"/>
+                    <rect x="9.5" y="18" width="3.5" height="3.5" rx="0.5" fill="white" fillOpacity="0.75"/>
+                    <rect x="15" y="18" width="3.5" height="3.5" rx="0.5" fill="white" fillOpacity="0.75"/>
+                  </svg>
                 </div>
-                <span className="text-white font-semibold text-lg">Bytaren</span>
+                <span className="font-display font-bold text-[18px] text-white">Bytaren</span>
               </div>
               <p className="text-sm leading-relaxed max-w-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
                 Stockholms enklaste sätt att byta bostad direkt — utan kö och utan mäklare.

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { Menu, X, MessageSquare, Heart, PlusCircle, Home, ChevronDown } from 'lucide-react'
+import { Menu, X, MessageSquare, Heart, PlusCircle, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function Navbar() {
@@ -30,11 +30,24 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-[68px]">
 
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 flex-shrink-0 group">
-            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center shadow-sm group-hover:bg-emerald-700 transition-colors">
-              <Home size={15} className="text-white" strokeWidth={2.5} />
+          <Link href="/" className="flex items-center gap-3 flex-shrink-0 group">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-md transition-all flex-shrink-0"
+              style={{ backgroundColor: '#1B4F3C' }}
+            >
+              <svg width="22" height="22" viewBox="0 0 28 27" fill="none">
+                <path d="M14 3L22 11V22H6V11L14 3Z" stroke="white" strokeWidth="1.8" strokeLinejoin="round"/>
+                <path d="M22 11V3" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                <path d="M19.5 5.5L22 3L24.5 5.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M6 22V25" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                <path d="M3.5 23L6 25L8.5 23" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                <rect x="9.5" y="13" width="3.5" height="3.5" rx="0.5" fill="white" fillOpacity="0.75"/>
+                <rect x="15" y="13" width="3.5" height="3.5" rx="0.5" fill="white" fillOpacity="0.75"/>
+                <rect x="9.5" y="18" width="3.5" height="3.5" rx="0.5" fill="white" fillOpacity="0.75"/>
+                <rect x="15" y="18" width="3.5" height="3.5" rx="0.5" fill="white" fillOpacity="0.75"/>
+              </svg>
             </div>
-            <span className="text-[19px] font-semibold text-gray-900 tracking-[-0.3px]">
+            <span className="font-display font-bold text-[20px] text-gray-900 tracking-[-0.3px]">
               Bytaren
             </span>
           </Link>
