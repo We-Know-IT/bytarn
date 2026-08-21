@@ -1,11 +1,37 @@
 'use client'
 
-import { useState } from 'react'
-import { Upload, X, Plus, MapPin, Info } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { Upload, X, Plus, MapPin, Info, Loader2 } from 'lucide-react'
 import { STOCKHOLM_DISTRICTS } from '@/types'
 import { cn } from '@/lib/utils'
 
 const MAX_IMAGES = 10
+
+interface NominatimResult {
+  display_name: string
+  address: {
+    road?: string
+    house_number?: string
+    postcode?: string
+    suburb?: string
+    city_district?: string
+    quarter?: string
+  }
+}
+
+function formatSuggestionLine(r: NominatimResult): string {
+  const { road, house_number, postcode } = r.address
+  const street = [road, house_number].filter(Boolean).join(' ')
+  const post = postcode ? `, ${postcode} Stockholm` : ', Stockholm'
+  return street ? street + post : r.display_name
+}
+
+function guessDistrict(r: NominatimResult): string {
+  const candidate = r.address.suburb ?? r.address.city_district ?? r.address.quarter ?? ''
+  return STOCKHOLM_DISTRICTS.find((d) =>
+    d.toLowerCase() === candidate.toLowerCase()
+  ) ?? ''
+}
 
 export default function NyAnnonsPage() {
   const [images, setImages] = useState<string[]>([])
@@ -24,6 +50,54 @@ export default function NyAnnonsPage() {
     furnished: false,
     petsAllowed: false,
   })
+
+  const [suggestions, setSuggestions] = useState<NominatimResult[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [loadingAddress, setLoadingAddress] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const addressWrapRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (addressWrapRef.current && !addressWrapRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
+
+  const fetchSuggestions = useCallback(async (q: string) => {
+    if (q.length < 3) { setSuggestions([]); return }
+    setLoadingAddress(true)
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?` +
+        `q=${encodeURIComponent(q + ' Stockholm')}&format=json&limit=6` +
+        `&countrycodes=se&addressdetails=1`
+      const res = await fetch(url, { headers: { 'Accept-Language': 'sv' } })
+      const data: NominatimResult[] = await res.json()
+      setSuggestions(data.filter((r) => r.address.road))
+      setShowSuggestions(true)
+    } catch {
+      setSuggestions([])
+    } finally {
+      setLoadingAddress(false)
+    }
+  }, [])
+
+  function handleAddressInput(value: string) {
+    setForm((f) => ({ ...f, address: value }))
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => fetchSuggestions(value), 350)
+  }
+
+  function selectSuggestion(r: NominatimResult) {
+    const address = formatSuggestionLine(r)
+    const district = guessDistrict(r)
+    setForm((f) => ({ ...f, address, district: district || f.district }))
+    setShowSuggestions(false)
+    setSuggestions([])
+  }
 
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
@@ -165,19 +239,45 @@ export default function NyAnnonsPage() {
             </select>
           </div>
 
-          <div>
+          <div ref={addressWrapRef} className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               <span className="flex items-center gap-1">
                 <MapPin size={14} /> Gatuadress *
               </span>
             </label>
-            <input
-              type="text"
-              placeholder="Hornsgatan 45"
-              value={form.address}
-              onChange={(e) => setForm({ ...form, address: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Hornsgatan 45"
+                value={form.address}
+                onChange={(e) => handleAddressInput(e.target.value)}
+                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                autoComplete="off"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              {loadingAddress && (
+                <Loader2 size={15} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />
+              )}
+            </div>
+            {showSuggestions && suggestions.length > 0 && (
+              <ul
+                className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
+                style={{ boxShadow: '0 4px 24px rgba(15,30,24,0.12)' }}
+              >
+                {suggestions.map((r, i) => (
+                  <li key={i}>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => { e.preventDefault(); selectSuggestion(r) }}
+                      className="w-full text-left px-4 py-3 text-sm hover:bg-emerald-50 transition-colors flex items-start gap-2.5 border-b border-gray-100 last:border-0"
+                    >
+                      <MapPin size={13} className="text-emerald-600 flex-shrink-0 mt-0.5" />
+                      <span style={{ color: '#15211E' }}>{formatSuggestionLine(r)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div>
