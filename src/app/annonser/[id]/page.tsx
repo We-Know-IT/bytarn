@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -31,6 +31,7 @@ export default function ListingDetailPage() {
   const [interested, setInterested] = useState(false)
   const [favorited, setFavorited] = useState(false)
   const [copied, setCopied] = useState(false)
+  const resetAutoPlay = useRef(0)
 
   if (!listing) {
     return (
@@ -55,9 +56,29 @@ export default function ListingDetailPage() {
     }
   }
 
-  const similarListings = MOCK_LISTINGS.filter(
+  // Auto-rotate gallery every 4.5 s; resets when user manually navigates
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!listing || listing.images.length <= 1 || lightbox) return
+    const id = setInterval(() => {
+      setCurrentImg((i) => (i + 1) % listing.images.length)
+    }, 4500)
+    return () => clearInterval(id)
+  }, [listing?.images.length, lightbox, resetAutoPlay.current])
+
+  function navigate(dir: 1 | -1) {
+    if (!listing) return
+    setCurrentImg((i) => (i + dir + listing.images.length) % listing.images.length)
+    resetAutoPlay.current += 1
+  }
+
+  const sameDist = MOCK_LISTINGS.filter(
     (l) => l.id !== listing.id && l.district === listing.district && l.status === 'aktiv'
-  ).slice(0, 3)
+  )
+  const similarListings = sameDist.length > 0
+    ? sameDist.slice(0, 3)
+    : MOCK_LISTINGS.filter((l) => l.id !== listing.id && l.status === 'aktiv').slice(0, 3)
+  const similarLabel = sameDist.length > 0 ? `Fler annonser i ${listing.district}` : 'Fler annonser'
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
@@ -77,13 +98,13 @@ export default function ListingDetailPage() {
             <>
               <button
                 className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
-                onClick={(e) => { e.stopPropagation(); setCurrentImg((i) => (i - 1 + listing.images.length) % listing.images.length) }}
+                onClick={(e) => { e.stopPropagation(); navigate(-1) }}
               >
                 <ChevronLeft size={24} />
               </button>
               <button
                 className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
-                onClick={(e) => { e.stopPropagation(); setCurrentImg((i) => (i + 1) % listing.images.length) }}
+                onClick={(e) => { e.stopPropagation(); navigate(1) }}
               >
                 <ChevronRight size={24} />
               </button>
@@ -126,13 +147,13 @@ export default function ListingDetailPage() {
                 {listing.images.length > 1 && (
                   <>
                     <button
-                      onClick={() => setCurrentImg((i) => (i - 1 + listing.images.length) % listing.images.length)}
+                      onClick={() => navigate(-1)}
                       className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 rounded-full flex items-center justify-center shadow hover:bg-white transition-colors"
                     >
                       <ChevronLeft size={18} />
                     </button>
                     <button
-                      onClick={() => setCurrentImg((i) => (i + 1) % listing.images.length)}
+                      onClick={() => navigate(1)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 rounded-full flex items-center justify-center shadow hover:bg-white transition-colors"
                     >
                       <ChevronRight size={18} />
@@ -143,7 +164,7 @@ export default function ListingDetailPage() {
                       {listing.images.map((_, i) => (
                         <button
                           key={i}
-                          onClick={() => setCurrentImg(i)}
+                          onClick={() => { setCurrentImg(i); resetAutoPlay.current += 1 }}
                           className={cn(
                             'w-2 h-2 rounded-full transition-all',
                             i === currentImg ? 'bg-white w-4' : 'bg-white/60'
@@ -284,7 +305,7 @@ export default function ListingDetailPage() {
           {similarListings.length > 0 && (
             <div className="mt-8 pt-8 border-t border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900 mb-5">
-                Fler annonser i {listing.district}
+                {similarLabel}
               </h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {similarListings.map((l) => (
