@@ -437,62 +437,135 @@ export default function HomePage() {
       ════════════════════════════════════════════════════════ */}
       <section style={{ backgroundColor: '#FBFAF7', paddingTop: 96, paddingBottom: 96 }}>
         <div className="max-w-[1360px] mx-auto px-6 sm:px-10">
-          <div className="text-center max-w-xl mx-auto mb-14">
-            <Eyebrow>Smart matchning</Eyebrow>
-            <SectionHeading>Vi letar efter rätt byte åt dig.</SectionHeading>
-            <p className="mt-4 text-[15px] leading-[1.65]" style={{ color: '#6D716C' }}>
-              Vår algoritm matchar dig med personer som har precis omvända önskemål.
-              Rätt byte, vid rätt tid, utan onödiga omvägar.
-            </p>
-          </div>
 
-          {/* Match visual */}
-          <div className="flex items-center justify-center gap-4 sm:gap-8 mb-12 flex-wrap sm:flex-nowrap">
-            <MatchUser
-              avatar="https://i.pravatar.cc/80?img=9"
-              name="Sara"
-              age={29}
-              district="Södermalm"
-              from="2 rok, Södermalm"
-              to="Vasastan eller Kungsholmen"
-            />
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
 
-            <div className="flex flex-col items-center gap-2 flex-shrink-0">
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg font-semibold"
-                style={{ backgroundColor: '#153F32' }}
-              >
-                ⇄
+            {/* Left — copy */}
+            <div>
+              <Eyebrow>Smart matchning</Eyebrow>
+              <SectionHeading>Algoritmen som hittar ditt perfekta byte.</SectionHeading>
+              <p className="mt-5 text-[15px] leading-[1.75] mb-10" style={{ color: '#6D716C' }}>
+                Bytarens matchningsmotor gör det tunga jobbet åt dig. Istället för att bläddra igenom hundratals
+                annonser hoppas vi att rätt person ska hitta dig — och tvärtom. Vi analyserar era respektive
+                önskemål och presenterar bara de byten som faktiskt kan fungera för båda parter.
+              </p>
+
+              <div className="space-y-6">
+                {[
+                  {
+                    icon: '⇄',
+                    title: 'Ömsesidig önskan',
+                    desc: 'Du vill dit de bor — de vill dit du bor. Matchningen kräver att båda parter pekar på varandra. Inga halvdana byten.',
+                  },
+                  {
+                    icon: '◫',
+                    title: 'Rumspassning',
+                    desc: 'Ditt antal rum matchar mot vad motparten söker, och vice versa. En 3 rok möter en som faktiskt vill ha 3 rok.',
+                  },
+                  {
+                    icon: '≈',
+                    title: 'Hyresbalans',
+                    desc: 'Motorn väger hyrornas nivåer mot varandra. Byten med rimliga skillnader lyfts — extrema obalanser sållas bort.',
+                  },
+                  {
+                    icon: '✦',
+                    title: 'Extrakrav matchas',
+                    desc: 'Balkong, hiss, husdjur tillåtet. Dina måsten vägs mot motpartens bostad, och tvärtom — så du aldrig behöver kompromissa i onödan.',
+                  },
+                ].map((item) => (
+                  <div key={item.title} className="flex gap-4">
+                    <div
+                      className="w-10 h-10 rounded-2xl flex items-center justify-center text-base flex-shrink-0 font-semibold"
+                      style={{ backgroundColor: 'rgba(21,63,50,0.08)', color: '#153F32' }}
+                    >
+                      {item.icon}
+                    </div>
+                    <div>
+                      <p className="text-[15px] font-semibold mb-1" style={{ color: '#15211E' }}>{item.title}</p>
+                      <p className="text-[14px] leading-[1.65]" style={{ color: '#6D716C' }}>{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div
-                className="px-3 py-1 rounded-full text-[11px] font-bold"
-                style={{ backgroundColor: 'rgba(21,63,50,0.10)', color: '#153F32' }}
-              >
-                98% match
+
+              <div className="mt-10">
+                <Link
+                  href="/hur-det-fungerar"
+                  className="btn-arrow inline-flex items-center gap-2 px-6 py-3.5 rounded-[14px] text-[15px] font-semibold transition-all hover:-translate-y-[1px]"
+                  style={{ color: '#153F32', border: '1.5px solid rgba(21,63,50,0.22)' }}
+                >
+                  Se hur matchningen fungerar <ArrowRight size={15} className="arrow-icon" />
+                </Link>
               </div>
             </div>
 
-            <MatchUser
-              avatar="https://i.pravatar.cc/80?img=22"
-              name="Erik"
-              age={34}
-              district="Vasastan"
-              from="2 rok, Vasastan"
-              to="Södermalm"
-            />
-          </div>
+            {/* Right — match visual */}
+            <div className="flex flex-col items-center gap-6">
+              <div className="flex items-center justify-center gap-4 sm:gap-8 w-full flex-wrap sm:flex-nowrap">
+                <MatchUser
+                  avatar="https://i.pravatar.cc/80?img=9"
+                  name="Sara"
+                  age={29}
+                  district="Södermalm"
+                  from="2 rok, Södermalm"
+                  to="Vasastan eller Kungsholmen"
+                />
 
-          <div className="text-center">
-            <Link
-              href="/hur-det-fungerar"
-              className="btn-arrow inline-flex items-center gap-2 px-6 py-3.5 rounded-[14px] text-[15px] font-semibold transition-all hover:-translate-y-[1px]"
-              style={{
-                color: '#153F32',
-                border: '1.5px solid rgba(21,63,50,0.22)',
-              }}
-            >
-              Se hur matchningen fungerar <ArrowRight size={15} className="arrow-icon" />
-            </Link>
+                <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg font-semibold"
+                    style={{ backgroundColor: '#153F32' }}
+                  >
+                    ⇄
+                  </div>
+                  <div
+                    className="px-3 py-1 rounded-full text-[11px] font-bold"
+                    style={{ backgroundColor: 'rgba(21,63,50,0.10)', color: '#153F32' }}
+                  >
+                    98% match
+                  </div>
+                </div>
+
+                <MatchUser
+                  avatar="https://i.pravatar.cc/80?img=22"
+                  name="Erik"
+                  age={34}
+                  district="Vasastan"
+                  from="2 rok, Vasastan"
+                  to="Södermalm"
+                />
+              </div>
+
+              {/* Score breakdown */}
+              <div
+                className="w-full max-w-sm p-5 rounded-2xl"
+                style={{ backgroundColor: 'rgba(21,63,50,0.05)', border: '1px solid rgba(21,63,50,0.09)' }}
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.10em] mb-4" style={{ color: '#A8B9A4' }}>Matchningsanalys</p>
+                <div className="space-y-3">
+                  {[
+                    { label: 'Ömsesidig stadsdel', score: 100 },
+                    { label: 'Rumspassning', score: 100 },
+                    { label: 'Hyresbalans', score: 92 },
+                    { label: 'Extrakrav', score: 85 },
+                  ].map((row) => (
+                    <div key={row.label}>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-[13px]" style={{ color: '#6D716C' }}>{row.label}</span>
+                        <span className="text-[13px] font-semibold" style={{ color: '#153F32' }}>{row.score}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full" style={{ backgroundColor: 'rgba(21,63,50,0.10)' }}>
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${row.score}%`, backgroundColor: '#153F32' }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
