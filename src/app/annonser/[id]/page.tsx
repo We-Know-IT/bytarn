@@ -295,7 +295,7 @@ export default function ListingDetailPage() {
             <div className="h-56 rounded-2xl overflow-hidden border border-gray-100">
               <ListingMap
                 listings={mapListings}
-                zoom={15}
+                zoom={16}
                 center={[listing.lat, listing.lng]}
               />
             </div>
