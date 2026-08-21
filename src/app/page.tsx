@@ -1,11 +1,14 @@
 'use client'
 
 import { useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { ArrowRight, Shield, Star } from 'lucide-react'
 import { MOCK_LISTINGS } from '@/lib/mock-data'
 import ListingCard from '@/components/ListingCard'
 import HeroSearch from '@/components/HeroSearch'
+
+const ListingMap = dynamic(() => import('@/components/ListingMap'), { ssr: false })
 
 /* ─── Static content ─────────────────────────────────────────────────── */
 
@@ -207,7 +210,7 @@ export default function HomePage() {
               style={{ backgroundColor: 'rgba(168,185,164,0.22)', color: '#153F32' }}
             >
               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#153F32' }} />
-              BYT BOSTAD PÅ DINA VILLKOR
+              100% GRATIS · INGA MELLANHÄNDER
             </div>
 
             {/* Headline */}
@@ -240,26 +243,31 @@ export default function HomePage() {
             </div>
 
             {/* CTAs */}
-            <div className="flex items-center gap-3 flex-wrap mb-12">
-              <Link
-                href="/annonser"
-                className="btn-arrow flex items-center gap-2 px-7 py-4 rounded-[14px] text-[15px] font-semibold text-white transition-all hover:-translate-y-[1px] hover:shadow-lg active:translate-y-0"
-                style={{ backgroundColor: '#153F32' }}
-              >
-                Hitta mitt byte
-                <ArrowRight size={15} className="arrow-icon" />
-              </Link>
-              <Link
-                href="/annonser/ny"
-                className="flex items-center gap-2 px-7 py-4 rounded-[14px] text-[15px] font-semibold transition-all hover:-translate-y-[1px]"
-                style={{
-                  color: '#153F32',
-                  border: '1.5px solid rgba(21,63,50,0.22)',
-                  backgroundColor: 'transparent',
-                }}
-              >
-                Lägg upp annons
-              </Link>
+            <div className="flex flex-col gap-3 mb-12">
+              <div className="flex items-center gap-3 flex-wrap">
+                <Link
+                  href="/registrera"
+                  className="btn-arrow flex items-center gap-2 px-7 py-4 rounded-[14px] text-[15px] font-semibold text-white transition-all hover:-translate-y-[1px] hover:shadow-lg active:translate-y-0"
+                  style={{ backgroundColor: '#153F32' }}
+                >
+                  Skapa konto — gratis
+                  <ArrowRight size={15} className="arrow-icon" />
+                </Link>
+                <Link
+                  href="/annonser"
+                  className="flex items-center gap-2 px-7 py-4 rounded-[14px] text-[15px] font-semibold transition-all hover:-translate-y-[1px]"
+                  style={{
+                    color: '#153F32',
+                    border: '1.5px solid rgba(21,63,50,0.22)',
+                    backgroundColor: 'transparent',
+                  }}
+                >
+                  Hitta byte
+                </Link>
+              </div>
+              <p className="text-[13px]" style={{ color: '#9EA69D' }}>
+                Gratis att söka, annonsera och kontakta — alltid.
+              </p>
             </div>
 
             {/* Trust metrics */}
@@ -406,6 +414,41 @@ export default function HomePage() {
             >
               Visa alla annonser <ArrowRight size={15} />
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════
+          MAP
+      ════════════════════════════════════════════════════════ */}
+      <section style={{ backgroundColor: '#FBFAF7', paddingTop: 96, paddingBottom: 96 }}>
+        <div className="max-w-[1360px] mx-auto px-6 sm:px-10">
+          <div className="flex items-end justify-between mb-10">
+            <div>
+              <Eyebrow>Kartvyn</Eyebrow>
+              <SectionHeading>Se var bytena finns.</SectionHeading>
+              <p className="mt-3 text-[15px]" style={{ color: '#6D716C' }}>
+                Klicka på en markering för att se annonsens detaljer.
+              </p>
+            </div>
+            <Link
+              href="/annonser"
+              className="hidden sm:flex items-center gap-1.5 text-[14px] font-semibold btn-arrow flex-shrink-0 mb-1"
+              style={{ color: '#153F32' }}
+            >
+              Visa alla annonser <ArrowRight size={14} className="arrow-icon" />
+            </Link>
+          </div>
+          <div
+            style={{
+              borderRadius: 24,
+              overflow: 'hidden',
+              height: 480,
+              boxShadow: '0 4px 24px rgba(15,30,24,0.10)',
+              border: '1px solid rgba(21,63,50,0.08)',
+            }}
+          >
+            <ListingMap listings={featured} />
           </div>
         </div>
       </section>
@@ -577,21 +620,26 @@ export default function HomePage() {
           >
             Tusentals stockholmare har redan hittat sitt nästa hem via Bytaren. Nu är det din tur.
           </p>
-          <div className="flex items-center justify-center gap-4 flex-wrap">
-            <Link
-              href="/registrera"
-              className="btn-arrow flex items-center gap-2 px-8 py-4 rounded-[14px] text-[15px] font-semibold transition-all hover:-translate-y-[1px] hover:shadow-xl active:translate-y-0"
-              style={{ backgroundColor: 'white', color: '#153F32' }}
-            >
-              Skapa konto <ArrowRight size={15} className="arrow-icon" />
-            </Link>
-            <Link
-              href="/annonser"
-              className="flex items-center gap-2 px-8 py-4 rounded-[14px] text-[15px] font-semibold text-white transition-all hover:-translate-y-[1px]"
-              style={{ border: '1.5px solid rgba(255,255,255,0.18)' }}
-            >
-              Utforska byten
-            </Link>
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center justify-center gap-4 flex-wrap">
+              <Link
+                href="/registrera"
+                className="btn-arrow flex items-center gap-2 px-8 py-4 rounded-[14px] text-[15px] font-semibold transition-all hover:-translate-y-[1px] hover:shadow-xl active:translate-y-0"
+                style={{ backgroundColor: 'white', color: '#153F32' }}
+              >
+                Skapa konto — helt gratis <ArrowRight size={15} className="arrow-icon" />
+              </Link>
+              <Link
+                href="/annonser"
+                className="flex items-center gap-2 px-8 py-4 rounded-[14px] text-[15px] font-semibold text-white transition-all hover:-translate-y-[1px]"
+                style={{ border: '1.5px solid rgba(255,255,255,0.18)' }}
+              >
+                Utforska byten
+              </Link>
+            </div>
+            <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              Ingen mäklarprovision · Inga dolda avgifter · Gratis för alla
+            </p>
           </div>
         </div>
       </section>
