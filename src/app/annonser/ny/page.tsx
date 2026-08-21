@@ -51,6 +51,25 @@ export default function NyAnnonsPage() {
     petsAllowed: false,
   })
 
+  // Pre-fill from onboarding draft saved to localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('bytaren_my_listing_draft')
+      if (!raw) return
+      const draft = JSON.parse(raw)
+      setForm((f) => ({
+        ...f,
+        district: draft.district ?? f.district,
+        address: draft.address ?? f.address,
+        rooms: draft.rooms ?? f.rooms,
+        area: draft.area ?? f.area,
+        rent: draft.rent ?? f.rent,
+        balcony: draft.balcony ?? f.balcony,
+        elevator: draft.elevator ?? f.elevator,
+      }))
+    } catch {}
+  }, [])
+
   const [suggestions, setSuggestions] = useState<NominatimResult[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [loadingAddress, setLoadingAddress] = useState(false)
