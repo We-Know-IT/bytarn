@@ -20,7 +20,7 @@ const FEATURES = [
   },
   {
     title: 'Du bestämmer alltid',
-    desc: 'Du väljer vem du kontaktar och när. Ingen annan kan initiera kontakt utan din åtgärd.',
+    desc: 'Du väljer vem du svarar och när. Alla meddelanden stannar i appen — inga privata uppgifter delas automatiskt.',
   },
   {
     title: 'Säker plattform',
