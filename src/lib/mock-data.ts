@@ -1,5 +1,8 @@
 import type { Listing, Conversation, Message } from '@/types'
 
+// Inloggad användare — Anna Svensson, Hornsgatan 45 Södermalm
+export const CURRENT_USER_HOME = { lat: 59.3176, lng: 18.0621, address: 'Hornsgatan 45', district: 'Södermalm' }
+
 export const MOCK_LISTINGS: Listing[] = [
   {
     id: '1',

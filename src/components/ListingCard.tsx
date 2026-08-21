@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { Heart, Home } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import type { Listing } from '@/types'
-import { cn } from '@/lib/utils'
+import { cn, haversineKm, formatDistance } from '@/lib/utils'
+import { CURRENT_USER_HOME } from '@/lib/mock-data'
 
 interface ListingCardProps {
   listing: Listing
@@ -22,6 +23,8 @@ export default function ListingCard({ listing, compact = false }: ListingCardPro
   const [imgError, setImgError] = useState(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pct = matchPercent(listing.matchCount)
+  const distKm = haversineKm(CURRENT_USER_HOME.lat, CURRENT_USER_HOME.lng, listing.lat, listing.lng)
+  const distLabel = formatDistance(distKm)
 
   const images = listing.images.filter(Boolean)
   const hasMultiple = images.length > 1
@@ -136,13 +139,21 @@ export default function ListingCard({ listing, compact = false }: ListingCardPro
 
         {/* ─── Content ─── */}
         <div className={cn('p-4', compact && 'p-3.5')}>
-          {/* District */}
-          <p
-            className="text-[10px] font-semibold uppercase tracking-[0.10em] mb-1.5"
-            style={{ color: '#A8B9A4' }}
-          >
-            {listing.district}, Stockholm
-          </p>
+          {/* District + distance */}
+          <div className="flex items-center justify-between mb-1.5">
+            <p
+              className="text-[10px] font-semibold uppercase tracking-[0.10em]"
+              style={{ color: '#A8B9A4' }}
+            >
+              {listing.district}, Stockholm
+            </p>
+            <span
+              className="text-[10px] font-semibold"
+              style={{ color: '#153F32' }}
+            >
+              📍 {distLabel}
+            </span>
+          </div>
 
           {/* Title */}
           <h3
