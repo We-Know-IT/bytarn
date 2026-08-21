@@ -1,14 +1,28 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Upload, X, Plus, MapPin, Info } from 'lucide-react'
 import { STOCKHOLM_DISTRICTS } from '@/types'
 import { cn } from '@/lib/utils'
 import AddressInput from '@/components/AddressInput'
+import { MOCK_LISTINGS } from '@/lib/mock-data'
 
 const MAX_IMAGES = 10
 
 export default function NyAnnonsPage() {
+  return (
+    <Suspense>
+      <NyAnnonsForm />
+    </Suspense>
+  )
+}
+
+function NyAnnonsForm() {
+  const searchParams = useSearchParams()
+  const editId = searchParams.get('redigera')
+  const isEditing = Boolean(editId)
+
   const [images, setImages] = useState<string[]>([])
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [form, setForm] = useState({
@@ -26,8 +40,30 @@ export default function NyAnnonsPage() {
     petsAllowed: false,
   })
 
-  // Pre-fill from onboarding draft saved to localStorage
+  // If editing, pre-fill from the existing listing
   useEffect(() => {
+    if (editId) {
+      const listing = MOCK_LISTINGS.find((l) => l.id === editId)
+      if (listing) {
+        setForm({
+          title: listing.title,
+          description: listing.description,
+          rooms: String(listing.rooms),
+          area: String(listing.area),
+          rent: String(listing.rent),
+          floor: String(listing.floor ?? ''),
+          district: listing.district,
+          address: listing.address,
+          elevator: listing.elevator ?? false,
+          balcony: listing.balcony ?? false,
+          furnished: listing.furnished ?? false,
+          petsAllowed: listing.petsAllowed ?? false,
+        })
+        setImages(listing.images)
+        return
+      }
+    }
+    // Otherwise pre-fill from onboarding draft
     try {
       const raw = localStorage.getItem('bytaren_my_listing_draft')
       if (!raw) return
@@ -43,7 +79,7 @@ export default function NyAnnonsPage() {
         elevator: draft.elevator ?? f.elevator,
       }))
     } catch {}
-  }, [])
+  }, [editId])
 
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
@@ -70,8 +106,8 @@ export default function NyAnnonsPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Lägg upp annons</h1>
-        <p className="text-gray-500 text-sm">Berätta om din bostad så hittar vi rätt bytespartner.</p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">{isEditing ? 'Redigera annons' : 'Lägg upp annons'}</h1>
+        <p className="text-gray-500 text-sm">{isEditing ? 'Uppdatera uppgifterna för din annons.' : 'Berätta om din bostad så hittar vi rätt bytespartner.'}</p>
       </div>
 
       {/* Step indicator */}
@@ -381,10 +417,10 @@ export default function NyAnnonsPage() {
               Tillbaka
             </button>
             <button
-              onClick={() => alert('Annons publicerad! (Demo — inte kopplad till backend ännu)')}
+              onClick={() => alert(isEditing ? 'Annons uppdaterad! (Demo — inte kopplad till backend ännu)' : 'Annons publicerad! (Demo — inte kopplad till backend ännu)')}
               className="flex-1 py-3.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors"
             >
-              Publicera annons
+              {isEditing ? 'Spara ändringar' : 'Publicera annons'}
             </button>
           </div>
         </div>

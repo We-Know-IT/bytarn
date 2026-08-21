@@ -155,10 +155,13 @@ export default function MinaSidorPage() {
                       <Eye size={12} />
                       Visa
                     </Link>
-                    <button className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1">
+                    <Link
+                      href={`/annonser/ny?redigera=${listing.id}`}
+                      className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                    >
                       <Edit2 size={12} />
                       Redigera
-                    </button>
+                    </Link>
                     <button className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1">
                       <EyeOff size={12} />
                       {listing.status === 'pausad' ? 'Aktivera' : 'Pausa'}
