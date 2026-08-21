@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="7" fill="#153F32"/>
+  <!-- House body -->
+  <path d="M16 5L24 13V25H8V13L16 5Z" stroke="white" stroke-width="1.8" stroke-linejoin="round" fill="none"/>
+  <!-- Chimney -->
+  <path d="M21 13V7" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Chimney cap -->
+  <path d="M18.8 9L21 7L23.2 9" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Swap arrow down-left -->
+  <path d="M8 25V28" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M6 26.5L8 28L10 26.5" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
