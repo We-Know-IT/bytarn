@@ -14,9 +14,11 @@ import {
   ArrowLeft,
   Share2,
   Flag,
+  X,
 } from 'lucide-react'
 import { MOCK_LISTINGS } from '@/lib/mock-data'
 import { formatRent, formatDate, cn } from '@/lib/utils'
+import ListingCard from '@/components/ListingCard'
 import dynamic from 'next/dynamic'
 
 const ListingMap = dynamic(() => import('@/components/ListingMap'), { ssr: false })
@@ -25,6 +27,7 @@ export default function ListingDetailPage() {
   const params = useParams()
   const listing = MOCK_LISTINGS.find((l) => l.id === params.id)
   const [currentImg, setCurrentImg] = useState(0)
+  const [lightbox, setLightbox] = useState(false)
   const [interested, setInterested] = useState(false)
   const [favorited, setFavorited] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -52,8 +55,51 @@ export default function ListingDetailPage() {
     }
   }
 
+  const similarListings = MOCK_LISTINGS.filter(
+    (l) => l.id !== listing.id && l.district === listing.district && l.status === 'aktiv'
+  ).slice(0, 3)
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/92"
+          onClick={() => setLightbox(false)}
+        >
+          <button
+            className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+            onClick={() => setLightbox(false)}
+          >
+            <X size={20} />
+          </button>
+          {listing.images.length > 1 && (
+            <>
+              <button
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+                onClick={(e) => { e.stopPropagation(); setCurrentImg((i) => (i - 1 + listing.images.length) % listing.images.length) }}
+              >
+                <ChevronLeft size={24} />
+              </button>
+              <button
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+                onClick={(e) => { e.stopPropagation(); setCurrentImg((i) => (i + 1) % listing.images.length) }}
+              >
+                <ChevronRight size={24} />
+              </button>
+            </>
+          )}
+          <img
+            src={listing.images[currentImg]}
+            alt={listing.title}
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="absolute bottom-5 text-white/60 text-sm">
+            {currentImg + 1} / {listing.images.length}
+          </div>
+        </div>
+      )}
       {/* Back */}
       <Link
         href="/annonser"
@@ -73,7 +119,8 @@ export default function ListingDetailPage() {
                 <img
                   src={listing.images[currentImg]}
                   alt={listing.title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover cursor-zoom-in"
+                  onClick={() => setLightbox(true)}
                 />
 
                 {listing.images.length > 1 && (
@@ -232,6 +279,20 @@ export default function ListingDetailPage() {
             <span>{listing.matchCount} matchningar</span>
             <span>Annonserad {formatDate(listing.createdAt)}</span>
           </div>
+
+          {/* Similar listings */}
+          {similarListings.length > 0 && (
+            <div className="mt-8 pt-8 border-t border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900 mb-5">
+                Fler annonser i {listing.district}
+              </h2>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {similarListings.map((l) => (
+                  <ListingCard key={l.id} listing={l} compact />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}

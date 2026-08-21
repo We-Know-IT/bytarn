@@ -69,6 +69,14 @@ export interface SearchFilters {
   rooms: number[]
   maxRent: number | null
   view: 'list' | 'map'
+  sort: 'newest' | 'rent_asc' | 'rent_desc' | 'best_match' | 'nearest'
+}
+
+export interface SavedSearch {
+  id: string
+  name: string
+  filters: Omit<SearchFilters, 'view' | 'sort'>
+  createdAt: string
 }
 
 export const STOCKHOLM_DISTRICTS = [

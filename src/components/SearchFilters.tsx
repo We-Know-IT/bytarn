@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, SlidersHorizontal, X, Map, List, ChevronDown } from 'lucide-react'
+import { Search, SlidersHorizontal, X, Map, List, Bookmark } from 'lucide-react'
 import { STOCKHOLM_DISTRICTS } from '@/types'
 import { cn } from '@/lib/utils'
-import type { SearchFilters } from '@/types'
+import type { SearchFilters, SavedSearch } from '@/types'
 
 interface SearchFiltersProps {
   filters: SearchFilters
@@ -14,10 +14,18 @@ interface SearchFiltersProps {
 
 const ROOM_OPTIONS = [1, 2, 3, 4, 5]
 const RENT_OPTIONS = [5000, 7500, 10000, 12500, 15000, 20000]
+const SORT_OPTIONS: { value: SearchFilters['sort']; label: string }[] = [
+  { value: 'newest', label: 'Nyast' },
+  { value: 'rent_asc', label: 'Lägst hyra' },
+  { value: 'rent_desc', label: 'Högst hyra' },
+  { value: 'best_match', label: 'Bäst match' },
+  { value: 'nearest', label: 'Närmast' },
+]
 
 export default function SearchFiltersComponent({ filters, onFiltersChange, resultCount }: SearchFiltersProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [districtSearch, setDistrictSearch] = useState('')
+  const [searchSaved, setSearchSaved] = useState(false)
 
   function toggleDistrict(d: string) {
     const next = filters.districts.includes(d)
@@ -34,7 +42,20 @@ export default function SearchFiltersComponent({ filters, onFiltersChange, resul
   }
 
   function clearAll() {
-    onFiltersChange({ districts: [], rooms: [], maxRent: null, view: filters.view })
+    onFiltersChange({ districts: [], rooms: [], maxRent: null, view: filters.view, sort: filters.sort })
+  }
+
+  function saveSearch() {
+    const saved: SavedSearch = {
+      id: Date.now().toString(),
+      name: `Sökning ${new Date().toLocaleDateString('sv-SE')}`,
+      filters: { districts: filters.districts, rooms: filters.rooms, maxRent: filters.maxRent },
+      createdAt: new Date().toISOString(),
+    }
+    const existing: SavedSearch[] = JSON.parse(localStorage.getItem('bytaren_saved_searches') || '[]')
+    localStorage.setItem('bytaren_saved_searches', JSON.stringify([...existing, saved]))
+    setSearchSaved(true)
+    setTimeout(() => setSearchSaved(false), 2000)
   }
 
   const activeCount =
@@ -108,6 +129,18 @@ export default function SearchFiltersComponent({ filters, onFiltersChange, resul
           </button>
 
           <div className="flex-1" />
+
+          {/* Sort dropdown */}
+          <select
+            value={filters.sort}
+            onChange={(e) => onFiltersChange({ ...filters, sort: e.target.value as SearchFilters['sort'] })}
+            className="hidden sm:block text-sm rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 cursor-pointer"
+            style={{ borderColor: '#DDD9D2', backgroundColor: '#F7F5F1', color: '#374151' }}
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
 
           {/* Result count */}
           <span className="text-sm text-gray-400 hidden sm:block flex-shrink-0">
@@ -227,6 +260,14 @@ export default function SearchFiltersComponent({ filters, onFiltersChange, resul
             )}
             <button onClick={clearAll} className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2">
               Rensa
+            </button>
+            <button
+              onClick={saveSearch}
+              className="flex items-center gap-1 text-xs font-medium ml-auto transition-colors"
+              style={{ color: searchSaved ? '#059669' : '#153F32' }}
+            >
+              <Bookmark size={12} />
+              {searchSaved ? 'Sökning sparad!' : 'Spara sökning'}
             </button>
           </div>
         )}

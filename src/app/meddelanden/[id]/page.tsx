@@ -46,6 +46,28 @@ export default function ConversationPage() {
     setInput('')
   }
 
+  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const imageUrl = ev.target?.result as string
+      const msg: Message = {
+        id: `m${Date.now()}`,
+        conversationId: conv!.id,
+        senderId: 'me',
+        senderName: 'Du',
+        content: '',
+        imageUrl,
+        createdAt: new Date().toISOString(),
+        read: false,
+      }
+      setMessages((prev) => [...prev, msg])
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
   function handleKey(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -115,22 +137,28 @@ export default function ConversationPage() {
                     className="rounded-2xl max-w-full mb-1 border border-gray-100"
                   />
                 )}
-                <div
-                  className={cn(
-                    'px-4 py-2.5 rounded-2xl text-sm leading-relaxed',
-                    isMe
-                      ? 'bg-emerald-600 text-white rounded-tr-sm'
-                      : 'bg-white text-gray-800 shadow-sm rounded-tl-sm border border-gray-100'
+                {msg.content && (
+                  <div
+                    className={cn(
+                      'px-4 py-2.5 rounded-2xl text-sm leading-relaxed',
+                      isMe
+                        ? 'bg-emerald-600 text-white rounded-tr-sm'
+                        : 'bg-white text-gray-800 shadow-sm rounded-tl-sm border border-gray-100'
+                    )}
+                  >
+                    {msg.content}
+                  </div>
+                )}
+                <div className={cn('flex items-center gap-1 mt-1 px-1', isMe ? 'justify-end' : '')}>
+                  <p className="text-xs text-gray-400">
+                    {formatMessageTime(msg.createdAt)}
+                  </p>
+                  {isMe && (
+                    <span className={cn('text-xs font-bold', msg.read ? 'text-emerald-500' : 'text-gray-300')}>
+                      {msg.read ? '✓✓' : '✓'}
+                    </span>
                   )}
-                >
-                  {msg.content}
                 </div>
-                <p className={cn(
-                  'text-xs text-gray-400 mt-1 px-1',
-                  isMe && 'text-right'
-                )}>
-                  {formatMessageTime(msg.createdAt)}
-                </p>
               </div>
             </div>
           )
@@ -142,7 +170,7 @@ export default function ConversationPage() {
       <div className="bg-white border-t border-gray-100 px-4 py-3">
         <div className="flex items-end gap-2">
           <label className="p-2 text-gray-400 hover:text-gray-600 cursor-pointer flex-shrink-0">
-            <input type="file" accept="image/*,video/*" className="hidden" />
+            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
             <ImageIcon size={20} />
           </label>
 

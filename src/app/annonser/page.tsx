@@ -2,10 +2,11 @@
 
 import { useState, useMemo } from 'react'
 import dynamic from 'next/dynamic'
-import { MOCK_LISTINGS } from '@/lib/mock-data'
+import { MOCK_LISTINGS, CURRENT_USER_HOME } from '@/lib/mock-data'
 import SearchFiltersComponent from '@/components/SearchFilters'
 import ListingCard from '@/components/ListingCard'
 import type { SearchFilters } from '@/types'
+import { haversineKm } from '@/lib/utils'
 
 const ListingMap = dynamic(() => import('@/components/ListingMap'), {
   ssr: false,
@@ -22,16 +23,31 @@ export default function AnnonserPage() {
     rooms: [],
     maxRent: null,
     view: 'list',
+    sort: 'newest',
   })
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const filtered = useMemo(() => {
-    return MOCK_LISTINGS.filter((l) => {
+    const results = MOCK_LISTINGS.filter((l) => {
       if (l.status !== 'aktiv') return false
       if (filters.districts.length > 0 && !filters.districts.includes(l.district)) return false
       if (filters.rooms.length > 0 && !filters.rooms.includes(l.rooms)) return false
       if (filters.maxRent !== null && l.rent > filters.maxRent) return false
       return true
+    })
+
+    return [...results].sort((a, b) => {
+      switch (filters.sort) {
+        case 'rent_asc': return a.rent - b.rent
+        case 'rent_desc': return b.rent - a.rent
+        case 'best_match': return b.matchCount - a.matchCount
+        case 'nearest': {
+          const dA = haversineKm(CURRENT_USER_HOME.lat, CURRENT_USER_HOME.lng, a.lat, a.lng)
+          const dB = haversineKm(CURRENT_USER_HOME.lat, CURRENT_USER_HOME.lng, b.lat, b.lng)
+          return dA - dB
+        }
+        default: return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      }
     })
   }, [filters])
 
