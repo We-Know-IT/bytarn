@@ -1,39 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, MapPin, Calendar } from 'lucide-react'
+import { Search, MapPin } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-const ROOM_OPTIONS = ['Alla storlekar', '1 rum', '2 rum', '3 rum', '4 rum', '5+ rum']
-const RENT_OPTIONS = ['Alla hyror', 'Under 7 500 kr', 'Under 10 000 kr', 'Under 12 500 kr', 'Under 15 000 kr']
-const MOVE_OPTIONS = ['Flexibelt', '1 månad', '3 månader', '6 månader', '1 år']
-
-interface FieldProps {
-  label: string
-  children: React.ReactNode
-  icon: React.ReactNode
-  border?: boolean
-}
-
-function Field({ label, children, icon, border = true }: FieldProps) {
-  return (
-    <div
-      className={`flex items-center gap-3 px-5 py-4 flex-1 min-w-0 ${border ? 'border-r' : ''}`}
-      style={border ? { borderColor: 'rgba(21,63,50,0.08)' } : {}}
-    >
-      <span className="flex-shrink-0 opacity-60" style={{ color: '#153F32' }}>{icon}</span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] mb-0.5" style={{ color: '#9EA69D' }}>
-          {label}
-        </p>
-        {children}
-      </div>
-    </div>
-  )
-}
+const ROOM_OPTIONS = ['1 rum', '2 rum', '3 rum', '4 rum', '5+ rum']
+const RENT_OPTIONS = ['Under 7 500 kr', 'Under 10 000 kr', 'Under 12 500 kr', 'Under 15 000 kr']
+const MOVE_OPTIONS = ['1 månad', '3 månader', '6 månader', '1 år']
 
 export default function HeroSearch() {
   const [area, setArea] = useState('')
+  const [focused, setFocused] = useState(false)
   const router = useRouter()
 
   function handleSearch(e: React.FormEvent) {
@@ -44,83 +21,115 @@ export default function HeroSearch() {
   return (
     <form
       onSubmit={handleSearch}
-      className="flex items-stretch bg-white overflow-hidden"
-      style={{
-        borderRadius: 20,
-        boxShadow: '0 2px 8px rgba(15,30,24,0.04), 0 20px 50px rgba(15,30,24,0.10)',
-        border: '1px solid rgba(21,63,50,0.08)',
-      }}
       aria-label="Sök bostadsbyten"
+      className="flex items-center bg-white"
+      style={{
+        borderRadius: 22,
+        border: focused
+          ? '1.5px solid rgba(21,63,50,0.35)'
+          : '1.5px solid rgba(21,63,50,0.10)',
+        boxShadow: focused
+          ? '0 2px 8px rgba(15,30,24,0.04), 0 20px 50px rgba(15,30,24,0.10)'
+          : '0 2px 8px rgba(15,30,24,0.04), 0 16px 40px rgba(15,30,24,0.07)',
+        transition: 'border-color 180ms ease, box-shadow 180ms ease',
+      }}
     >
-      {/* Area */}
-      <Field label="Område" icon={<MapPin size={16} />}>
-        <input
-          type="text"
-          placeholder="Var vill du bo?"
-          value={area}
-          onChange={(e) => setArea(e.target.value)}
-          className="w-full bg-transparent text-[14px] outline-none placeholder:text-[#C8D0C5]"
-          style={{ color: '#15211E' }}
-          aria-label="Område"
-        />
-      </Field>
+      {/* ── Område ── */}
+      <div className="flex items-center gap-3 px-5 py-4 flex-[1.4] min-w-0">
+        <MapPin size={16} strokeWidth={1.75} style={{ color: '#153F32', flexShrink: 0 }} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.10em] mb-0.5" style={{ color: '#A8B9A4' }}>
+            Område
+          </p>
+          <input
+            type="text"
+            placeholder="Var vill du bo?"
+            value={area}
+            onChange={(e) => setArea(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            className="w-full bg-transparent text-[14px] font-medium outline-none placeholder:font-normal"
+            style={{ color: '#15211E' }}
+            aria-label="Område"
+          />
+        </div>
+      </div>
 
-      {/* Storlek */}
+      <Divider />
+
+      {/* ── Storlek ── */}
+      <div className="hidden sm:block flex-1 min-w-0">
+        <SelectField label="Storlek" placeholder="Alla rum" options={ROOM_OPTIONS} />
+      </div>
+
       <div className="hidden sm:block">
-        <Field label="Storlek" icon={<span className="text-[13px] font-medium">rok</span>}>
-          <select
-            className="bg-transparent text-[14px] outline-none appearance-none cursor-pointer w-full"
-            style={{ color: '#6D716C' }}
-            aria-label="Storlek"
-            defaultValue=""
-          >
-            <option value="" disabled>Alla storlekar</option>
-            {ROOM_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-          </select>
-        </Field>
+        <Divider />
       </div>
 
-      {/* Hyra */}
+      {/* ── Hyra ── */}
+      <div className="hidden md:block flex-1 min-w-0">
+        <SelectField label="Hyra" placeholder="Alla hyror" options={RENT_OPTIONS} />
+      </div>
+
       <div className="hidden md:block">
-        <Field label="Hyra" icon={<span className="text-[12px] font-semibold">kr</span>}>
-          <select
-            className="bg-transparent text-[14px] outline-none appearance-none cursor-pointer w-full"
-            style={{ color: '#6D716C' }}
-            aria-label="Hyra"
-            defaultValue=""
-          >
-            <option value="" disabled>Alla hyror</option>
-            {RENT_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-          </select>
-        </Field>
+        <Divider />
       </div>
 
-      {/* Inflytt */}
-      <div className="hidden lg:block">
-        <Field label="Inflytt" icon={<Calendar size={15} />}>
-          <select
-            className="bg-transparent text-[14px] outline-none appearance-none cursor-pointer w-full"
-            style={{ color: '#6D716C' }}
-            aria-label="Inflytt"
-            defaultValue=""
-          >
-            <option value="" disabled>Flexibelt</option>
-            {MOVE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-          </select>
-        </Field>
+      {/* ── Inflytt ── */}
+      <div className="hidden lg:block flex-1 min-w-0">
+        <SelectField label="Inflytt" placeholder="Flexibelt" options={MOVE_OPTIONS} />
       </div>
 
-      {/* Search button */}
-      <div className="p-3 flex items-center flex-shrink-0">
+      {/* ── Search button ── */}
+      <div className="p-2.5 flex-shrink-0">
         <button
           type="submit"
-          className="w-[52px] h-[52px] rounded-[14px] flex items-center justify-center text-white transition-all hover:-translate-y-[1px] hover:shadow-lg hover:opacity-90 active:translate-y-0"
-          style={{ backgroundColor: '#153F32' }}
           aria-label="Sök"
+          className="flex items-center justify-center text-white transition-all hover:opacity-90 hover:-translate-y-[1px] active:translate-y-0"
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 16,
+            backgroundColor: '#153F32',
+          }}
         >
-          <Search size={19} />
+          <Search size={18} strokeWidth={2} />
         </button>
       </div>
     </form>
+  )
+}
+
+function Divider() {
+  return (
+    <div
+      className="h-8 w-px flex-shrink-0"
+      style={{ backgroundColor: 'rgba(21,63,50,0.10)' }}
+    />
+  )
+}
+
+function SelectField({ label, placeholder, options }: {
+  label: string
+  placeholder: string
+  options: string[]
+}) {
+  return (
+    <div className="px-5 py-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.10em] mb-0.5" style={{ color: '#A8B9A4' }}>
+        {label}
+      </p>
+      <select
+        defaultValue=""
+        aria-label={label}
+        className="bg-transparent text-[14px] font-medium outline-none appearance-none cursor-pointer w-full"
+        style={{ color: '#6D716C' }}
+      >
+        <option value="" disabled>{placeholder}</option>
+        {options.map((o) => (
+          <option key={o} value={o}>{o}</option>
+        ))}
+      </select>
+    </div>
   )
 }
