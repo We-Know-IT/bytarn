@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { ArrowRight, Shield, Star } from 'lucide-react'
+import { ArrowRight, Shield } from 'lucide-react'
 import { MOCK_LISTINGS } from '@/lib/mock-data'
 import ListingCard from '@/components/ListingCard'
 import HeroSearch from '@/components/HeroSearch'
@@ -270,27 +270,6 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* Trust metrics */}
-            <div className="flex items-center gap-0 flex-wrap">
-              {[
-                { value: '1 250+', label: 'Aktiva annonser' },
-                { value: '340', label: 'Genomförda byten' },
-                { value: '4.8 / 5', label: 'Snittbetyg' },
-                { value: '100%', label: 'Verifierade' },
-              ].map((m, i) => (
-                <div key={m.label} className="flex items-center">
-                  {i > 0 && (
-                    <div className="w-px h-8 mx-5 flex-shrink-0" style={{ backgroundColor: 'rgba(21,63,50,0.12)' }} />
-                  )}
-                  <div>
-                    <p className="text-[20px] font-bold leading-none mb-0.5" style={{ color: '#15211E' }}>
-                      {m.value}
-                    </p>
-                    <p className="text-[12px]" style={{ color: '#9EA69D' }}>{m.label}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* ── Right column: property cards ── */}
@@ -580,12 +559,6 @@ export default function HomePage() {
                         <p className="text-[12px]" style={{ color: '#9EA69D' }}>Identitet bekräftad</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      {[1, 2, 3, 4, 5].map((n) => (
-                        <Star key={n} size={13} fill="#D9C2A3" style={{ color: '#D9C2A3' }} />
-                      ))}
-                      <span className="text-[12px] ml-2" style={{ color: '#9EA69D' }}>4.9 av 5</span>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -673,14 +646,6 @@ export default function HomePage() {
               <p className="text-[14px] leading-relaxed max-w-[230px] mb-5" style={{ color: 'rgba(255,255,255,0.38)' }}>
                 Stockholms enklaste sätt att byta bostad — utan kö och utan mäklare.
               </p>
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <Star key={n} size={12} fill="#D9C2A3" style={{ color: '#D9C2A3' }} />
-                ))}
-                <span className="text-[12px] ml-1.5" style={{ color: 'rgba(255,255,255,0.28)' }}>
-                  4.8 av 5
-                </span>
-              </div>
             </div>
 
             {/* Link columns */}
