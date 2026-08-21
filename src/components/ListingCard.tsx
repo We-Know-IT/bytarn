@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Heart, Home } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { Listing } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -18,11 +18,38 @@ function matchPercent(matchCount: number): number | null {
 
 export default function ListingCard({ listing, compact = false }: ListingCardProps) {
   const [favorited, setFavorited] = useState(false)
+  const [imgIndex, setImgIndex] = useState(0)
   const [imgError, setImgError] = useState(false)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pct = matchPercent(listing.matchCount)
 
+  const images = listing.images.filter(Boolean)
+  const hasMultiple = images.length > 1
+
+  function startRotation() {
+    if (!hasMultiple) return
+    intervalRef.current = setInterval(() => {
+      setImgIndex((i) => (i + 1) % images.length)
+    }, 3000)
+  }
+
+  function stopRotation() {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+    setImgIndex(0)
+  }
+
+  useEffect(() => () => stopRotation(), [])
+
   return (
-    <Link href={`/annonser/${listing.id}`} className="group block">
+    <Link
+      href={`/annonser/${listing.id}`}
+      className="group block"
+      onMouseEnter={startRotation}
+      onMouseLeave={stopRotation}
+    >
       <article
         className="bg-white card-lift"
         style={{
@@ -34,11 +61,11 @@ export default function ListingCard({ listing, compact = false }: ListingCardPro
       >
         {/* ─── Image ─── */}
         <div className="relative overflow-hidden" style={{ aspectRatio: '4/3', backgroundColor: '#E3EBE2' }}>
-          {!imgError && listing.images[0] ? (
+          {!imgError && images[imgIndex] ? (
             <img
-              src={listing.images[0]}
+              src={images[imgIndex]}
               alt={listing.title}
-              className="w-full h-full object-cover img-zoom"
+              className="w-full h-full object-cover img-zoom transition-opacity duration-300"
               onError={() => setImgError(true)}
             />
           ) : (
@@ -82,10 +109,27 @@ export default function ListingCard({ listing, compact = false }: ListingCardPro
             <Heart size={14} fill={favorited ? 'currentColor' : 'none'} />
           </button>
 
-          {/* Image count */}
-          {listing.images.length > 1 && (
+          {/* Image counter / dots */}
+          {hasMultiple && (
             <div className="absolute bottom-3 right-3 bg-black/35 text-white text-[11px] px-2 py-0.5 rounded-full font-medium">
-              1/{listing.images.length}
+              {imgIndex + 1}/{images.length}
+            </div>
+          )}
+
+          {/* Dot indicators */}
+          {hasMultiple && (
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
+              {images.map((_, i) => (
+                <div
+                  key={i}
+                  className="rounded-full transition-all duration-300"
+                  style={{
+                    width: i === imgIndex ? 16 : 6,
+                    height: 6,
+                    backgroundColor: i === imgIndex ? 'white' : 'rgba(255,255,255,0.5)',
+                  }}
+                />
+              ))}
             </div>
           )}
         </div>
