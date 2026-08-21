@@ -360,7 +360,7 @@ export default function HomePage() {
 
           {/* Filter chips */}
           <div className="flex items-center gap-2 mb-8 flex-wrap">
-            {['Alla', 'Lägenhet', 'Radhus', 'Villa'].map((chip, i) => (
+            {['Alla', 'Lägenhet'].map((chip, i) => (
               <button
                 key={chip}
                 className="px-4 py-2 rounded-full text-[13px] font-medium transition-all"
