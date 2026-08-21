@@ -9,8 +9,8 @@ const STEPS = [
   },
   {
     step: '02',
-    title: 'Hitta matchningar',
-    desc: 'Vår algoritm matchar dig med personer som har omvända önskemål. Du ser deras profil och annons.',
+    title: 'Algoritmen jobbar åt dig',
+    desc: 'Vi analyserar ömsesidig önskan, rumspassning, hyresbalans och dina extrakrav — och presenterar bara de byten som faktiskt kan fungera för båda parter.',
   },
   {
     step: '03',
@@ -21,6 +21,29 @@ const STEPS = [
     step: '04',
     title: 'Byt bostad',
     desc: 'Ni bestämmer villkor och datum er emellan. Bytaren är plattformen — ni är de som gör affären.',
+  },
+]
+
+const MATCH_CRITERIA = [
+  {
+    icon: '⇄',
+    title: 'Ömsesidig önskan',
+    desc: 'Du vill dit de bor — de vill dit du bor. Matchningen kräver att båda parter pekar på varandra. Inga halvdana byten.',
+  },
+  {
+    icon: '◫',
+    title: 'Rumspassning',
+    desc: 'Ditt antal rum matchar mot vad motparten söker, och vice versa. En 3 rok möter en som faktiskt vill ha 3 rok.',
+  },
+  {
+    icon: '≈',
+    title: 'Hyresbalans',
+    desc: 'Motorn väger hyrornas nivåer mot varandra. Byten med rimliga skillnader lyfts — extrema obalanser sållas bort.',
+  },
+  {
+    icon: '✦',
+    title: 'Extrakrav matchas',
+    desc: 'Balkong, hiss, husdjur tillåtet. Dina måsten vägs mot motpartens bostad — så du aldrig behöver kompromissa i onödan.',
   },
 ]
 
@@ -103,6 +126,51 @@ export default function HurDetFungerar() {
                 <p className="text-[14px] leading-[1.65]" style={{ color: '#6D716C' }}>
                   {s.desc}
                 </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Matching deep-dive */}
+      <section style={{ paddingTop: 80, paddingBottom: 80, backgroundColor: '#FBFAF7' }}>
+        <div className="max-w-[1360px] mx-auto px-6 sm:px-10">
+          <div className="max-w-xl mb-12">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] mb-3" style={{ color: '#A8B9A4' }}>
+              Matchningsmotorn
+            </p>
+            <h2
+              className="font-display mb-4"
+              style={{
+                fontSize: 'clamp(28px, 3vw, 42px)',
+                fontStyle: 'italic',
+                lineHeight: 1.05,
+                color: '#15211E',
+              }}
+            >
+              Vad avgör om det är ett bra byte?
+            </h2>
+            <p className="text-[15px] leading-[1.65]" style={{ color: '#6D716C' }}>
+              Istället för att du ska bläddra igenom hundratals annonser gör vår algoritm jobbet.
+              Den väger fyra faktorer mot varandra och presenterar bara de byten som faktiskt kan fungera — för båda.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {MATCH_CRITERIA.map((c) => (
+              <div
+                key={c.title}
+                className="p-6 rounded-2xl"
+                style={{ backgroundColor: 'rgba(21,63,50,0.04)', border: '1px solid rgba(21,63,50,0.08)' }}
+              >
+                <div
+                  className="w-10 h-10 rounded-2xl flex items-center justify-center text-base font-semibold mb-5"
+                  style={{ backgroundColor: 'rgba(21,63,50,0.09)', color: '#153F32' }}
+                >
+                  {c.icon}
+                </div>
+                <h3 className="text-[16px] font-semibold mb-2" style={{ color: '#15211E' }}>{c.title}</h3>
+                <p className="text-[14px] leading-[1.65]" style={{ color: '#6D716C' }}>{c.desc}</p>
               </div>
             ))}
           </div>
