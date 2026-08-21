@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -71,6 +71,9 @@ export default function ListingDetailPage() {
     setCurrentImg((i) => (i + dir + listing.images.length) % listing.images.length)
     resetAutoPlay.current += 1
   }
+
+  // Stable reference — prevents ListingMap from reinitializing on every auto-rotate tick
+  const mapListings = useMemo(() => (listing ? [listing] : []), [listing?.id])
 
   const sameDist = MOCK_LISTINGS.filter(
     (l) => l.id !== listing.id && l.district === listing.district && l.status === 'aktiv'
@@ -290,7 +293,11 @@ export default function ListingDetailPage() {
           <div className="mb-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-3">Läge</h2>
             <div className="h-56 rounded-2xl overflow-hidden border border-gray-100">
-              <ListingMap listings={[listing]} />
+              <ListingMap
+                listings={mapListings}
+                zoom={15}
+                center={[listing.lat, listing.lng]}
+              />
             </div>
           </div>
 

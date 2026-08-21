@@ -10,9 +10,11 @@ interface ListingMapProps {
   listings: Listing[]
   selectedId?: string | null
   onSelect?: (id: string | null) => void
+  zoom?: number
+  center?: [number, number]
 }
 
-export default function ListingMap({ listings, selectedId, onSelect }: ListingMapProps) {
+export default function ListingMap({ listings, selectedId, onSelect, zoom = 12, center }: ListingMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
   const markersRef = useRef<any[]>([])
@@ -29,9 +31,10 @@ export default function ListingMap({ listings, selectedId, onSelect }: ListingMa
         mapInstanceRef.current = null
       }
 
+      const defaultCenter: [number, number] = center ?? [59.334591, 18.063240]
       const map = L.map(mapRef.current!, {
-        center: [59.334591, 18.063240],
-        zoom: 12,
+        center: defaultCenter,
+        zoom,
         zoomControl: true,
       })
 
@@ -41,6 +44,9 @@ export default function ListingMap({ listings, selectedId, onSelect }: ListingMa
       }).addTo(map)
 
       mapInstanceRef.current = map
+
+      // Force Leaflet to recalculate dimensions once the container is painted
+      setTimeout(() => map.invalidateSize(), 0)
 
       // Home pin — current user's location
       const homeIcon = L.divIcon({
