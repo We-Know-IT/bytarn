@@ -26,7 +26,8 @@ export async function GET(request: NextRequest) {
     const claims = payload as unknown as BankIdClaims
 
     const personalIdNumber = claims['https://claims.oidc.se/1.0/personalIdentityNumber']
-    const name = claims.name ?? [claims.given_name, claims.family_name].filter(Boolean).join(' ') || 'BankID-användare'
+    const name =
+      claims.name ?? ([claims.given_name, claims.family_name].filter(Boolean).join(' ') || 'BankID-användare')
 
     if (!personalIdNumber) {
       throw new Error('Inget personnummer i BankID-svaret.')
