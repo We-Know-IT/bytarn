@@ -1,12 +1,53 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
-import { Eye, EyeOff } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { Eye, EyeOff, Fingerprint, Loader2 } from 'lucide-react'
+import { createClient, supabaseConfigured } from '@/lib/supabase/client'
+
+const BANKID_ERRORS: Record<string, string> = {
+  bankid: 'BankID-inloggningen misslyckades. Försök igen.',
+  bankid_state: 'Sessionen tog för lång tid. Försök igen.',
+}
 
 export default function LoggaInPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoggaInForm />
+    </Suspense>
+  )
+}
+
+function LoggaInForm() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const bankIdError = searchParams.get('fel')
   const [showPassword, setShowPassword] = useState(false)
   const [form, setForm] = useState({ email: '', password: '' })
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function handleLogin() {
+    setError(null)
+    if (!supabaseConfigured) {
+      setError('Backend är inte konfigurerad i den här miljön ännu (saknar Supabase-uppgifter).')
+      return
+    }
+    setLoading(true)
+    const supabase = createClient()
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: form.email,
+      password: form.password,
+    })
+    setLoading(false)
+    if (authError) {
+      setError(authError.message === 'Invalid login credentials' ? 'Fel e-post eller lösenord.' : authError.message)
+      return
+    }
+    router.push('/mina-sidor')
+    router.refresh()
+  }
 
   return (
     <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12 bg-gray-50">
@@ -19,6 +60,21 @@ export default function LoggaInPage() {
             <h1 className="text-2xl font-bold text-gray-900">Välkommen tillbaka</h1>
             <p className="text-gray-500 text-sm mt-1">Logga in på ditt konto</p>
           </div>
+
+          {bankIdError && (
+            <div className="mb-4 px-3 py-2.5 rounded-lg bg-red-50 text-red-700 text-sm">
+              {BANKID_ERRORS[bankIdError] ?? 'Något gick fel. Försök igen.'}
+            </div>
+          )}
+
+          {/* BankID */}
+          <a
+            href="/api/auth/bankid/start"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-[#0e5c9e] text-white rounded-xl text-sm font-semibold hover:bg-[#0a4a80] transition-colors mb-3"
+          >
+            <Fingerprint size={18} strokeWidth={2} />
+            Logga in med BankID
+          </a>
 
           {/* Google */}
           <button className="w-full flex items-center justify-center gap-3 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors mb-4">
@@ -33,9 +89,13 @@ export default function LoggaInPage() {
 
           <div className="flex items-center gap-3 my-4">
             <div className="flex-1 h-px bg-gray-100" />
-            <span className="text-xs text-gray-400">eller</span>
+            <span className="text-xs text-gray-400">eller med lösenord</span>
             <div className="flex-1 h-px bg-gray-100" />
           </div>
+
+          {error && (
+            <div className="mb-4 px-3 py-2.5 rounded-lg bg-red-50 text-red-700 text-sm">{error}</div>
+          )}
 
           <div className="space-y-4">
             <div>
@@ -74,9 +134,11 @@ export default function LoggaInPage() {
             </div>
 
             <button
-              onClick={() => alert('Auth är inte kopplad till backend ännu.')}
-              className="w-full py-3.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors"
+              onClick={handleLogin}
+              disabled={loading || !form.email || !form.password}
+              className="w-full py-3.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
+              {loading && <Loader2 size={16} className="animate-spin" />}
               Logga in
             </button>
           </div>

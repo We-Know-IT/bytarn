@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import dynamic from 'next/dynamic'
-import { MOCK_LISTINGS, CURRENT_USER_HOME } from '@/lib/mock-data'
+import { CURRENT_USER_HOME } from '@/lib/mock-data'
+import { fetchListings } from '@/lib/listings'
 import SearchFiltersComponent from '@/components/SearchFilters'
 import ListingCard from '@/components/ListingCard'
-import type { SearchFilters } from '@/types'
+import type { Listing, SearchFilters } from '@/types'
 import { haversineKm } from '@/lib/utils'
+import { Home } from 'lucide-react'
 
 const ListingMap = dynamic(() => import('@/components/ListingMap'), {
   ssr: false,
@@ -26,9 +28,17 @@ export default function AnnonserPage() {
     sort: 'newest',
   })
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [listings, setListings] = useState<Listing[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchListings()
+      .then(setListings)
+      .finally(() => setLoading(false))
+  }, [])
 
   const filtered = useMemo(() => {
-    const results = MOCK_LISTINGS.filter((l) => {
+    const results = listings.filter((l) => {
       if (l.status !== 'aktiv') return false
       if (filters.districts.length > 0 && !filters.districts.includes(l.district)) return false
       if (filters.rooms.length > 0 && !filters.rooms.includes(l.rooms)) return false
@@ -49,7 +59,7 @@ export default function AnnonserPage() {
         default: return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       }
     })
-  }, [filters])
+  }, [filters, listings])
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 64px)' }}>
@@ -63,10 +73,16 @@ export default function AnnonserPage() {
         /* List view */
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="h-64 rounded-2xl bg-gray-100 animate-pulse" />
+                ))}
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="text-center py-20">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">🏠</span>
+                  <Home size={26} className="text-gray-400" strokeWidth={1.75} />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Inga annonser hittades</h3>
                 <p className="text-gray-500 text-sm">Prova att ändra dina filter.</p>

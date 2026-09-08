@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, CheckCircle, MapPin, Home, Users, Bell } from 'lucide-react'
+import { ArrowRight, CheckCircle, MapPin, Home, Users, Bell, Map, Handshake, MessageSquare } from 'lucide-react'
 import { STOCKHOLM_DISTRICTS } from '@/types'
 import { cn } from '@/lib/utils'
 import AddressInput from '@/components/AddressInput'
@@ -89,7 +89,7 @@ export default function OnboardingPage() {
           {step === 0 && (
             <div className="text-center">
               <div className="w-20 h-20 bg-emerald-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                <span className="text-4xl">🏠</span>
+                <Home size={36} className="text-emerald-600" strokeWidth={1.75} />
               </div>
               <h1 className="text-2xl font-bold text-gray-900 mb-3">Välkommen till Bytaren!</h1>
               <p className="text-gray-500 mb-6 leading-relaxed">
@@ -97,8 +97,16 @@ export default function OnboardingPage() {
                 Vi hjälper dig hitta rätt match på bara några minuter.
               </p>
               <div className="space-y-3 text-left mb-8">
-                {['✅ Lägg upp din bostad gratis', '🗺️ Utforska annonser på karta', '🤝 Matchas med rätt bytespartner', '💬 Chatta direkt i appen'].map((item) => (
-                  <div key={item} className="text-sm text-gray-700">{item}</div>
+                {[
+                  { Icon: CheckCircle, text: 'Lägg upp din bostad gratis' },
+                  { Icon: Map, text: 'Utforska annonser på karta' },
+                  { Icon: Handshake, text: 'Matchas med rätt bytespartner' },
+                  { Icon: MessageSquare, text: 'Chatta direkt i appen' },
+                ].map(({ Icon, text }) => (
+                  <div key={text} className="flex items-center gap-2.5 text-sm text-gray-700">
+                    <Icon size={16} className="text-emerald-600 flex-shrink-0" strokeWidth={1.75} />
+                    {text}
+                  </div>
                 ))}
               </div>
               <button
@@ -283,9 +291,9 @@ export default function OnboardingPage() {
               <div className="mt-6 p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
                 <h3 className="text-sm font-semibold text-emerald-800 mb-1">Din bostad</h3>
                 <div className="text-xs text-emerald-700 space-y-0.5">
-                  <p>📍 {rooms} rum i {district}{address ? ` — ${address.split(',')[0]}` : ''}</p>
-                  {wantDistricts.length > 0 && <p>🔍 Söker i: {wantDistricts.join(', ')}</p>}
-                  {wantRooms.length > 0 && <p>🏠 Vill ha: {wantRooms.join(', ')} rum</p>}
+                  <p>{rooms} rum i {district}{address ? ` — ${address.split(',')[0]}` : ''}</p>
+                  {wantDistricts.length > 0 && <p>Söker i: {wantDistricts.join(', ')}</p>}
+                  {wantRooms.length > 0 && <p>Vill ha: {wantRooms.join(', ')} rum</p>}
                 </div>
               </div>
 

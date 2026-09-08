@@ -1,14 +1,40 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Eye, EyeOff, CheckCircle } from 'lucide-react'
+import { Eye, EyeOff, CheckCircle, Fingerprint } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { createClient, supabaseConfigured } from '@/lib/supabase/client'
 
 export default function RegistreraPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', password: '' })
   const [agreed, setAgreed] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function handleSignUp() {
+    setError(null)
+    if (!supabaseConfigured) {
+      setError('Backend är inte konfigurerad i den här miljön ännu (saknar Supabase-uppgifter).')
+      return
+    }
+    setLoading(true)
+    const supabase = createClient()
+    const { error: authError } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+      options: { data: { name: form.name } },
+    })
+    setLoading(false)
+    if (authError) {
+      setError(authError.message)
+      return
+    }
+    router.push('/onboarding')
+  }
 
   const passwordStrength = form.password.length === 0
     ? 0
@@ -30,6 +56,15 @@ export default function RegistreraPage() {
             <p className="text-gray-500 text-sm mt-1">Gratis, alltid</p>
           </div>
 
+          {/* BankID */}
+          <a
+            href="/api/auth/bankid/start"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-[#0e5c9e] text-white rounded-xl text-sm font-semibold hover:bg-[#0a4a80] transition-colors mb-3"
+          >
+            <Fingerprint size={18} strokeWidth={2} />
+            Skapa konto med BankID
+          </a>
+
           {/* Google */}
           <button className="w-full flex items-center justify-center gap-3 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors mb-4">
             <svg width="18" height="18" viewBox="0 0 18 18">
@@ -43,9 +78,13 @@ export default function RegistreraPage() {
 
           <div className="flex items-center gap-3 my-4">
             <div className="flex-1 h-px bg-gray-100" />
-            <span className="text-xs text-gray-400">eller</span>
+            <span className="text-xs text-gray-400">eller med lösenord</span>
             <div className="flex-1 h-px bg-gray-100" />
           </div>
+
+          {error && (
+            <div className="mb-4 px-3 py-2.5 rounded-lg bg-red-50 text-red-700 text-sm">{error}</div>
+          )}
 
           <div className="space-y-4">
             <div>
@@ -126,11 +165,11 @@ export default function RegistreraPage() {
             </label>
 
             <button
-              disabled={!agreed || !form.name || !form.email || form.password.length < 8}
-              onClick={() => window.location.href = '/onboarding'}
+              disabled={loading || !agreed || !form.name || !form.email || form.password.length < 8}
+              onClick={handleSignUp}
               className="w-full py-3.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              Skapa konto
+              {loading ? 'Skapar konto…' : 'Skapa konto'}
             </button>
           </div>
 

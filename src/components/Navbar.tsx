@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Menu, X, MessageSquare, Heart, PlusCircle, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/context/AuthContext'
 
 const NAV_LINKS = [
   { href: '/annonser', label: 'Hitta byte' },
@@ -25,6 +26,8 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const pathname = usePathname()
+  const { user, profile } = useAuth()
+  const initial = (profile?.name ?? user?.email ?? '?').charAt(0).toUpperCase()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
@@ -123,27 +126,31 @@ export default function Navbar() {
 
           <div className="w-px h-5 mx-1" style={{ backgroundColor: 'rgba(21,63,50,0.12)' }} />
 
-          <Link
-            href="/mina-sidor"
-            className="flex items-center gap-2 px-3 py-2 rounded-xl transition-colors hover:bg-[rgba(21,63,50,0.06)]"
-          >
-            <div
-              className="w-7 h-7 rounded-full flex items-center justify-center ring-1 ring-[#A8B9A4] flex-shrink-0"
-              style={{ backgroundColor: '#E3EBE2' }}
+          {user ? (
+            <Link
+              href="/mina-sidor"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl transition-colors hover:bg-[rgba(21,63,50,0.06)]"
             >
-              <span className="text-[11px] font-bold" style={{ color: '#153F32' }}>A</span>
-            </div>
-            <span className="text-[14px] font-medium" style={{ color: '#15211E' }}>Anna</span>
-            <ChevronDown size={12} style={{ color: '#9EA69D' }} />
-          </Link>
-
-          <Link
-            href="/logga-in"
-            className="ml-1 px-5 py-2.5 text-[14px] font-semibold rounded-xl text-white transition-all hover:-translate-y-[1px] hover:shadow-lg active:translate-y-0"
-            style={{ backgroundColor: '#153F32' }}
-          >
-            Logga in
-          </Link>
+              <div
+                className="w-7 h-7 rounded-full flex items-center justify-center ring-1 ring-[#A8B9A4] flex-shrink-0"
+                style={{ backgroundColor: '#E3EBE2' }}
+              >
+                <span className="text-[11px] font-bold" style={{ color: '#153F32' }}>{initial}</span>
+              </div>
+              <span className="text-[14px] font-medium" style={{ color: '#15211E' }}>
+                {profile?.name?.split(' ')[0] ?? 'Konto'}
+              </span>
+              <ChevronDown size={12} style={{ color: '#9EA69D' }} />
+            </Link>
+          ) : (
+            <Link
+              href="/logga-in"
+              className="ml-1 px-5 py-2.5 text-[14px] font-semibold rounded-xl text-white transition-all hover:-translate-y-[1px] hover:shadow-lg active:translate-y-0"
+              style={{ backgroundColor: '#153F32' }}
+            >
+              Logga in
+            </Link>
+          )}
         </div>
 
         {/* ─── Mobile toggle ─── */}

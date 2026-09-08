@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Send, Image as ImageIcon, Paperclip } from 'lucide-react'
+import { ArrowLeft, Send, Image as ImageIcon, Paperclip, Handshake } from 'lucide-react'
 import { MOCK_CONVERSATIONS, MOCK_MESSAGES } from '@/lib/mock-data'
 import { formatMessageTime, cn } from '@/lib/utils'
 import type { Message } from '@/types'
@@ -94,8 +94,9 @@ export default function ConversationPage() {
           <p className="text-xs text-gray-400">{conv.listingTitle}</p>
         </div>
         {conv.mutualInterest && (
-          <span className="text-xs bg-emerald-100 text-emerald-700 font-medium px-2 py-1 rounded-full">
-            🤝 Match!
+          <span className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 font-medium px-2 py-1 rounded-full">
+            <Handshake size={12} strokeWidth={2} />
+            Match!
           </span>
         )}
         <Link
