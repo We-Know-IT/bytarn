@@ -1,6 +1,12 @@
-import { MOCK_LISTINGS } from '@/lib/mock-data'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
 import { formatDate } from '@/lib/utils'
+import { fetchListings } from '@/lib/listings'
+import { createClient, supabaseConfigured } from '@/lib/supabase/client'
 import ListingCard from '@/components/ListingCard'
+import type { Listing } from '@/types'
 import Link from 'next/link'
 import { MessageSquare, ArrowLeft } from 'lucide-react'
 
@@ -11,11 +17,38 @@ const MOCK_USERS: Record<string, { name: string; avatar?: string; bio?: string; 
   u4: { name: 'Johan Holm', avatar: 'https://i.pravatar.cc/150?img=55', joinedAt: '2026-05-20T00:00:00Z' },
 }
 
-export default function ProfilPage({ params }: { params: { id: string } }) {
-  const user = MOCK_USERS[params.id]
-  const listings = MOCK_LISTINGS.filter((l) => l.userId === params.id && l.status === 'aktiv')
+export default function ProfilPage() {
+  const params = useParams()
+  const id = params.id as string
+  const [profileUser, setProfileUser] = useState<{ name: string; avatar?: string; bio?: string; joinedAt: string } | null | undefined>(undefined)
+  const [listings, setListings] = useState<Listing[]>([])
 
-  if (!user) {
+  useEffect(() => {
+    fetchListings().then((all) => setListings(all.filter((l) => l.userId === id && l.status === 'aktiv')))
+
+    if (!supabaseConfigured) {
+      setProfileUser(MOCK_USERS[id] ?? null)
+      return
+    }
+    createClient()
+      .from('profiles')
+      .select('name, avatar_url, bio, created_at')
+      .eq('id', id)
+      .single()
+      .then(({ data }) => {
+        setProfileUser(
+          data
+            ? { name: data.name, avatar: data.avatar_url ?? undefined, bio: data.bio ?? undefined, joinedAt: data.created_at }
+            : null
+        )
+      })
+  }, [id])
+
+  if (profileUser === undefined) {
+    return <div className="min-h-screen flex items-center justify-center text-gray-400 text-sm">Laddar profil…</div>
+  }
+
+  if (!profileUser) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -25,6 +58,8 @@ export default function ProfilPage({ params }: { params: { id: string } }) {
       </div>
     )
   }
+
+  const user = profileUser
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">

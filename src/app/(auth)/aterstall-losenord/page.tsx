@@ -3,10 +3,32 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { ArrowLeft, Mail } from 'lucide-react'
+import { createClient, supabaseConfigured } from '@/lib/supabase/client'
 
 export default function AterstallLosenordPage() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function handleReset() {
+    setError(null)
+    if (!supabaseConfigured) {
+      setError('Backend är inte konfigurerad i den här miljön ännu.')
+      return
+    }
+    setLoading(true)
+    const supabase = createClient()
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/logga-in`,
+    })
+    setLoading(false)
+    if (resetError) {
+      setError(resetError.message)
+      return
+    }
+    setSent(true)
+  }
 
   return (
     <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12 bg-gray-50">
@@ -51,12 +73,13 @@ export default function AterstallLosenordPage() {
                   />
                 </div>
                 <button
-                  onClick={() => setSent(true)}
-                  disabled={!email}
+                  onClick={handleReset}
+                  disabled={!email || loading}
                   className="w-full py-3.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  Skicka återställningslänk
+                  {loading ? 'Skickar…' : 'Skicka återställningslänk'}
                 </button>
+                {error && <p className="text-sm text-red-600">{error}</p>}
               </div>
 
               <div className="text-center mt-6">

@@ -15,8 +15,14 @@ import {
   Share2,
   Flag,
   X,
+  MoveVertical,
+  Trees,
+  Sofa,
+  PawPrint,
+  Handshake,
 } from 'lucide-react'
-import { MOCK_LISTINGS } from '@/lib/mock-data'
+import { fetchListingById, fetchListings } from '@/lib/listings'
+import type { Listing } from '@/types'
 import { formatRent, formatDate, cn } from '@/lib/utils'
 import ListingCard from '@/components/ListingCard'
 import dynamic from 'next/dynamic'
@@ -25,13 +31,28 @@ const ListingMap = dynamic(() => import('@/components/ListingMap'), { ssr: false
 
 export default function ListingDetailPage() {
   const params = useParams()
-  const listing = MOCK_LISTINGS.find((l) => l.id === params.id)
+  const [listing, setListing] = useState<Listing | null | undefined>(undefined)
+  const [allListings, setAllListings] = useState<Listing[]>([])
   const [currentImg, setCurrentImg] = useState(0)
   const [lightbox, setLightbox] = useState(false)
   const [interested, setInterested] = useState(false)
   const [favorited, setFavorited] = useState(false)
   const [copied, setCopied] = useState(false)
   const resetAutoPlay = useRef(0)
+
+  useEffect(() => {
+    const id = params.id as string
+    fetchListingById(id).then(setListing)
+    fetchListings().then(setAllListings)
+  }, [params.id])
+
+  if (listing === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-400 text-sm">
+        Laddar annons…
+      </div>
+    )
+  }
 
   if (!listing) {
     return (
@@ -75,12 +96,12 @@ export default function ListingDetailPage() {
   // Stable reference — prevents ListingMap from reinitializing on every auto-rotate tick
   const mapListings = useMemo(() => (listing ? [listing] : []), [listing?.id])
 
-  const sameDist = MOCK_LISTINGS.filter(
+  const sameDist = allListings.filter(
     (l) => l.id !== listing.id && l.district === listing.district && l.status === 'aktiv'
   )
   const similarListings = sameDist.length > 0
     ? sameDist.slice(0, 3)
-    : MOCK_LISTINGS.filter((l) => l.id !== listing.id && l.status === 'aktiv').slice(0, 3)
+    : allListings.filter((l) => l.id !== listing.id && l.status === 'aktiv').slice(0, 3)
   const similarLabel = sameDist.length > 0 ? `Fler annonser i ${listing.district}` : 'Fler annonser'
 
   return (
@@ -260,10 +281,10 @@ export default function ListingDetailPage() {
           {/* Amenities */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             {[
-              { label: 'Hiss', value: listing.elevator, icon: '🛗' },
-              { label: 'Balkong', value: listing.balcony, icon: '🌿' },
-              { label: 'Möblerad', value: listing.furnished, icon: '🛋️' },
-              { label: 'Husdjur OK', value: listing.petsAllowed, icon: '🐾' },
+              { label: 'Hiss', value: listing.elevator, Icon: MoveVertical },
+              { label: 'Balkong', value: listing.balcony, Icon: Trees },
+              { label: 'Möblerad', value: listing.furnished, Icon: Sofa },
+              { label: 'Husdjur OK', value: listing.petsAllowed, Icon: PawPrint },
             ].map((item) => (
               <div
                 key={item.label}
@@ -272,7 +293,7 @@ export default function ListingDetailPage() {
                   item.value ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-400'
                 )}
               >
-                <span>{item.icon}</span>
+                <item.Icon size={16} strokeWidth={1.75} />
                 <span className="font-medium">{item.label}</span>
                 {item.value ? (
                   <CheckCircle size={14} className="ml-auto text-emerald-500" />
@@ -354,7 +375,7 @@ export default function ListingDetailPage() {
               {/* Match indicator */}
               {listing.matchCount > 0 && (
                 <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl mb-4">
-                  <span className="text-emerald-600 text-lg">🤝</span>
+                  <Handshake size={18} className="text-emerald-600 flex-shrink-0" strokeWidth={1.75} />
                   <div>
                     <p className="text-xs font-semibold text-emerald-700">Ömsesidigt intresse!</p>
                     <p className="text-xs text-emerald-600">Ni har båda visat intresse.</p>
@@ -373,7 +394,13 @@ export default function ListingDetailPage() {
                       : 'bg-emerald-600 text-white hover:bg-emerald-700'
                   )}
                 >
-                  {interested ? '✓ Intresseanmälan skickad' : 'Visa intresse'}
+                  {interested ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <CheckCircle size={16} /> Intresseanmälan skickad
+                    </span>
+                  ) : (
+                    'Visa intresse'
+                  )}
                 </button>
 
                 <Link

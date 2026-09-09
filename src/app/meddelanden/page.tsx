@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { MessageSquare } from 'lucide-react'
+import { MessageSquare, Handshake } from 'lucide-react'
 import { MOCK_CONVERSATIONS } from '@/lib/mock-data'
 import { formatMessageTime, cn } from '@/lib/utils'
 
@@ -79,8 +79,9 @@ export default function MeddelandenPage() {
 
                 {/* Match badge */}
                 {conv.mutualInterest && (
-                  <span className="flex-shrink-0 text-xs bg-emerald-100 text-emerald-700 font-medium px-2 py-1 rounded-full">
-                    🤝 Match
+                  <span className="flex-shrink-0 inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 font-medium px-2 py-1 rounded-full">
+                    <Handshake size={12} strokeWidth={2} />
+                    Match
                   </span>
                 )}
               </Link>

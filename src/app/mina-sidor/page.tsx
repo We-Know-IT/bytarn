@@ -2,40 +2,40 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Settings, Heart, Home, MessageSquare, Plus, Edit2, Trash2, Eye, EyeOff, Bookmark, Bell, CheckCircle2, Circle } from 'lucide-react'
+import { Settings, Heart, Home, MessageSquare, Plus, Edit2, Trash2, Eye, EyeOff, Bookmark, LogOut, CheckCircle2, Circle } from 'lucide-react'
 import { MOCK_LISTINGS } from '@/lib/mock-data'
+import { fetchListings } from '@/lib/listings'
+import { useAuth } from '@/context/AuthContext'
+import { supabaseConfigured } from '@/lib/supabase/client'
 import ListingCard from '@/components/ListingCard'
 import { cn, formatDate } from '@/lib/utils'
-import type { SavedSearch } from '@/types'
+import type { Listing, SavedSearch } from '@/types'
 
 type Tab = 'annonser' | 'favoriter' | 'intresse' | 'sparade'
 
-const MOCK_ACTIVITY = [
-  { id: '1', text: 'Sofia K. visade intresse för din annons', time: '2026-08-21T10:30:00Z', icon: '👀' },
-  { id: '2', text: 'Ny match! Du och Erik M. har ömsesidigt intresse', time: '2026-08-21T09:15:00Z', icon: '🤝' },
-  { id: '3', text: 'Erik M. skickade ett meddelande', time: '2026-08-20T18:00:00Z', icon: '💬' },
-  { id: '4', text: '3 personer tittade på din annons idag', time: '2026-08-20T16:45:00Z', icon: '👁️' },
-  { id: '5', text: 'Din annons fick 5 nya visningar den senaste timmen', time: '2026-08-20T12:00:00Z', icon: '📈' },
-]
-
-const MOCK_ME = {
-  name: 'Anna Svensson',
-  email: 'anna@example.com',
-  avatar: 'https://i.pravatar.cc/150?img=47',
-  joinedAt: '2026-06-01T00:00:00Z',
-}
-
-const MY_LISTINGS = MOCK_LISTINGS.filter((l) => l.userId === 'u1')
-const FAVORITE_LISTINGS = MOCK_LISTINGS.filter((l) => ['2', '5', '6'].includes(l.id))
-
 export default function MinaSidorPage() {
+  const { user, profile, signOut } = useAuth()
   const [tab, setTab] = useState<Tab>('annonser')
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([])
+  const [allListings, setAllListings] = useState<Listing[]>(MOCK_LISTINGS)
 
   useEffect(() => {
     const stored = localStorage.getItem('bytaren_saved_searches')
     if (stored) setSavedSearches(JSON.parse(stored))
   }, [])
+
+  useEffect(() => {
+    fetchListings().then(setAllListings)
+  }, [])
+
+  const me = supabaseConfigured
+    ? { name: profile?.name ?? 'Din profil', email: user?.email ?? '', avatar: profile?.avatarUrl ?? undefined, joinedAt: user?.created_at ?? new Date().toISOString() }
+    : { name: 'Anna Svensson', email: 'anna@example.com', avatar: 'https://i.pravatar.cc/150?img=47', joinedAt: '2026-06-01T00:00:00Z' }
+
+  const myListings = supabaseConfigured
+    ? allListings.filter((l) => l.userId === user?.id)
+    : allListings.filter((l) => l.userId === 'u1')
+  const favoriteListings = supabaseConfigured ? [] : allListings.filter((l) => ['2', '5', '6'].includes(l.id))
 
   function deleteSavedSearch(id: string) {
     const updated = savedSearches.filter((s) => s.id !== id)
@@ -45,9 +45,8 @@ export default function MinaSidorPage() {
 
   const onboardingSteps = [
     { id: 'profile', label: 'Komplett profil skapad', done: true },
-    { id: 'listing', label: 'Annons publicerad', done: MY_LISTINGS.length > 0 },
-    { id: 'interest', label: 'Visat intresse för en annons', done: true },
-    { id: 'match', label: 'Fått en match', done: false },
+    { id: 'listing', label: 'Annons publicerad', done: myListings.length > 0 },
+    { id: 'favorite', label: 'Sparat en annons som favorit', done: favoriteListings.length > 0 },
   ]
   const doneCount = onboardingSteps.filter((s) => s.done).length
   const allDone = doneCount === onboardingSteps.length
@@ -58,8 +57,8 @@ export default function MinaSidorPage() {
       <div className="flex items-start gap-5 mb-8">
         <div className="relative flex-shrink-0">
           <img
-            src={MOCK_ME.avatar}
-            alt={MOCK_ME.name}
+            src={me.avatar}
+            alt={me.name}
             className="w-20 h-20 rounded-full object-cover"
           />
           <button className="absolute bottom-0 right-0 w-7 h-7 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50">
@@ -68,30 +67,37 @@ export default function MinaSidorPage() {
         </div>
 
         <div className="flex-1">
-          <h1 className="text-xl font-bold text-gray-900">{MOCK_ME.name}</h1>
-          <p className="text-sm text-gray-500">{MOCK_ME.email}</p>
-          <p className="text-xs text-gray-400 mt-1">Medlem sedan {formatDate(MOCK_ME.joinedAt)}</p>
+          <h1 className="text-xl font-bold text-gray-900">{me.name}</h1>
+          <p className="text-sm text-gray-500">{me.email}</p>
+          <p className="text-xs text-gray-400 mt-1">Medlem sedan {formatDate(me.joinedAt)}</p>
 
           <div className="flex gap-4 mt-3 text-sm">
             <div className="text-center">
-              <div className="font-bold text-gray-900">{MY_LISTINGS.length}</div>
+              <div className="font-bold text-gray-900">{myListings.length}</div>
               <div className="text-gray-400 text-xs">Annonser</div>
             </div>
             <div className="text-center">
-              <div className="font-bold text-gray-900">{FAVORITE_LISTINGS.length}</div>
+              <div className="font-bold text-gray-900">{favoriteListings.length}</div>
               <div className="text-gray-400 text-xs">Favoriter</div>
-            </div>
-            <div className="text-center">
-              <div className="font-bold text-emerald-600">2</div>
-              <div className="text-gray-400 text-xs">Matcher</div>
             </div>
           </div>
         </div>
 
-        <button className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-600 text-sm rounded-xl hover:bg-gray-50">
-          <Settings size={15} />
-          Inställningar
-        </button>
+        <div className="flex flex-col gap-2 flex-shrink-0">
+          <button className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-600 text-sm rounded-xl hover:bg-gray-50">
+            <Settings size={15} />
+            Inställningar
+          </button>
+          {supabaseConfigured && user && (
+            <button
+              onClick={() => signOut()}
+              className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-500 text-sm rounded-xl hover:bg-gray-50"
+            >
+              <LogOut size={15} />
+              Logga ut
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -155,29 +161,8 @@ export default function MinaSidorPage() {
             </div>
           )}
 
-          {/* Activity feed */}
-          <div className="border border-gray-100 rounded-2xl p-5 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Bell size={15} className="text-gray-400" />
-              <h3 className="font-semibold text-gray-900 text-sm">Aktivitet</h3>
-            </div>
-            <div className="space-y-3">
-              {MOCK_ACTIVITY.map((item) => (
-                <div key={item.id} className="flex items-start gap-3">
-                  <span className="text-base leading-none mt-0.5">{item.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-700 leading-snug">{item.text}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {new Date(item.time).toLocaleString('sv-SE', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-gray-500">{MY_LISTINGS.length} annonser</p>
+            <p className="text-sm text-gray-500">{myListings.length} annonser</p>
             <Link
               href="/annonser/ny"
               className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 transition-colors"
@@ -187,7 +172,7 @@ export default function MinaSidorPage() {
             </Link>
           </div>
 
-          {MY_LISTINGS.length === 0 ? (
+          {myListings.length === 0 ? (
             <div className="text-center py-12">
               <Home size={40} className="text-gray-300 mx-auto mb-3" />
               <h3 className="font-semibold text-gray-900 mb-2">Inga annonser än</h3>
@@ -202,7 +187,7 @@ export default function MinaSidorPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {MY_LISTINGS.map((listing) => (
+              {myListings.map((listing) => (
                 <div key={listing.id} className="border border-gray-100 rounded-2xl overflow-hidden">
                   <div className="flex gap-4 p-4">
                     <img
@@ -266,15 +251,15 @@ export default function MinaSidorPage() {
 
       {tab === 'favoriter' && (
         <div>
-          <p className="text-sm text-gray-500 mb-4">{FAVORITE_LISTINGS.length} sparade annonser</p>
-          {FAVORITE_LISTINGS.length === 0 ? (
+          <p className="text-sm text-gray-500 mb-4">{favoriteListings.length} sparade annonser</p>
+          {favoriteListings.length === 0 ? (
             <div className="text-center py-12">
               <Heart size={40} className="text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500 text-sm">Inga favoriter sparade ännu.</p>
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {FAVORITE_LISTINGS.map((listing) => (
+              {favoriteListings.map((listing) => (
                 <ListingCard key={listing.id} listing={listing} />
               ))}
             </div>
@@ -333,34 +318,12 @@ export default function MinaSidorPage() {
       )}
 
       {tab === 'intresse' && (
-        <div>
-          <p className="text-sm text-gray-500 mb-4">Annonser du visat intresse för</p>
-          <div className="space-y-3">
-            {MOCK_LISTINGS.slice(1, 4).map((listing) => (
-              <Link
-                key={listing.id}
-                href={`/annonser/${listing.id}`}
-                className="flex items-center gap-4 p-4 border border-gray-100 rounded-2xl hover:border-emerald-200 transition-colors"
-              >
-                <img
-                  src={listing.images[0]}
-                  alt={listing.title}
-                  className="w-16 h-14 object-cover rounded-xl flex-shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 text-sm line-clamp-1">{listing.title}</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">{listing.district} · {listing.rooms} rok</p>
-                </div>
-                {listing.matchCount > 0 ? (
-                  <span className="text-xs bg-emerald-100 text-emerald-700 font-medium px-2 py-1 rounded-full flex-shrink-0">
-                    🤝 Match!
-                  </span>
-                ) : (
-                  <span className="text-xs text-gray-400 flex-shrink-0">Väntar</span>
-                )}
-              </Link>
-            ))}
-          </div>
+        <div className="text-center py-12">
+          <MessageSquare size={40} className="text-gray-300 mx-auto mb-3" />
+          <h3 className="font-semibold text-gray-900 mb-2">Inga intresseanmälningar än</h3>
+          <p className="text-gray-500 text-sm">
+            Annonser du visar intresse för dyker upp här.
+          </p>
         </div>
       )}
     </div>

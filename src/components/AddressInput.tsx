@@ -6,6 +6,8 @@ import { STOCKHOLM_DISTRICTS } from '@/types'
 
 interface NominatimResult {
   display_name: string
+  lat: string
+  lon: string
   address: {
     road?: string
     house_number?: string
@@ -50,13 +52,13 @@ function deduplicate(results: NominatimResult[]): NominatimResult[] {
 
 interface AddressInputProps {
   value: string
-  onChange: (address: string, district?: string) => void
+  onChange: (address: string, district?: string, lat?: number, lng?: number) => void
   className?: string
   inputClassName?: string
 }
 
 export default function AddressInput({ value, onChange, inputClassName }: AddressInputProps) {
-  const [suggestions, setSuggestions] = useState<{ label: string; district: string }[]>([])
+  const [suggestions, setSuggestions] = useState<{ label: string; district: string; lat: number; lng: number }[]>([])
   const [show, setShow] = useState(false)
   const [loading, setLoading] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -81,7 +83,14 @@ export default function AddressInput({ value, onChange, inputClassName }: Addres
       const res = await fetch(url, { headers: { 'Accept-Language': 'sv' } })
       const data: NominatimResult[] = await res.json()
       const unique = deduplicate(data.filter((r) => r.address.road))
-      setSuggestions(unique.map((r) => ({ label: buildLabel(r, q), district: guessDistrict(r) })))
+      setSuggestions(
+        unique.map((r) => ({
+          label: buildLabel(r, q),
+          district: guessDistrict(r),
+          lat: parseFloat(r.lat),
+          lng: parseFloat(r.lon),
+        }))
+      )
       setShow(true)
     } catch {
       setSuggestions([])
@@ -96,8 +105,8 @@ export default function AddressInput({ value, onChange, inputClassName }: Addres
     debounceRef.current = setTimeout(() => fetchSuggestions(v), 380)
   }
 
-  function select(s: { label: string; district: string }) {
-    onChange(s.label, s.district || undefined)
+  function select(s: { label: string; district: string; lat: number; lng: number }) {
+    onChange(s.label, s.district || undefined, s.lat, s.lng)
     setShow(false)
     setSuggestions([])
   }

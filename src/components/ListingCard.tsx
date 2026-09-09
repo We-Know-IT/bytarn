@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Heart, Home } from 'lucide-react'
+import { Heart, Home, MapPin } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import type { Listing } from '@/types'
 import { cn, haversineKm, formatDistance } from '@/lib/utils'
@@ -83,7 +83,7 @@ export default function ListingCard({ listing, compact = false }: ListingCardPro
               className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-semibold text-white"
               style={{ backgroundColor: '#153F32' }}
             >
-              <span>♥</span>
+              <Heart size={11} fill="currentColor" />
               <span>{pct}% match</span>
             </div>
           )}
@@ -148,10 +148,11 @@ export default function ListingCard({ listing, compact = false }: ListingCardPro
               {listing.district}, Stockholm
             </p>
             <span
-              className="text-[10px] font-semibold"
+              className="inline-flex items-center gap-0.5 text-[10px] font-semibold"
               style={{ color: '#153F32' }}
             >
-              📍 {distLabel}
+              <MapPin size={10} strokeWidth={2} />
+              {distLabel}
             </span>
           </div>
 
@@ -187,21 +188,9 @@ export default function ListingCard({ listing, compact = false }: ListingCardPro
             >
               <div className="flex items-center gap-2">
                 {listing.interestedCount > 0 && (
-                  <>
-                    <div className="flex -space-x-1.5">
-                      {[47, 12, 32].slice(0, Math.min(listing.interestedCount, 3)).map((n) => (
-                        <img
-                          key={n}
-                          src={`https://i.pravatar.cc/28?img=${n}`}
-                          className="w-6 h-6 rounded-full ring-2 ring-white object-cover"
-                          alt=""
-                        />
-                      ))}
-                    </div>
-                    <span className="text-[12px]" style={{ color: '#9EA69D' }}>
-                      {listing.interestedCount} potentiella byten
-                    </span>
-                  </>
+                  <span className="text-[12px]" style={{ color: '#9EA69D' }}>
+                    {listing.interestedCount} intresserade
+                  </span>
                 )}
               </div>
               <span

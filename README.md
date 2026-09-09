@@ -20,6 +20,29 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Backend setup (Supabase)
+
+The app runs on demo/mock data until a real backend is configured. To connect one:
+
+1. Create a [Supabase](https://supabase.com) project.
+2. Run `supabase/schema.sql` against it (SQL editor, or `supabase db push`) — this creates the
+   `profiles`, `listings`, `favorites`, `saved_searches`, `conversations` and `messages` tables
+   with row-level security policies.
+3. Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_SUPABASE_URL` and
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY` from your project's API settings, plus
+   `SUPABASE_SERVICE_ROLE_KEY` (needed for BankID account provisioning).
+4. Restart `npm run dev`. Auth (email/password), listings, and profiles now read and write to
+   Supabase instead of the mock data in `src/lib/mock-data.ts`.
+
+### BankID login
+
+BankID sign-in goes through [Criipto Verify](https://docs.criipto.com/verify/e-ids/sweden-bankid/),
+a hosted broker — going live requires a Criipto account with the Sweden BankID add-on (real BankID
+access needs a bank-issued agreement Criipto already holds; there's no way to test this without
+that account). Fill in `CRIIPTO_DOMAIN`, `CRIIPTO_CLIENT_ID`, `CRIIPTO_CLIENT_SECRET` and
+`NEXT_PUBLIC_APP_URL` in `.env.local` to enable the "Logga in med BankID" buttons on the
+login/register pages.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

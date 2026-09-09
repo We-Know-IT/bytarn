@@ -1,10 +1,11 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { ArrowRight, Shield } from 'lucide-react'
-import { MOCK_LISTINGS } from '@/lib/mock-data'
+import { fetchListings } from '@/lib/listings'
+import type { Listing } from '@/types'
 import ListingCard from '@/components/ListingCard'
 import HeroSearch from '@/components/HeroSearch'
 
@@ -81,7 +82,7 @@ function CheckIcon() {
 /* ─── Hero property card (static) ────────────────────────────────────── */
 
 interface HeroCardProps {
-  listing: (typeof MOCK_LISTINGS)[0]
+  listing: Listing
   matchPct: number
   style?: React.CSSProperties
   imageStyle?: React.CSSProperties
@@ -171,7 +172,13 @@ function MatchUser({ avatar, name, age, district, from, to }: MatchUserProps) {
 /* ─── Page ───────────────────────────────────────────────────────────── */
 
 export default function HomePage() {
-  const featured = useMemo(() => MOCK_LISTINGS.filter((l) => l.status === 'aktiv').slice(0, 6), [])
+  const [listings, setListings] = useState<Listing[]>([])
+
+  useEffect(() => {
+    fetchListings().then(setListings)
+  }, [])
+
+  const featured = useMemo(() => listings.filter((l) => l.status === 'aktiv').slice(0, 6), [listings])
   const card1 = featured[0]
   const card2 = featured[1]
   const card3 = featured[2]

@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { Upload, X, Plus, MapPin, Info } from 'lucide-react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { Upload, X, Plus, MapPin, Info, MoveVertical, Trees, Sofa, PawPrint } from 'lucide-react'
 import { STOCKHOLM_DISTRICTS } from '@/types'
 import { cn } from '@/lib/utils'
 import AddressInput from '@/components/AddressInput'
-import { MOCK_LISTINGS } from '@/lib/mock-data'
+import { createListing, updateListing, fetchListingById } from '@/lib/listings'
+import { useAuth } from '@/context/AuthContext'
+import { supabaseConfigured } from '@/lib/supabase/client'
 
 const MAX_IMAGES = 10
 
@@ -19,12 +21,16 @@ export default function NyAnnonsPage() {
 }
 
 function NyAnnonsForm() {
+  const router = useRouter()
+  const { user } = useAuth()
   const searchParams = useSearchParams()
   const editId = searchParams.get('redigera')
   const isEditing = Boolean(editId)
 
   const [images, setImages] = useState<string[]>([])
   const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -34,6 +40,8 @@ function NyAnnonsForm() {
     floor: '',
     district: '',
     address: '',
+    lat: undefined as number | undefined,
+    lng: undefined as number | undefined,
     elevator: false,
     balcony: false,
     furnished: false,
@@ -43,9 +51,10 @@ function NyAnnonsForm() {
   // If editing, pre-fill from the existing listing
   useEffect(() => {
     if (editId) {
-      const listing = MOCK_LISTINGS.find((l) => l.id === editId)
-      if (listing) {
-        setForm({
+      fetchListingById(editId).then((listing) => {
+        if (!listing) return
+        setForm((f) => ({
+          ...f,
           title: listing.title,
           description: listing.description,
           rooms: String(listing.rooms),
@@ -54,14 +63,16 @@ function NyAnnonsForm() {
           floor: String(listing.floor ?? ''),
           district: listing.district,
           address: listing.address,
+          lat: listing.lat,
+          lng: listing.lng,
           elevator: listing.elevator ?? false,
           balcony: listing.balcony ?? false,
           furnished: listing.furnished ?? false,
           petsAllowed: listing.petsAllowed ?? false,
-        })
+        }))
         setImages(listing.images)
-        return
-      }
+      })
+      return
     }
     // Otherwise pre-fill from onboarding draft
     try {
@@ -96,6 +107,53 @@ function NyAnnonsForm() {
 
   function removeImage(index: number) {
     setImages((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  async function handleSubmit() {
+    setSubmitError(null)
+    if (!supabaseConfigured || !user) {
+      setSubmitError(
+        !supabaseConfigured
+          ? 'Backend är inte konfigurerad i den här miljön ännu.'
+          : 'Du måste vara inloggad för att publicera en annons.'
+      )
+      return
+    }
+    if (!form.lat || !form.lng) {
+      setSubmitError('Välj en adress från förslagslistan så vi kan placera annonsen på kartan.')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const input = {
+        title: form.title,
+        description: form.description,
+        rooms: Number(form.rooms),
+        rent: Number(form.rent),
+        area: Number(form.area),
+        district: form.district,
+        address: form.address,
+        lat: form.lat,
+        lng: form.lng,
+        images,
+        floor: form.floor ? Number(form.floor) : undefined,
+        elevator: form.elevator,
+        balcony: form.balcony,
+        furnished: form.furnished,
+        petsAllowed: form.petsAllowed,
+      }
+      if (isEditing && editId) {
+        await updateListing(editId, input)
+        router.push(`/annonser/${editId}`)
+      } else {
+        const id = await createListing(input, user.id)
+        router.push(`/annonser/${id}`)
+      }
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Kunde inte publicera annonsen.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const canGoToStep2 =
@@ -229,10 +287,12 @@ function NyAnnonsForm() {
             </label>
             <AddressInput
               value={form.address}
-              onChange={(addr, dist) => setForm((f) => ({
+              onChange={(addr, dist, lat, lng) => setForm((f) => ({
                 ...f,
                 address: addr,
                 district: dist || f.district,
+                lat: lat ?? f.lat,
+                lng: lng ?? f.lng,
               }))}
             />
           </div>
@@ -253,10 +313,10 @@ function NyAnnonsForm() {
             <label className="block text-sm font-medium text-gray-700 mb-3">Faciliteter</label>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { key: 'elevator', label: 'Hiss', icon: '🛗' },
-                { key: 'balcony', label: 'Balkong', icon: '🌿' },
-                { key: 'furnished', label: 'Möblerad', icon: '🛋️' },
-                { key: 'petsAllowed', label: 'Husdjur OK', icon: '🐾' },
+                { key: 'elevator', label: 'Hiss', Icon: MoveVertical },
+                { key: 'balcony', label: 'Balkong', Icon: Trees },
+                { key: 'furnished', label: 'Möblerad', Icon: Sofa },
+                { key: 'petsAllowed', label: 'Husdjur OK', Icon: PawPrint },
               ].map((item) => (
                 <button
                   key={item.key}
@@ -271,7 +331,7 @@ function NyAnnonsForm() {
                       : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
                   )}
                 >
-                  <span>{item.icon}</span>
+                  <item.Icon size={16} strokeWidth={1.75} />
                   {item.label}
                 </button>
               ))}
@@ -409,6 +469,10 @@ function NyAnnonsForm() {
             </p>
           </div>
 
+          {submitError && (
+            <div className="px-4 py-3 rounded-xl bg-red-50 text-red-700 text-sm">{submitError}</div>
+          )}
+
           <div className="flex gap-3">
             <button
               onClick={() => setStep(2)}
@@ -417,10 +481,11 @@ function NyAnnonsForm() {
               Tillbaka
             </button>
             <button
-              onClick={() => alert(isEditing ? 'Annons uppdaterad! (Demo — inte kopplad till backend ännu)' : 'Annons publicerad! (Demo — inte kopplad till backend ännu)')}
-              className="flex-1 py-3.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors"
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="flex-1 py-3.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
             >
-              {isEditing ? 'Spara ändringar' : 'Publicera annons'}
+              {submitting ? 'Publicerar…' : isEditing ? 'Spara ändringar' : 'Publicera annons'}
             </button>
           </div>
         </div>
