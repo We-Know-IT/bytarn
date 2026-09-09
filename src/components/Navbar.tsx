@@ -143,13 +143,22 @@ export default function Navbar() {
               <ChevronDown size={12} style={{ color: '#9EA69D' }} />
             </Link>
           ) : (
-            <Link
-              href="/logga-in"
-              className="ml-1 px-5 py-2.5 text-[14px] font-semibold rounded-xl text-white transition-all hover:-translate-y-[1px] hover:shadow-lg active:translate-y-0"
-              style={{ backgroundColor: '#153F32' }}
-            >
-              Logga in
-            </Link>
+            <div className="flex items-center gap-2 ml-1">
+              <Link
+                href="/logga-in"
+                className="px-4 py-2.5 text-[14px] font-semibold rounded-xl transition-colors hover:bg-[rgba(21,63,50,0.06)]"
+                style={{ color: '#153F32' }}
+              >
+                Logga in
+              </Link>
+              <Link
+                href="/registrera"
+                className="px-5 py-2.5 text-[14px] font-semibold rounded-xl text-white transition-all hover:-translate-y-[1px] hover:shadow-lg active:translate-y-0"
+                style={{ backgroundColor: '#153F32' }}
+              >
+                Skapa konto
+              </Link>
+            </div>
           )}
         </div>
 
@@ -182,15 +191,36 @@ export default function Navbar() {
                 {label}
               </Link>
             ))}
-            <div className="pt-3 border-t" style={{ borderColor: 'rgba(21,63,50,0.10)' }}>
-              <Link
-                href="/logga-in"
-                onClick={() => setMobileOpen(false)}
-                className="block px-3 py-3.5 text-[15px] font-semibold text-white rounded-xl text-center transition-colors"
-                style={{ backgroundColor: '#153F32' }}
-              >
-                Logga in
-              </Link>
+            <div className="pt-3 border-t space-y-2" style={{ borderColor: 'rgba(21,63,50,0.10)' }}>
+              {user ? (
+                <Link
+                  href="/mina-sidor"
+                  onClick={() => setMobileOpen(false)}
+                  className="block px-3 py-3.5 text-[15px] font-semibold text-white rounded-xl text-center transition-colors"
+                  style={{ backgroundColor: '#153F32' }}
+                >
+                  Min profil
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/registrera"
+                    onClick={() => setMobileOpen(false)}
+                    className="block px-3 py-3.5 text-[15px] font-semibold text-white rounded-xl text-center transition-colors"
+                    style={{ backgroundColor: '#153F32' }}
+                  >
+                    Skapa konto
+                  </Link>
+                  <Link
+                    href="/logga-in"
+                    onClick={() => setMobileOpen(false)}
+                    className="block px-3 py-3 text-[15px] font-medium rounded-xl text-center transition-colors"
+                    style={{ color: '#153F32' }}
+                  >
+                    Logga in
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

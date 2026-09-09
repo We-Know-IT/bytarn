@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Upload, X, Plus, MapPin, Info, MoveVertical, Trees, Sofa, PawPrint } from 'lucide-react'
+import { Upload, X, Plus, MapPin, Info, MoveVertical, Trees, Sofa, PawPrint, Wand2 } from 'lucide-react'
 import { STOCKHOLM_DISTRICTS } from '@/types'
 import { cn } from '@/lib/utils'
 import AddressInput from '@/components/AddressInput'
@@ -11,6 +11,40 @@ import { useAuth } from '@/context/AuthContext'
 import { supabaseConfigured } from '@/lib/supabase/client'
 
 const MAX_IMAGES = 10
+
+interface ListingFormData {
+  title: string
+  rooms: string
+  area: string
+  rent: string
+  floor: string
+  district: string
+  address: string
+  elevator: boolean
+  balcony: boolean
+  furnished: boolean
+  petsAllowed: boolean
+}
+
+// Builds a title/description straight from the fields already filled in —
+// no external calls, just a factual summary of real data instead of a blank page.
+function suggestTitle(f: ListingFormData): string {
+  const amenities = [f.elevator && 'hiss', f.balcony && 'balkong', f.furnished && 'möblerad'].filter(Boolean) as string[]
+  const suffix = amenities.length > 0 ? ` — ${amenities.join(', ')}` : f.area ? ` — ${f.area} m²` : ''
+  return `${f.rooms || '?'} rok på ${f.district || 'okänd stadsdel'}${suffix}`
+}
+
+function suggestDescription(f: ListingFormData): string {
+  const amenities = [f.elevator && 'hiss', f.balcony && 'balkong', f.furnished && 'möblerad', f.petsAllowed && 'husdjur tillåtet'].filter(Boolean) as string[]
+  const sentences = [
+    `${f.rooms || '?'}-rumslägenhet på ${f.area || '?'} m² i ${f.district || 'Stockholm'}${f.address ? `, ${f.address}` : ''}.`,
+  ]
+  if (f.floor) sentences.push(`Ligger på våning ${f.floor}.`)
+  if (amenities.length > 0) sentences.push(`Har ${amenities.join(', ')}.`)
+  if (f.rent) sentences.push(`Hyra ${new Intl.NumberFormat('sv-SE').format(Number(f.rent))} kr/mån.`)
+  sentences.push('Söker byte i Stockholmsområdet.')
+  return sentences.join(' ')
+}
 
 export default function NyAnnonsPage() {
   return (
@@ -85,6 +119,7 @@ function NyAnnonsForm() {
         address: draft.address ?? f.address,
         rooms: draft.rooms ?? f.rooms,
         area: draft.area ?? f.area,
+        floor: draft.floor ?? f.floor,
         rent: draft.rent ?? f.rent,
         balcony: draft.balcony ?? f.balcony,
         elevator: draft.elevator ?? f.elevator,
@@ -197,7 +232,17 @@ function NyAnnonsForm() {
       {step === 1 && (
         <div className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Rubrik *</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-medium text-gray-700">Rubrik *</label>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, title: suggestTitle(form).slice(0, 80) })}
+                className="flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700"
+              >
+                <Wand2 size={12} />
+                Föreslå
+              </button>
+            </div>
             <input
               type="text"
               placeholder="t.ex. 3 rok på Södermalm — ljus och central"
@@ -298,7 +343,17 @@ function NyAnnonsForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Beskrivning</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-medium text-gray-700">Beskrivning</label>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, description: suggestDescription(form) })}
+                className="flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700"
+              >
+                <Wand2 size={12} />
+                Föreslå
+              </button>
+            </div>
             <textarea
               placeholder="Beskriv din bostad, vad du letar efter i ett byte, och eventuella villkor..."
               value={form.description}

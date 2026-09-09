@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Eye, EyeOff, CheckCircle, Fingerprint } from 'lucide-react'
+import { Eye, EyeOff, CheckCircle, Fingerprint, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient, supabaseConfigured } from '@/lib/supabase/client'
 
@@ -14,6 +14,7 @@ export default function RegistreraPage() {
   const [agreed, setAgreed] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [confirmSent, setConfirmSent] = useState(false)
 
   async function handleSignUp() {
     setError(null)
@@ -23,7 +24,7 @@ export default function RegistreraPage() {
     }
     setLoading(true)
     const supabase = createClient()
-    const { error: authError } = await supabase.auth.signUp({
+    const { data, error: authError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
       options: { data: { name: form.name } },
@@ -33,7 +34,35 @@ export default function RegistreraPage() {
       setError(authError.message)
       return
     }
+    if (!data.session) {
+      // E-postbekräftelse krävs i Supabase-projektet — det finns ännu ingen
+      // inloggad session, så vi ska inte låtsas att kontot redan är aktivt.
+      setConfirmSent(true)
+      return
+    }
     router.push('/onboarding')
+  }
+
+  if (confirmSent) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12 bg-gray-50">
+        <div className="w-full max-w-sm">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
+            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Mail size={28} className="text-emerald-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Bekräfta din e-post</h2>
+            <p className="text-gray-500 text-sm mb-6">
+              Vi har skickat ett bekräftelsemail till <strong className="text-gray-700">{form.email}</strong>.
+              Klicka på länken i mejlet för att aktivera kontot och logga in.
+            </p>
+            <Link href="/logga-in" className="text-emerald-600 font-medium hover:underline text-sm">
+              Till inloggning
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   const passwordStrength = form.password.length === 0
