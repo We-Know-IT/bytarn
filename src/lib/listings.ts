@@ -73,6 +73,22 @@ export async function fetchListings(): Promise<Listing[]> {
   return (data as unknown as ListingRow[]).map(rowToListing)
 }
 
+export async function fetchMyListings(userId: string): Promise<Listing[]> {
+  if (!supabaseConfigured) return []
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('listings')
+    .select(LISTING_SELECT)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Kunde inte hämta dina annonser', error)
+    return []
+  }
+  return (data as unknown as ListingRow[]).map(rowToListing)
+}
+
 export async function fetchListingById(id: string): Promise<Listing | null> {
   if (!supabaseConfigured) return MOCK_LISTINGS.find((l) => l.id === id) ?? null
   const supabase = createClient()
@@ -153,5 +169,21 @@ export async function updateListing(id: string, input: CreateListingInput): Prom
     })
     .eq('id', id)
 
+  if (error) throw error
+}
+
+export async function setListingStatus(id: string, status: Listing['status']): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('listings')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', id)
+
+  if (error) throw error
+}
+
+export async function deleteListing(id: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase.from('listings').delete().eq('id', id)
   if (error) throw error
 }
