@@ -449,12 +449,12 @@ export default function HomePage() {
 
             {/* Left — copy */}
             <div>
-              <Eyebrow>Smart matchning</Eyebrow>
+              <Eyebrow>Smart matchning — kommer snart</Eyebrow>
               <SectionHeading>Algoritmen som hittar ditt perfekta byte.</SectionHeading>
               <p className="mt-5 text-[15px] leading-[1.75] mb-10" style={{ color: '#6D716C' }}>
-                Bytarens matchningsmotor gör det tunga jobbet åt dig. Istället för att bläddra igenom hundratals
-                annonser hoppas vi att rätt person ska hitta dig — och tvärtom. Vi analyserar era respektive
-                önskemål och presenterar bara de byten som faktiskt kan fungera för båda parter.
+                Vi bygger en matchningsmotor som ska göra det tunga jobbet åt dig. Istället för att bläddra igenom
+                hundratals annonser ska den analysera era respektive önskemål och presentera bara de byten som
+                faktiskt kan fungera för båda parter. Så här är tanken:
               </p>
 
               <div className="space-y-6">
@@ -508,6 +508,9 @@ export default function HomePage() {
 
             {/* Right — match visual */}
             <div className="flex flex-col items-center gap-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: '#A8B9A4' }}>
+                Illustrativt exempel
+              </p>
               <div className="flex items-center justify-center gap-4 sm:gap-8 w-full flex-wrap sm:flex-nowrap">
                 <MatchUser
                   avatar="https://i.pravatar.cc/80?img=9"
@@ -742,7 +745,11 @@ export default function HomePage() {
                 { label: 'Meddelanden', href: '/meddelanden' },
               ] },
               { title: 'Bytaren', links: [
+                { label: 'Om oss', href: '/om-oss' },
                 { label: 'Trygghet', href: '/trygghet' },
+                { label: 'Integritetspolicy', href: '/integritetspolicy' },
+                { label: 'Villkor', href: '/villkor' },
+                { label: 'Kontakt', href: '/kontakt' },
               ] },
             ].map((col) => (
               <div key={col.title}>

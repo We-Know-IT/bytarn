@@ -3,8 +3,8 @@ import { Shield, ArrowRight } from 'lucide-react'
 
 const FEATURES = [
   {
-    title: 'Verifierade profiler',
-    desc: 'Alla användare verifieras med e-post och telefonnummer. Du vet alltid vem du pratar med.',
+    title: 'E-postverifierade profiler',
+    desc: 'Alla konton bekräftas via e-post innan de är aktiva. Vill du logga in med BankID är det verifierad legitimation.',
   },
   {
     title: 'Transparent kommunikation',
@@ -12,7 +12,7 @@ const FEATURES = [
   },
   {
     title: 'Rapporteringsfunktion',
-    desc: 'Om något känns fel kan du rapportera en användare med ett knapptryck. Vi agerar snabbt.',
+    desc: 'Om något känns fel kan du rapportera en annons direkt från dess sida. Vi går igenom rapporter manuellt.',
   },
   {
     title: 'Inga dolda avgifter',

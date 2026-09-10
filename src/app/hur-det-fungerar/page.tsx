@@ -9,8 +9,8 @@ const STEPS = [
   },
   {
     step: '02',
-    title: 'Algoritmen jobbar åt dig',
-    desc: 'Vi analyserar ömsesidig önskan, rumspassning, hyresbalans och dina extrakrav — och presenterar bara de byten som faktiskt kan fungera för båda parter.',
+    title: 'Sök och filtrera',
+    desc: 'Filtrera på stadsdel, antal rum och hyra, eller utforska annonser direkt på kartan. En smartare matchning som analyserar ömsesidig önskan och hyresbalans åt dig är på väg.',
   },
   {
     step: '03',
@@ -136,9 +136,17 @@ export default function HurDetFungerar() {
       <section style={{ paddingTop: 80, paddingBottom: 80, backgroundColor: '#FBFAF7' }}>
         <div className="max-w-[1360px] mx-auto px-6 sm:px-10">
           <div className="max-w-xl mb-12">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] mb-3" style={{ color: '#A8B9A4' }}>
-              Matchningsmotorn
-            </p>
+            <div className="flex items-center gap-2 mb-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: '#A8B9A4' }}>
+                Matchningsmotorn
+              </p>
+              <span
+                className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: 'rgba(21,63,50,0.08)', color: '#153F32' }}
+              >
+                Kommer snart
+              </span>
+            </div>
             <h2
               className="font-display mb-4"
               style={{
@@ -148,11 +156,11 @@ export default function HurDetFungerar() {
                 color: '#15211E',
               }}
             >
-              Vad avgör om det är ett bra byte?
+              Vad kommer avgöra om det är ett bra byte?
             </h2>
             <p className="text-[15px] leading-[1.65]" style={{ color: '#6D716C' }}>
-              Istället för att du ska bläddra igenom hundratals annonser gör vår algoritm jobbet.
-              Den väger fyra faktorer mot varandra och presenterar bara de byten som faktiskt kan fungera — för båda.
+              Idag söker och filtrerar du själv bland annonserna. Vi bygger en algoritm som istället
+              ska väga fyra faktorer mot varandra och bara visa dig byten som faktiskt kan fungera — för båda.
             </p>
           </div>
 

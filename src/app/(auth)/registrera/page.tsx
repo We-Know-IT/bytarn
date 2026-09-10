@@ -201,11 +201,11 @@ export default function RegistreraPage() {
               </div>
               <span className="text-sm text-gray-600">
                 Jag godkänner{' '}
-                <a href="#" className="text-emerald-600 hover:underline">
+                <a href="/villkor" target="_blank" className="text-emerald-600 hover:underline">
                   användarvillkoren
                 </a>{' '}
                 och{' '}
-                <a href="#" className="text-emerald-600 hover:underline">
+                <a href="/integritetspolicy" target="_blank" className="text-emerald-600 hover:underline">
                   integritetspolicyn
                 </a>
               </span>
