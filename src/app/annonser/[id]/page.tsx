@@ -46,6 +46,21 @@ export default function ListingDetailPage() {
     fetchListings().then(setAllListings)
   }, [params.id])
 
+  // Auto-rotate gallery every 4.5 s; resets when user manually navigates.
+  // Must run unconditionally (before the early returns below) — React requires
+  // every render to call the same hooks in the same order.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!listing || listing.images.length <= 1 || lightbox) return
+    const id = setInterval(() => {
+      setCurrentImg((i) => (i + 1) % listing.images.length)
+    }, 4500)
+    return () => clearInterval(id)
+  }, [listing?.images.length, lightbox, resetAutoPlay.current])
+
+  // Stable reference — prevents ListingMap from reinitializing on every auto-rotate tick
+  const mapListings = useMemo(() => (listing ? [listing] : []), [listing?.id])
+
   if (listing === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-400 text-sm">
@@ -77,24 +92,11 @@ export default function ListingDetailPage() {
     }
   }
 
-  // Auto-rotate gallery every 4.5 s; resets when user manually navigates
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (!listing || listing.images.length <= 1 || lightbox) return
-    const id = setInterval(() => {
-      setCurrentImg((i) => (i + 1) % listing.images.length)
-    }, 4500)
-    return () => clearInterval(id)
-  }, [listing?.images.length, lightbox, resetAutoPlay.current])
-
   function navigate(dir: 1 | -1) {
     if (!listing) return
     setCurrentImg((i) => (i + dir + listing.images.length) % listing.images.length)
     resetAutoPlay.current += 1
   }
-
-  // Stable reference — prevents ListingMap from reinitializing on every auto-rotate tick
-  const mapListings = useMemo(() => (listing ? [listing] : []), [listing?.id])
 
   const sameDist = allListings.filter(
     (l) => l.id !== listing.id && l.district === listing.district && l.status === 'aktiv'
