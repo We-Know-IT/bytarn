@@ -26,6 +26,7 @@ export default function OnboardingPage() {
   const [address, setAddress] = useState('')
   const [rooms, setRooms] = useState('')
   const [area, setArea] = useState('')
+  const [floor, setFloor] = useState('')
   const [rent, setRent] = useState('')
   const [balcony, setBalcony] = useState(false)
   const [elevator, setElevator] = useState(false)
@@ -44,7 +45,7 @@ export default function OnboardingPage() {
 
   function saveDraftAndContinue() {
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ district, address, rooms, area, rent, balcony, elevator }))
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ district, address, rooms, area, floor, rent, balcony, elevator }))
     } catch {}
     setStep(2)
   }
@@ -168,11 +169,16 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                {/* Yta + Hyra */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Yta + Våning + Hyra */}
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Yta (m²)</label>
                     <input type="number" placeholder="65" value={area} onChange={(e) => setArea(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Våning</label>
+                    <input type="number" placeholder="3" value={floor} onChange={(e) => setFloor(e.target.value)}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                   </div>
                   <div>
@@ -297,16 +303,22 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-8">
-                <button onClick={() => setStep(2)} className="flex-1 py-3 border border-gray-200 text-gray-600 font-medium rounded-xl hover:bg-gray-50">Tillbaka</button>
+              <p className="text-sm font-medium text-gray-700 mt-8 mb-3">Vad vill du göra härnäst?</p>
+              <div className="grid grid-cols-2 gap-3">
                 <Link href="/annonser/ny"
-                  className="flex-1 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors text-center flex items-center justify-center gap-2">
-                  Lägg upp min annons <ArrowRight size={16} />
+                  className="py-4 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors text-center flex flex-col items-center justify-center gap-1">
+                  <span className="flex items-center gap-2">Lägg upp annons <ArrowRight size={16} /></span>
+                  <span className="text-xs font-normal text-emerald-100">Annonsera din bostad</span>
+                </Link>
+                <Link href="/annonser"
+                  className="py-4 border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors text-center flex flex-col items-center justify-center gap-1">
+                  <span>Utforska annonser</span>
+                  <span className="text-xs font-normal text-gray-400">Titta runt först</span>
                 </Link>
               </div>
-              <Link href="/annonser" className="block text-center text-xs text-gray-400 hover:text-gray-600 mt-3">
-                Hoppa över — utforska annonser direkt
-              </Link>
+              <button onClick={() => setStep(2)} className="block w-full text-center text-xs text-gray-400 hover:text-gray-600 mt-4">
+                Tillbaka
+              </button>
             </div>
           )}
         </div>

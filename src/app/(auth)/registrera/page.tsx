@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Eye, EyeOff, CheckCircle, Fingerprint } from 'lucide-react'
+import { Eye, EyeOff, CheckCircle, Fingerprint, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient, supabaseConfigured } from '@/lib/supabase/client'
 
@@ -14,6 +14,7 @@ export default function RegistreraPage() {
   const [agreed, setAgreed] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [confirmSent, setConfirmSent] = useState(false)
 
   async function handleSignUp() {
     setError(null)
@@ -23,7 +24,7 @@ export default function RegistreraPage() {
     }
     setLoading(true)
     const supabase = createClient()
-    const { error: authError } = await supabase.auth.signUp({
+    const { data, error: authError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
       options: { data: { name: form.name } },
@@ -33,7 +34,49 @@ export default function RegistreraPage() {
       setError(authError.message)
       return
     }
+    if (!data.session) {
+      // E-postbekräftelse krävs i Supabase-projektet — det finns ännu ingen
+      // inloggad session, så vi ska inte låtsas att kontot redan är aktivt.
+      setConfirmSent(true)
+      return
+    }
     router.push('/onboarding')
+  }
+
+  async function handleGoogleSignUp() {
+    setError(null)
+    if (!supabaseConfigured) {
+      setError('Backend är inte konfigurerad i den här miljön ännu (saknar Supabase-uppgifter).')
+      return
+    }
+    const supabase = createClient()
+    const { error: authError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/onboarding` },
+    })
+    if (authError) setError(authError.message)
+  }
+
+  if (confirmSent) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12 bg-gray-50">
+        <div className="w-full max-w-sm">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
+            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Mail size={28} className="text-emerald-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Bekräfta din e-post</h2>
+            <p className="text-gray-500 text-sm mb-6">
+              Vi har skickat ett bekräftelsemail till <strong className="text-gray-700">{form.email}</strong>.
+              Klicka på länken i mejlet för att aktivera kontot och logga in.
+            </p>
+            <Link href="/logga-in" className="text-emerald-600 font-medium hover:underline text-sm">
+              Till inloggning
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   const passwordStrength = form.password.length === 0
@@ -66,7 +109,11 @@ export default function RegistreraPage() {
           </a>
 
           {/* Google */}
-          <button className="w-full flex items-center justify-center gap-3 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors mb-4">
+          <button
+            type="button"
+            onClick={handleGoogleSignUp}
+            className="w-full flex items-center justify-center gap-3 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors mb-4"
+          >
             <svg width="18" height="18" viewBox="0 0 18 18">
               <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z" />
               <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z" />
