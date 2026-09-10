@@ -187,3 +187,11 @@ export async function deleteListing(id: string): Promise<void> {
   const { error } = await supabase.from('listings').delete().eq('id', id)
   if (error) throw error
 }
+
+export async function reportListing(listingId: string, reporterId: string, reason: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('reports')
+    .insert({ listing_id: listingId, reporter_id: reporterId, reason })
+  if (error) throw error
+}

@@ -21,16 +21,19 @@ import {
   PawPrint,
   Handshake,
 } from 'lucide-react'
-import { fetchListingById, fetchListings } from '@/lib/listings'
+import { fetchListingById, fetchListings, reportListing } from '@/lib/listings'
 import type { Listing } from '@/types'
 import { formatRent, formatDate, cn } from '@/lib/utils'
 import ListingCard from '@/components/ListingCard'
+import { useAuth } from '@/context/AuthContext'
+import { supabaseConfigured } from '@/lib/supabase/client'
 import dynamic from 'next/dynamic'
 
 const ListingMap = dynamic(() => import('@/components/ListingMap'), { ssr: false })
 
 export default function ListingDetailPage() {
   const params = useParams()
+  const { user } = useAuth()
   const [listing, setListing] = useState<Listing | null | undefined>(undefined)
   const [allListings, setAllListings] = useState<Listing[]>([])
   const [currentImg, setCurrentImg] = useState(0)
@@ -38,6 +41,7 @@ export default function ListingDetailPage() {
   const [interested, setInterested] = useState(false)
   const [favorited, setFavorited] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [reported, setReported] = useState(false)
   const resetAutoPlay = useRef(0)
 
   useEffect(() => {
@@ -80,6 +84,22 @@ export default function ListingDetailPage() {
         </div>
       </div>
     )
+  }
+
+  async function handleReport() {
+    if (!listing) return
+    if (!supabaseConfigured || !user) {
+      alert('Du måste vara inloggad för att rapportera en annons.')
+      return
+    }
+    const reason = prompt('Vad är fel med annonsen?')
+    if (!reason) return
+    try {
+      await reportListing(listing.id, user.id, reason)
+      setReported(true)
+    } catch {
+      alert('Kunde inte skicka rapporten. Försök igen.')
+    }
   }
 
   const handleShare = async () => {
@@ -436,9 +456,13 @@ export default function ListingDetailPage() {
               </div>
             </div>
 
-            <button className="w-full text-xs text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1 py-2">
+            <button
+              onClick={handleReport}
+              disabled={reported}
+              className="w-full text-xs text-gray-400 hover:text-gray-600 disabled:text-emerald-600 disabled:cursor-default flex items-center justify-center gap-1 py-2"
+            >
               <Flag size={12} />
-              Rapportera annons
+              {reported ? 'Rapport skickad' : 'Rapportera annons'}
             </button>
           </div>
         </div>

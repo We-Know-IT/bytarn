@@ -178,3 +178,23 @@ create policy "Recipients can mark messages as read"
       where cp.conversation_id = messages.conversation_id and cp.user_id = auth.uid()
     )
   );
+
+-- ─── Reports ─────────────────────────────────────────────────────────────
+-- Backs the "Rapportera annons" button — lets a signed-in user flag a
+-- listing for review. No admin UI reads this yet; it's stored for manual
+-- review until a moderation workflow exists.
+create table if not exists reports (
+  id uuid primary key default gen_random_uuid(),
+  listing_id uuid not null references listings (id) on delete cascade,
+  reporter_id uuid not null references profiles (id) on delete cascade,
+  reason text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table reports enable row level security;
+
+create policy "Users can create reports"
+  on reports for insert with check (auth.uid() = reporter_id);
+
+create policy "Users can view their own reports"
+  on reports for select using (auth.uid() = reporter_id);
