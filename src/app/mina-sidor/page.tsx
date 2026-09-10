@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Settings, Heart, Home, MessageSquare, Plus, Edit2, Trash2, Eye, EyeOff, Bookmark, LogOut, CheckCircle2, Circle } from 'lucide-react'
 import { MOCK_LISTINGS } from '@/lib/mock-data'
-import { fetchListings } from '@/lib/listings'
+import { fetchListings, fetchMyListings, setListingStatus, deleteListing } from '@/lib/listings'
 import { useAuth } from '@/context/AuthContext'
 import { supabaseConfigured } from '@/lib/supabase/client'
 import ListingCard from '@/components/ListingCard'
@@ -18,6 +18,7 @@ export default function MinaSidorPage() {
   const [tab, setTab] = useState<Tab>('annonser')
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([])
   const [allListings, setAllListings] = useState<Listing[]>(MOCK_LISTINGS)
+  const [myListingsReal, setMyListingsReal] = useState<Listing[]>([])
 
   useEffect(() => {
     const stored = localStorage.getItem('bytaren_saved_searches')
@@ -28,12 +29,16 @@ export default function MinaSidorPage() {
     fetchListings().then(setAllListings)
   }, [])
 
+  useEffect(() => {
+    if (supabaseConfigured && user) fetchMyListings(user.id).then(setMyListingsReal)
+  }, [user])
+
   const me = supabaseConfigured
     ? { name: profile?.name ?? 'Din profil', email: user?.email ?? '', avatar: profile?.avatarUrl ?? undefined, joinedAt: user?.created_at ?? new Date().toISOString() }
     : { name: 'Anna Svensson', email: 'anna@example.com', avatar: 'https://i.pravatar.cc/150?img=47', joinedAt: '2026-06-01T00:00:00Z' }
 
   const myListings = supabaseConfigured
-    ? allListings.filter((l) => l.userId === user?.id)
+    ? myListingsReal
     : allListings.filter((l) => l.userId === 'u1')
   const favoriteListings = supabaseConfigured ? [] : allListings.filter((l) => ['2', '5', '6'].includes(l.id))
 
@@ -41,6 +46,20 @@ export default function MinaSidorPage() {
     const updated = savedSearches.filter((s) => s.id !== id)
     setSavedSearches(updated)
     localStorage.setItem('bytaren_saved_searches', JSON.stringify(updated))
+  }
+
+  async function togglePause(listing: Listing) {
+    if (!supabaseConfigured) return
+    const next = listing.status === 'pausad' ? 'aktiv' : 'pausad'
+    await setListingStatus(listing.id, next)
+    setMyListingsReal((prev) => prev.map((l) => (l.id === listing.id ? { ...l, status: next } : l)))
+  }
+
+  async function handleDelete(id: string) {
+    if (!supabaseConfigured) return
+    if (!confirm('Ta bort annonsen? Detta går inte att ångra.')) return
+    await deleteListing(id)
+    setMyListingsReal((prev) => prev.filter((l) => l.id !== id))
   }
 
   const onboardingSteps = [
@@ -233,11 +252,17 @@ export default function MinaSidorPage() {
                       <Edit2 size={12} />
                       Redigera
                     </Link>
-                    <button className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1">
+                    <button
+                      onClick={() => togglePause(listing)}
+                      className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                    >
                       <EyeOff size={12} />
                       {listing.status === 'pausad' ? 'Aktivera' : 'Pausa'}
                     </button>
-                    <button className="text-xs text-red-400 hover:text-red-600 flex items-center gap-1 ml-auto">
+                    <button
+                      onClick={() => handleDelete(listing.id)}
+                      className="text-xs text-red-400 hover:text-red-600 flex items-center gap-1 ml-auto"
+                    >
                       <Trash2 size={12} />
                       Ta bort
                     </button>

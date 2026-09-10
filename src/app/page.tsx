@@ -728,11 +728,22 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* Link columns */}
+            {/* Link columns — only pages that actually exist */}
             {[
-              { title: 'Plattform', links: ['Hitta byte', 'Lägg upp annons', 'Hur det fungerar', 'Kartvyn'] },
-              { title: 'Konto', links: ['Logga in', 'Registrera dig', 'Mina sidor', 'Meddelanden'] },
-              { title: 'Bytaren', links: ['Om oss', 'Trygghet', 'Integritetspolicy', 'Villkor', 'Kontakt'] },
+              { title: 'Plattform', links: [
+                { label: 'Hitta byte', href: '/annonser' },
+                { label: 'Lägg upp annons', href: '/annonser/ny' },
+                { label: 'Hur det fungerar', href: '/hur-det-fungerar' },
+              ] },
+              { title: 'Konto', links: [
+                { label: 'Logga in', href: '/logga-in' },
+                { label: 'Registrera dig', href: '/registrera' },
+                { label: 'Mina sidor', href: '/mina-sidor' },
+                { label: 'Meddelanden', href: '/meddelanden' },
+              ] },
+              { title: 'Bytaren', links: [
+                { label: 'Trygghet', href: '/trygghet' },
+              ] },
             ].map((col) => (
               <div key={col.title}>
                 <p
@@ -743,14 +754,14 @@ export default function HomePage() {
                 </p>
                 <ul className="space-y-3">
                   {col.links.map((link) => (
-                    <li key={link}>
-                      <a
-                        href="#"
+                    <li key={link.label}>
+                      <Link
+                        href={link.href}
                         className="text-[13px] transition-colors hover:text-white"
                         style={{ color: 'rgba(255,255,255,0.45)' }}
                       >
-                        {link}
-                      </a>
+                        {link.label}
+                      </Link>
                     </li>
                   ))}
                 </ul>
@@ -762,12 +773,7 @@ export default function HomePage() {
             className="border-t flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 text-[12px]"
             style={{ borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.28)' }}
           >
-            <span>© 2026 Bytaren AB — Alla rättigheter förbehållna</span>
-            <div className="flex items-center gap-5">
-              {['Integritetspolicy', 'Villkor', 'Kontakt'].map((l) => (
-                <a key={l} href="#" className="hover:text-white transition-colors">{l}</a>
-              ))}
-            </div>
+            <span>© 2026 Bytaren — Alla rättigheter förbehållna</span>
           </div>
         </div>
       </footer>
