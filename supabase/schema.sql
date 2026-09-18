@@ -19,13 +19,15 @@ create table if not exists profiles (
 
 alter table profiles enable row level security;
 
+drop policy if exists "Profiles are viewable by everyone" on profiles;
 create policy "Profiles are viewable by everyone"
   on profiles for select using (true);
 
+drop policy if exists "Users can update their own profile" on profiles;
 create policy "Users can update their own profile"
   on profiles for update using (auth.uid() = id);
 
-create function handle_new_user()
+create or replace function handle_new_user()
 returns trigger as $$
 begin
   insert into public.profiles (id, name)
@@ -34,6 +36,7 @@ begin
 end;
 $$ language plpgsql security definer;
 
+drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure handle_new_user();
@@ -68,15 +71,19 @@ create index if not exists listings_user_id_idx on listings (user_id);
 
 alter table listings enable row level security;
 
+drop policy if exists "Active listings are viewable by everyone" on listings;
 create policy "Active listings are viewable by everyone"
   on listings for select using (status = 'aktiv' or user_id = auth.uid());
 
+drop policy if exists "Users can insert their own listings" on listings;
 create policy "Users can insert their own listings"
   on listings for insert with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update their own listings" on listings;
 create policy "Users can update their own listings"
   on listings for update using (auth.uid() = user_id);
 
+drop policy if exists "Users can delete their own listings" on listings;
 create policy "Users can delete their own listings"
   on listings for delete using (auth.uid() = user_id);
 
@@ -90,6 +97,7 @@ create table if not exists favorites (
 
 alter table favorites enable row level security;
 
+drop policy if exists "Users manage their own favorites" on favorites;
 create policy "Users manage their own favorites"
   on favorites for all using (auth.uid() = user_id);
 
@@ -106,6 +114,7 @@ create table if not exists saved_searches (
 
 alter table saved_searches enable row level security;
 
+drop policy if exists "Users manage their own saved searches" on saved_searches;
 create policy "Users manage their own saved searches"
   on saved_searches for all using (auth.uid() = user_id);
 
@@ -138,6 +147,7 @@ alter table conversations enable row level security;
 alter table conversation_participants enable row level security;
 alter table messages enable row level security;
 
+drop policy if exists "Participants can view their conversations" on conversations;
 create policy "Participants can view their conversations"
   on conversations for select using (
     exists (
@@ -148,9 +158,11 @@ create policy "Participants can view their conversations"
 
 -- Any signed-in user can start a conversation (e.g. by contacting a
 -- listing's owner) — access to it is controlled by conversation_participants.
+drop policy if exists "Users can start conversations" on conversations;
 create policy "Users can start conversations"
   on conversations for insert with check (auth.uid() is not null);
 
+drop policy if exists "Participants can view participant rows" on conversation_participants;
 create policy "Participants can view participant rows"
   on conversation_participants for select using (
     exists (
@@ -162,6 +174,7 @@ create policy "Participants can view participant rows"
 -- A user can add themselves to a conversation, or add someone else once
 -- they're already a participant (so: add yourself first, then the other
 -- person, as two separate inserts — see getOrCreateConversation()).
+drop policy if exists "Users can add participants to their conversations" on conversation_participants;
 create policy "Users can add participants to their conversations"
   on conversation_participants for insert with check (
     user_id = auth.uid()
@@ -171,6 +184,7 @@ create policy "Users can add participants to their conversations"
     )
   );
 
+drop policy if exists "Participants can view messages" on messages;
 create policy "Participants can view messages"
   on messages for select using (
     exists (
@@ -179,6 +193,7 @@ create policy "Participants can view messages"
     )
   );
 
+drop policy if exists "Participants can send messages" on messages;
 create policy "Participants can send messages"
   on messages for insert with check (
     auth.uid() = sender_id
@@ -188,6 +203,7 @@ create policy "Participants can send messages"
     )
   );
 
+drop policy if exists "Recipients can mark messages as read" on messages;
 create policy "Recipients can mark messages as read"
   on messages for update using (
     exists (
@@ -210,9 +226,11 @@ create table if not exists reports (
 
 alter table reports enable row level security;
 
+drop policy if exists "Users can create reports" on reports;
 create policy "Users can create reports"
   on reports for insert with check (auth.uid() = reporter_id);
 
+drop policy if exists "Users can view their own reports" on reports;
 create policy "Users can view their own reports"
   on reports for select using (auth.uid() = reporter_id);
 
@@ -231,12 +249,14 @@ create table if not exists listing_collaborators (
 
 alter table listing_collaborators enable row level security;
 
+drop policy if exists "Owners and collaborators can view collaborators" on listing_collaborators;
 create policy "Owners and collaborators can view collaborators"
   on listing_collaborators for select using (
     auth.uid() = user_id
     or exists (select 1 from listings l where l.id = listing_collaborators.listing_id and l.user_id = auth.uid())
   );
 
+drop policy if exists "Owners can remove collaborators" on listing_collaborators;
 create policy "Owners can remove collaborators"
   on listing_collaborators for delete using (
     exists (select 1 from listings l where l.id = listing_collaborators.listing_id and l.user_id = auth.uid())
@@ -253,6 +273,7 @@ create policy "Active listings are viewable by everyone"
   );
 
 drop policy if exists "Users can update their own listings" on listings;
+drop policy if exists "Owners and collaborators can update listings" on listings;
 create policy "Owners and collaborators can update listings"
   on listings for update using (
     auth.uid() = user_id
@@ -260,6 +281,7 @@ create policy "Owners and collaborators can update listings"
   );
 
 drop policy if exists "Users can delete their own listings" on listings;
+drop policy if exists "Owners and collaborators can delete listings" on listings;
 create policy "Owners and collaborators can delete listings"
   on listings for delete using (
     auth.uid() = user_id
@@ -303,12 +325,15 @@ create table if not exists interests (
 
 alter table interests enable row level security;
 
+drop policy if exists "Users can express interest" on interests;
 create policy "Users can express interest"
   on interests for insert with check (auth.uid() = user_id);
 
+drop policy if exists "Users can remove their interest" on interests;
 create policy "Users can remove their interest"
   on interests for delete using (auth.uid() = user_id);
 
+drop policy if exists "Users can view interest on their own listings or their own interests" on interests;
 create policy "Users can view interest on their own listings or their own interests"
   on interests for select using (
     auth.uid() = user_id
@@ -326,32 +351,39 @@ insert into storage.buckets (id, name, public)
 values ('avatars', 'avatars', true)
 on conflict (id) do nothing;
 
+drop policy if exists "Public read listing images" on storage.objects;
 create policy "Public read listing images"
   on storage.objects for select using (bucket_id = 'listing-images');
 
+drop policy if exists "Users can upload their own listing images" on storage.objects;
 create policy "Users can upload their own listing images"
   on storage.objects for insert with check (
     bucket_id = 'listing-images' and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+drop policy if exists "Users can delete their own listing images" on storage.objects;
 create policy "Users can delete their own listing images"
   on storage.objects for delete using (
     bucket_id = 'listing-images' and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+drop policy if exists "Public read avatars" on storage.objects;
 create policy "Public read avatars"
   on storage.objects for select using (bucket_id = 'avatars');
 
+drop policy if exists "Users can upload their own avatar" on storage.objects;
 create policy "Users can upload their own avatar"
   on storage.objects for insert with check (
     bucket_id = 'avatars' and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+drop policy if exists "Users can update their own avatar" on storage.objects;
 create policy "Users can update their own avatar"
   on storage.objects for update using (
     bucket_id = 'avatars' and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+drop policy if exists "Users can delete their own avatar" on storage.objects;
 create policy "Users can delete their own avatar"
   on storage.objects for delete using (
     bucket_id = 'avatars' and auth.uid()::text = (storage.foldername(name))[1]
