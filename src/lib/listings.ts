@@ -69,7 +69,7 @@ export async function fetchListings(): Promise<Listing[]> {
 
   if (error) {
     console.error('Kunde inte hämta annonser', error)
-    return MOCK_LISTINGS
+    throw error
   }
   return (data as unknown as ListingRow[]).map(rowToListing)
 }

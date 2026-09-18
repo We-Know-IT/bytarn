@@ -33,6 +33,7 @@ export default function AnnonserPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set())
   const [matchedOwnerIds, setMatchedOwnerIds] = useState<Set<string>>(new Set())
   const { user } = useAuth()
@@ -40,6 +41,7 @@ export default function AnnonserPage() {
   useEffect(() => {
     fetchListings()
       .then(setListings)
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false))
   }, [])
 
@@ -90,6 +92,14 @@ export default function AnnonserPage() {
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="h-64 rounded-2xl bg-gray-100 animate-pulse" />
                 ))}
+              </div>
+            ) : loadError ? (
+              <div className="text-center py-20">
+                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Home size={26} className="text-red-400" strokeWidth={1.75} />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Kunde inte hämta annonser</h3>
+                <p className="text-gray-500 text-sm">Något gick fel. Prova att ladda om sidan.</p>
               </div>
             ) : filtered.length === 0 ? (
               <div className="text-center py-20">

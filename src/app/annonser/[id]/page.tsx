@@ -54,7 +54,7 @@ export default function ListingDetailPage() {
   useEffect(() => {
     const id = params.id as string
     fetchListingById(id).then(setListing)
-    fetchListings().then(setAllListings)
+    fetchListings().then(setAllListings).catch(() => setAllListings([]))
     fetchInterestCount(id).then(setInterestCount)
   }, [params.id])
 

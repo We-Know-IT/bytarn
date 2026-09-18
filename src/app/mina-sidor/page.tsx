@@ -36,7 +36,7 @@ export default function MinaSidorPage() {
   }, [])
 
   useEffect(() => {
-    fetchListings().then(setAllListings)
+    fetchListings().then(setAllListings).catch(() => setAllListings([]))
   }, [])
 
   useEffect(() => {

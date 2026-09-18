@@ -113,9 +113,11 @@ export default function ListingMap({ listings, selectedId, onSelect, zoom = 12, 
         zoomControl: true,
       })
 
-      // Clean, low-saturation basemap — closer to Booli/Bostadsförmedlingen than a busy street map.
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '©OpenStreetMap ©CartoDB',
+      // Standard OpenStreetMap tiles — no API key required, and shows transit
+      // stations, shops and other POIs (Carto's Voyager basemap needs a paid
+      // API key now and its style hides most of that anyway).
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '©OpenStreetMap',
         maxZoom: 19,
       }).addTo(map)
 

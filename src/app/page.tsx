@@ -175,7 +175,7 @@ export default function HomePage() {
   const [listings, setListings] = useState<Listing[]>([])
 
   useEffect(() => {
-    fetchListings().then(setListings)
+    fetchListings().then(setListings).catch(() => setListings([]))
   }, [])
 
   const featured = useMemo(() => listings.filter((l) => l.status === 'aktiv').slice(0, 6), [listings])
