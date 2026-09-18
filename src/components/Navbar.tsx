@@ -91,8 +91,8 @@ export default function Navbar() {
           <Link
             href="/annonser/ny"
             className={cn(
-              'flex items-center gap-1.5 text-[14px] font-medium transition-colors duration-200 py-1',
-              isActive('/annonser/ny') ? 'text-[#153F32]' : 'text-[#6D716C] hover:text-[#153F32]'
+              'nav-link flex items-center gap-1.5 text-[14px] font-medium transition-colors duration-200 py-1',
+              isActive('/annonser/ny') ? 'active text-[#153F32]' : 'text-[#6D716C] hover:text-[#153F32]'
             )}
           >
             <PlusCircle size={14} strokeWidth={2} />
