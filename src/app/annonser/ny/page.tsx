@@ -2,11 +2,13 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Upload, X, Plus, MapPin, Info, MoveVertical, Trees, Sofa, PawPrint, Wand2 } from 'lucide-react'
+import { Upload, X, Plus, MapPin, Info, MoveVertical, Trees, Sofa, PawPrint, Wand2, Loader2, Users, Mail } from 'lucide-react'
 import { STOCKHOLM_DISTRICTS } from '@/types'
 import { cn } from '@/lib/utils'
 import AddressInput from '@/components/AddressInput'
 import { createListing, updateListing, fetchListingById } from '@/lib/listings'
+import { uploadListingImage } from '@/lib/storage'
+import { fetchCollaborators, inviteCollaboratorByEmail, removeCollaborator, type Collaborator } from '@/lib/collaborators'
 import { useAuth } from '@/context/AuthContext'
 import { supabaseConfigured } from '@/lib/supabase/client'
 
@@ -62,9 +64,14 @@ function NyAnnonsForm() {
   const isEditing = Boolean(editId)
 
   const [images, setImages] = useState<string[]>([])
+  const [uploadingImages, setUploadingImages] = useState(false)
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([])
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviting, setInviting] = useState(false)
+  const [inviteError, setInviteError] = useState<string | null>(null)
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -106,6 +113,7 @@ function NyAnnonsForm() {
         }))
         setImages(listing.images)
       })
+      fetchCollaborators(editId).then(setCollaborators)
       return
     }
     // Otherwise pre-fill from onboarding draft
@@ -127,21 +135,48 @@ function NyAnnonsForm() {
     } catch {}
   }, [editId])
 
-  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files || [])
-    files.forEach((file) => {
-      const reader = new FileReader()
-      reader.onload = (ev) => {
-        if (images.length < MAX_IMAGES) {
-          setImages((prev) => [...prev, ev.target?.result as string])
-        }
-      }
-      reader.readAsDataURL(file)
-    })
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []).slice(0, MAX_IMAGES - images.length)
+    e.target.value = ''
+    if (files.length === 0) return
+    if (!supabaseConfigured || !user) {
+      setSubmitError('Du måste vara inloggad för att ladda upp bilder.')
+      return
+    }
+    setUploadingImages(true)
+    try {
+      const uploaded = await Promise.all(files.map((file) => uploadListingImage(file, user.id)))
+      setImages((prev) => [...prev, ...uploaded].slice(0, MAX_IMAGES))
+    } catch {
+      setSubmitError('Kunde inte ladda upp en eller flera bilder. Försök igen.')
+    } finally {
+      setUploadingImages(false)
+    }
   }
 
   function removeImage(index: number) {
     setImages((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  async function handleInvite() {
+    if (!editId || !inviteEmail.trim()) return
+    setInviting(true)
+    setInviteError(null)
+    try {
+      await inviteCollaboratorByEmail(editId, inviteEmail.trim())
+      setInviteEmail('')
+      setCollaborators(await fetchCollaborators(editId))
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : 'Kunde inte bjuda in personen.')
+    } finally {
+      setInviting(false)
+    }
+  }
+
+  async function handleRemoveCollaborator(userId: string) {
+    if (!editId) return
+    await removeCollaborator(editId, userId)
+    setCollaborators((prev) => prev.filter((c) => c.userId !== userId))
   }
 
   async function handleSubmit() {
@@ -416,7 +451,7 @@ function NyAnnonsForm() {
           {/* Upload area */}
           <label className={cn(
             'block border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors',
-            images.length >= MAX_IMAGES
+            images.length >= MAX_IMAGES || uploadingImages
               ? 'border-gray-200 opacity-50 cursor-not-allowed'
               : 'border-gray-300 hover:border-emerald-400 hover:bg-emerald-50'
           )}>
@@ -425,17 +460,25 @@ function NyAnnonsForm() {
               accept="image/*"
               multiple
               onChange={handleImageUpload}
-              disabled={images.length >= MAX_IMAGES}
+              disabled={images.length >= MAX_IMAGES || uploadingImages}
               className="hidden"
             />
-            <Upload size={32} className="text-gray-400 mx-auto mb-3" />
+            {uploadingImages ? (
+              <Loader2 size={32} className="text-emerald-500 mx-auto mb-3 animate-spin" />
+            ) : (
+              <Upload size={32} className="text-gray-400 mx-auto mb-3" />
+            )}
             <p className="text-sm font-medium text-gray-600">
-              Klicka för att ladda upp bilder
+              {uploadingImages ? 'Laddar upp…' : 'Klicka för att ladda upp bilder'}
             </p>
             <p className="text-xs text-gray-400 mt-1">
               JPG, PNG upp till 10 MB · {images.length}/{MAX_IMAGES} tillagda
             </p>
           </label>
+
+          {submitError && (
+            <div className="px-4 py-3 rounded-xl bg-red-50 text-red-700 text-sm">{submitError}</div>
+          )}
 
           {/* Image grid */}
           {images.length > 0 && (
@@ -468,6 +511,63 @@ function NyAnnonsForm() {
                   <Plus size={24} className="text-gray-400" />
                 </label>
               )}
+            </div>
+          )}
+
+          {/* Dela annons med en medannonsör (t.ex. en sambo) */}
+          {isEditing && editId && (
+            <div className="border border-gray-200 rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-1">
+                <Users size={16} className="text-emerald-600" />
+                <h3 className="font-semibold text-gray-900 text-sm">Dela annonsen</h3>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">
+                Bjud in t.ex. en sambo så kan ni båda hantera samma annons. Personen måste redan ha ett konto på Bytaren.
+              </p>
+
+              {collaborators.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  {collaborators.map((c) => (
+                    <div key={c.userId} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl">
+                      {c.avatarUrl ? (
+                        <img src={c.avatarUrl} alt={c.name} className="w-8 h-8 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-xs font-semibold">
+                          {c.name[0]}
+                        </div>
+                      )}
+                      <span className="flex-1 text-sm text-gray-800">{c.name}</span>
+                      <button
+                        onClick={() => handleRemoveCollaborator(c.userId)}
+                        className="text-xs text-red-400 hover:text-red-600"
+                      >
+                        Ta bort
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="e-post till medannonsör"
+                    className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <button
+                  onClick={handleInvite}
+                  disabled={inviting || !inviteEmail.trim()}
+                  className="px-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 disabled:opacity-40 transition-colors"
+                >
+                  {inviting ? 'Bjuder in…' : 'Bjud in'}
+                </button>
+              </div>
+              {inviteError && <p className="text-xs text-red-600 mt-2">{inviteError}</p>}
             </div>
           )}
 
@@ -520,7 +620,7 @@ function NyAnnonsForm() {
           <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
             <Info size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-amber-700">
-              Din annons kommer att granskas och publiceras inom några minuter.
+              Annonsen publiceras direkt och blir synlig för alla på Bytaren.
             </p>
           </div>
 

@@ -7,6 +7,7 @@ import { createClient, supabaseConfigured } from '@/lib/supabase/client'
 export interface Profile {
   id: string
   name: string
+  bio: string | null
   avatarUrl: string | null
   homeAddress: string | null
   homeDistrict: string | null
@@ -19,6 +20,7 @@ interface AuthContextValue {
   profile: Profile | null
   loading: boolean
   signOut: () => Promise<void>
+  refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -26,6 +28,7 @@ const AuthContext = createContext<AuthContextValue>({
   profile: null,
   loading: false,
   signOut: async () => {},
+  refreshProfile: async () => {},
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -43,6 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile({
           id: data.id,
           name: data.name,
+          bio: data.bio,
           avatarUrl: data.avatar_url,
           homeAddress: data.home_address,
           homeDistrict: data.home_district,
@@ -75,8 +79,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await createClient().auth.signOut()
   }
 
+  async function refreshProfile() {
+    if (!supabaseConfigured || !user) return
+    const supabase = createClient()
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+    if (data) {
+      setProfile({
+        id: data.id,
+        name: data.name,
+        bio: data.bio,
+        avatarUrl: data.avatar_url,
+        homeAddress: data.home_address,
+        homeDistrict: data.home_district,
+        homeLat: data.home_lat,
+        homeLng: data.home_lng,
+      })
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

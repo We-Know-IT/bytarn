@@ -1,30 +1,48 @@
 'use client'
 
 import Link from 'next/link'
-import { Heart, Home, MapPin } from 'lucide-react'
+import { Heart, Home, MapPin, Handshake } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import type { Listing } from '@/types'
 import { cn, haversineKm, formatDistance } from '@/lib/utils'
 import { CURRENT_USER_HOME } from '@/lib/mock-data'
+import { useAuth } from '@/context/AuthContext'
+import { supabaseConfigured } from '@/lib/supabase/client'
+import { addFavorite, removeFavorite } from '@/lib/favorites'
 
 interface ListingCardProps {
   listing: Listing
   compact?: boolean
+  favorited?: boolean
+  mutualMatch?: boolean
 }
 
-function matchPercent(matchCount: number): number | null {
-  if (matchCount <= 0) return null
-  return Math.min(97, 76 + matchCount * 5)
-}
-
-export default function ListingCard({ listing, compact = false }: ListingCardProps) {
-  const [favorited, setFavorited] = useState(false)
+export default function ListingCard({ listing, compact = false, favorited: initialFavorited = false, mutualMatch = false }: ListingCardProps) {
+  const { user } = useAuth()
+  const [favorited, setFavorited] = useState(initialFavorited)
   const [imgIndex, setImgIndex] = useState(0)
   const [imgError, setImgError] = useState(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const pct = matchPercent(listing.matchCount)
   const distKm = haversineKm(CURRENT_USER_HOME.lat, CURRENT_USER_HOME.lng, listing.lat, listing.lng)
   const distLabel = formatDistance(distKm)
+
+  useEffect(() => setFavorited(initialFavorited), [initialFavorited])
+
+  async function handleFavoriteClick(e: React.MouseEvent) {
+    e.preventDefault()
+    if (!supabaseConfigured || !user) {
+      alert('Du måste vara inloggad för att spara favoriter.')
+      return
+    }
+    const next = !favorited
+    setFavorited(next)
+    try {
+      if (next) await addFavorite(user.id, listing.id)
+      else await removeFavorite(user.id, listing.id)
+    } catch {
+      setFavorited(!next)
+    }
+  }
 
   const images = listing.images.filter(Boolean)
   const hasMultiple = images.length > 1
@@ -78,18 +96,18 @@ export default function ListingCard({ listing, compact = false }: ListingCardPro
           )}
 
           {/* Match badge — top left */}
-          {pct !== null && (
+          {mutualMatch && (
             <div
               className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-semibold text-white"
               style={{ backgroundColor: '#153F32' }}
             >
-              <Heart size={11} fill="currentColor" />
-              <span>{pct}% match</span>
+              <Handshake size={11} strokeWidth={2} />
+              <span>Match</span>
             </div>
           )}
 
           {/* Status badge (if no match badge) */}
-          {pct === null && listing.status !== 'aktiv' && (
+          {!mutualMatch && listing.status !== 'aktiv' && (
             <div className="absolute top-3 left-3 px-2.5 py-1.5 rounded-full text-[11px] font-semibold bg-white/90 text-amber-700">
               {listing.status === 'pausad' ? 'Pausad' : 'Avslutad'}
             </div>
@@ -97,10 +115,7 @@ export default function ListingCard({ listing, compact = false }: ListingCardPro
 
           {/* Favorite — top right */}
           <button
-            onClick={(e) => {
-              e.preventDefault()
-              setFavorited(!favorited)
-            }}
+            onClick={handleFavoriteClick}
             className={cn(
               'absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200',
               favorited

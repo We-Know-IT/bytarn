@@ -26,7 +26,7 @@ type ListingRow = {
   profiles: { name: string; avatar_url: string | null } | null
 }
 
-function rowToListing(row: ListingRow): Listing {
+export function rowToListing(row: ListingRow): Listing {
   return {
     id: row.id,
     title: row.title,
@@ -55,7 +55,8 @@ function rowToListing(row: ListingRow): Listing {
   }
 }
 
-const LISTING_SELECT = '*, profiles ( name, avatar_url )'
+export const LISTING_SELECT = '*, profiles ( name, avatar_url )'
+export type { ListingRow }
 
 export async function fetchListings(): Promise<Listing[]> {
   if (!supabaseConfigured) return MOCK_LISTINGS
@@ -73,20 +74,36 @@ export async function fetchListings(): Promise<Listing[]> {
   return (data as unknown as ListingRow[]).map(rowToListing)
 }
 
+// Listings you own, plus listings you're a co-manager on (e.g. a partner
+// invited you) — a collaborator can pause/edit/delete just like the owner.
 export async function fetchMyListings(userId: string): Promise<Listing[]> {
   if (!supabaseConfigured) return []
   const supabase = createClient()
-  const { data, error } = await supabase
-    .from('listings')
-    .select(LISTING_SELECT)
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
 
-  if (error) {
-    console.error('Kunde inte hämta dina annonser', error)
+  const [{ data: owned, error: ownedError }, { data: collabRows, error: collabError }] = await Promise.all([
+    supabase.from('listings').select(LISTING_SELECT).eq('user_id', userId),
+    supabase.from('listing_collaborators').select('listing_id').eq('user_id', userId),
+  ])
+
+  if (ownedError || collabError) {
+    console.error('Kunde inte hämta dina annonser', ownedError ?? collabError)
     return []
   }
-  return (data as unknown as ListingRow[]).map(rowToListing)
+
+  const collabIds = (collabRows ?? []).map((r) => r.listing_id as string)
+  let collaborated: ListingRow[] = []
+  if (collabIds.length > 0) {
+    const { data, error } = await supabase.from('listings').select(LISTING_SELECT).in('id', collabIds)
+    if (error) console.error('Kunde inte hämta delade annonser', error)
+    else collaborated = data as unknown as ListingRow[]
+  }
+
+  const byId = new Map<string, ListingRow>()
+  ;[...(owned as unknown as ListingRow[]), ...collaborated].forEach((row) => byId.set(row.id, row))
+
+  return [...byId.values()]
+    .map(rowToListing)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 }
 
 export async function fetchListingById(id: string): Promise<Listing | null> {
