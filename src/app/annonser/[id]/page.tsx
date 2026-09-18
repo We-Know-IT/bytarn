@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   ChevronLeft,
@@ -22,6 +22,9 @@ import {
   Handshake,
 } from 'lucide-react'
 import { fetchListingById, fetchListings, reportListing } from '@/lib/listings'
+import { addFavorite, removeFavorite, fetchFavoriteListingIds } from '@/lib/favorites'
+import { expressInterest, removeInterest, fetchMyInterestListingIds, fetchInterestCount, fetchMutualMatchUserIds } from '@/lib/interests'
+import { getOrCreateConversation } from '@/lib/messages'
 import type { Listing } from '@/types'
 import { formatRent, formatDate, cn } from '@/lib/utils'
 import ListingCard from '@/components/ListingCard'
@@ -33,6 +36,7 @@ const ListingMap = dynamic(() => import('@/components/ListingMap'), { ssr: false
 
 export default function ListingDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const { user } = useAuth()
   const [listing, setListing] = useState<Listing | null | undefined>(undefined)
   const [allListings, setAllListings] = useState<Listing[]>([])
@@ -42,13 +46,27 @@ export default function ListingDetailPage() {
   const [favorited, setFavorited] = useState(false)
   const [copied, setCopied] = useState(false)
   const [reported, setReported] = useState(false)
+  const [interestCount, setInterestCount] = useState(0)
+  const [mutualMatch, setMutualMatch] = useState(false)
+  const [messaging, setMessaging] = useState(false)
   const resetAutoPlay = useRef(0)
 
   useEffect(() => {
     const id = params.id as string
     fetchListingById(id).then(setListing)
     fetchListings().then(setAllListings)
+    fetchInterestCount(id).then(setInterestCount)
   }, [params.id])
+
+  useEffect(() => {
+    if (!user) return
+    const id = params.id as string
+    fetchFavoriteListingIds(user.id).then((ids) => setFavorited(ids.has(id)))
+    fetchMyInterestListingIds(user.id).then((ids) => setInterested(ids.has(id)))
+    fetchMutualMatchUserIds(user.id).then((ownerIds) => {
+      if (listing) setMutualMatch(ownerIds.has(listing.userId))
+    })
+  }, [user, params.id, listing])
 
   // Auto-rotate gallery every 4.5 s; resets when user manually navigates.
   // Must run unconditionally (before the early returns below) — React requires
@@ -84,6 +102,60 @@ export default function ListingDetailPage() {
         </div>
       </div>
     )
+  }
+
+  async function handleToggleFavorite() {
+    if (!listing) return
+    if (!supabaseConfigured || !user) {
+      alert('Du måste vara inloggad för att spara favoriter.')
+      return
+    }
+    const next = !favorited
+    setFavorited(next)
+    try {
+      if (next) await addFavorite(user.id, listing.id)
+      else await removeFavorite(user.id, listing.id)
+    } catch {
+      setFavorited(!next)
+    }
+  }
+
+  async function handleToggleInterest() {
+    if (!listing) return
+    if (!supabaseConfigured || !user) {
+      alert('Du måste vara inloggad för att visa intresse.')
+      return
+    }
+    const next = !interested
+    setInterested(next)
+    setInterestCount((c) => Math.max(0, c + (next ? 1 : -1)))
+    try {
+      if (next) await expressInterest(user.id, listing.id)
+      else await removeInterest(user.id, listing.id)
+    } catch {
+      setInterested(!next)
+      setInterestCount((c) => Math.max(0, c + (next ? -1 : 1)))
+    }
+  }
+
+  async function handleMessage() {
+    if (!listing) return
+    if (!supabaseConfigured || !user) {
+      alert('Du måste vara inloggad för att skicka meddelanden.')
+      return
+    }
+    if (user.id === listing.userId) {
+      alert('Du kan inte skicka meddelande till dig själv.')
+      return
+    }
+    setMessaging(true)
+    try {
+      const conversationId = await getOrCreateConversation(listing.id, user.id, listing.userId)
+      router.push(`/meddelanden/${conversationId}`)
+    } catch {
+      alert('Kunde inte starta konversationen. Försök igen.')
+      setMessaging(false)
+    }
   }
 
   async function handleReport() {
@@ -264,7 +336,8 @@ export default function ListingDetailPage() {
                   )}
                 </button>
                 <button
-                  onClick={() => setFavorited(!favorited)}
+                  onClick={handleToggleFavorite}
+                  aria-label={favorited ? 'Ta bort från favoriter' : 'Spara som favorit'}
                   className={cn(
                     'p-2 border rounded-xl transition-colors',
                     favorited
@@ -346,8 +419,7 @@ export default function ListingDetailPage() {
 
           {/* Activity */}
           <div className="flex items-center gap-6 text-sm text-gray-500 py-4 border-t border-gray-100">
-            <span>{listing.interestedCount} intresserade</span>
-            <span>{listing.matchCount} matchningar</span>
+            <span>{interestCount} intresserade</span>
             <span>Annonserad {formatDate(listing.createdAt)}</span>
           </div>
 
@@ -395,7 +467,7 @@ export default function ListingDetailPage() {
               </div>
 
               {/* Match indicator */}
-              {listing.matchCount > 0 && (
+              {mutualMatch && (
                 <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl mb-4">
                   <Handshake size={18} className="text-emerald-600 flex-shrink-0" strokeWidth={1.75} />
                   <div>
@@ -408,7 +480,7 @@ export default function ListingDetailPage() {
               {/* CTA buttons */}
               <div className="space-y-2">
                 <button
-                  onClick={() => setInterested(!interested)}
+                  onClick={handleToggleInterest}
                   className={cn(
                     'w-full py-3 rounded-xl font-semibold text-sm transition-all',
                     interested
@@ -425,13 +497,14 @@ export default function ListingDetailPage() {
                   )}
                 </button>
 
-                <Link
-                  href="/meddelanden"
-                  className="w-full py-3 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                <button
+                  onClick={handleMessage}
+                  disabled={messaging}
+                  className="w-full py-3 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   <MessageSquare size={16} />
-                  Skicka meddelande
-                </Link>
+                  {messaging ? 'Öppnar…' : 'Skicka meddelande'}
+                </button>
               </div>
             </div>
 

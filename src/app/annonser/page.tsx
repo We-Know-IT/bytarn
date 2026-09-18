@@ -4,6 +4,9 @@ import { useState, useMemo, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { CURRENT_USER_HOME } from '@/lib/mock-data'
 import { fetchListings } from '@/lib/listings'
+import { fetchFavoriteListingIds } from '@/lib/favorites'
+import { fetchMutualMatchUserIds } from '@/lib/interests'
+import { useAuth } from '@/context/AuthContext'
 import SearchFiltersComponent from '@/components/SearchFilters'
 import ListingCard from '@/components/ListingCard'
 import type { Listing, SearchFilters } from '@/types'
@@ -30,12 +33,21 @@ export default function AnnonserPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set())
+  const [matchedOwnerIds, setMatchedOwnerIds] = useState<Set<string>>(new Set())
+  const { user } = useAuth()
 
   useEffect(() => {
     fetchListings()
       .then(setListings)
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (!user) return
+    fetchFavoriteListingIds(user.id).then(setFavoriteIds)
+    fetchMutualMatchUserIds(user.id).then(setMatchedOwnerIds)
+  }, [user])
 
   const filtered = useMemo(() => {
     const results = listings.filter((l) => {
@@ -90,7 +102,12 @@ export default function AnnonserPage() {
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {filtered.map((listing) => (
-                  <ListingCard key={listing.id} listing={listing} />
+                  <ListingCard
+                    key={listing.id}
+                    listing={listing}
+                    favorited={favoriteIds.has(listing.id)}
+                    mutualMatch={matchedOwnerIds.has(listing.userId)}
+                  />
                 ))}
               </div>
             )}
@@ -126,7 +143,12 @@ export default function AnnonserPage() {
                         : 'hover:ring-1 hover:ring-gray-200'
                     }`}
                   >
-                    <ListingCard listing={listing} compact />
+                    <ListingCard
+                      listing={listing}
+                      compact
+                      favorited={favoriteIds.has(listing.id)}
+                      mutualMatch={matchedOwnerIds.has(listing.userId)}
+                    />
                   </div>
                 ))
               )}

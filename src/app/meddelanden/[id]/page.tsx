@@ -3,23 +3,49 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Send, Image as ImageIcon, Paperclip, Handshake } from 'lucide-react'
-import { MOCK_CONVERSATIONS, MOCK_MESSAGES } from '@/lib/mock-data'
+import { ArrowLeft, Send, Image as ImageIcon, Handshake, Loader2 } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
+import {
+  fetchConversations,
+  fetchMessages,
+  sendMessage,
+  markConversationRead,
+  type ChatMessage,
+  type ConversationSummary,
+} from '@/lib/messages'
+import { uploadListingImage } from '@/lib/storage'
 import { formatMessageTime, cn } from '@/lib/utils'
-import type { Message } from '@/types'
 
 export default function ConversationPage() {
   const params = useParams()
-  const conv = MOCK_CONVERSATIONS.find((c) => c.id === params.id)
-  const [messages, setMessages] = useState<Message[]>(
-    MOCK_MESSAGES.filter((m) => m.conversationId === params.id)
-  )
+  const conversationId = params.id as string
+  const { user } = useAuth()
+  const [conv, setConv] = useState<ConversationSummary | null | undefined>(undefined)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
+  const [uploading, setUploading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!user) return
+    fetchConversations(user.id).then((convs) => {
+      setConv(convs.find((c) => c.id === conversationId) ?? null)
+    })
+    fetchMessages(conversationId).then(setMessages)
+    markConversationRead(conversationId, user.id)
+  }, [user, conversationId])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  if (!user || conv === undefined) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-gray-400 text-sm">
+        Laddar konversation…
+      </div>
+    )
+  }
 
   if (!conv) {
     return (
@@ -29,49 +55,42 @@ export default function ConversationPage() {
     )
   }
 
-  const other = conv.participants.find((p) => p.id !== 'me')
+  const other = conv.other
 
-  function sendMessage() {
-    if (!input.trim()) return
-    const msg: Message = {
-      id: `m${Date.now()}`,
-      conversationId: conv!.id,
-      senderId: 'me',
-      senderName: 'Du',
-      content: input.trim(),
-      createdAt: new Date().toISOString(),
-      read: false,
-    }
-    setMessages((prev) => [...prev, msg])
+  async function handleSend() {
+    if (!input.trim() || !user) return
+    const content = input.trim()
     setInput('')
+    await sendMessage(conversationId, user.id, content)
+    setMessages((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), conversationId, senderId: user.id, content, read: false, createdAt: new Date().toISOString() },
+    ])
   }
 
-  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      const imageUrl = ev.target?.result as string
-      const msg: Message = {
-        id: `m${Date.now()}`,
-        conversationId: conv!.id,
-        senderId: 'me',
-        senderName: 'Du',
-        content: '',
-        imageUrl,
-        createdAt: new Date().toISOString(),
-        read: false,
-      }
-      setMessages((prev) => [...prev, msg])
+    if (!file || !user) return
+    setUploading(true)
+    try {
+      const imageUrl = await uploadListingImage(file, user.id)
+      await sendMessage(conversationId, user.id, '', imageUrl)
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), conversationId, senderId: user.id, content: '', imageUrl, read: false, createdAt: new Date().toISOString() },
+      ])
+    } catch {
+      alert('Kunde inte skicka bilden. Försök igen.')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
     }
-    reader.readAsDataURL(file)
-    e.target.value = ''
   }
 
   function handleKey(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      sendMessage()
+      handleSend()
     }
   }
 
@@ -82,15 +101,15 @@ export default function ConversationPage() {
         <Link href="/meddelanden" className="text-gray-400 hover:text-gray-600">
           <ArrowLeft size={20} />
         </Link>
-        {other?.avatar ? (
-          <img src={other.avatar} alt={other.name} className="w-9 h-9 rounded-full object-cover" />
+        {other?.avatarUrl ? (
+          <img src={other.avatarUrl} alt={other.name} className="w-9 h-9 rounded-full object-cover" />
         ) : (
           <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-semibold text-sm">
-            {other?.name[0]}
+            {other?.name[0] ?? '?'}
           </div>
         )}
         <div className="flex-1">
-          <p className="font-semibold text-gray-900 text-sm">{other?.name}</p>
+          <p className="font-semibold text-gray-900 text-sm">{other?.name ?? 'Okänd användare'}</p>
           <p className="text-xs text-gray-400">{conv.listingTitle}</p>
         </div>
         {conv.mutualInterest && (
@@ -99,66 +118,51 @@ export default function ConversationPage() {
             Match!
           </span>
         )}
-        <Link
-          href={`/annonser/${conv.listingId}`}
-          className="flex-shrink-0"
-        >
-          <img
-            src={conv.listingImage}
-            alt={conv.listingTitle}
-            className="w-12 h-12 rounded-lg object-cover border border-gray-100"
-          />
-        </Link>
+        {conv.listingId && (
+          <Link href={`/annonser/${conv.listingId}`} className="flex-shrink-0">
+            {conv.listingImage ? (
+              <img
+                src={conv.listingImage}
+                alt={conv.listingTitle}
+                className="w-12 h-12 rounded-lg object-cover border border-gray-100"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-100" />
+            )}
+          </Link>
+        )}
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-gray-50">
         {messages.map((msg) => {
-          const isMe = msg.senderId === 'me'
+          const isMe = msg.senderId === user.id
           return (
             <div key={msg.id} className={cn('flex gap-2', isMe && 'flex-row-reverse')}>
-              {!isMe && (
-                other?.avatar ? (
-                  <img
-                    src={other.avatar}
-                    alt={other.name}
-                    className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-auto"
-                  />
+              {!isMe &&
+                (other?.avatarUrl ? (
+                  <img src={other.avatarUrl} alt={other.name} className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-auto" />
                 ) : (
                   <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center text-xs text-emerald-700 flex-shrink-0 mt-auto">
-                    {other?.name[0]}
+                    {other?.name[0] ?? '?'}
                   </div>
-                )
-              )}
+                ))}
               <div className={cn('max-w-xs lg:max-w-sm', isMe && 'items-end flex flex-col')}>
                 {msg.imageUrl && (
-                  <img
-                    src={msg.imageUrl}
-                    alt="Bild"
-                    className="rounded-2xl max-w-full mb-1 border border-gray-100"
-                  />
+                  <img src={msg.imageUrl} alt="Bild" className="rounded-2xl max-w-full mb-1 border border-gray-100" />
                 )}
                 {msg.content && (
                   <div
                     className={cn(
                       'px-4 py-2.5 rounded-2xl text-sm leading-relaxed',
-                      isMe
-                        ? 'bg-emerald-600 text-white rounded-tr-sm'
-                        : 'bg-white text-gray-800 shadow-sm rounded-tl-sm border border-gray-100'
+                      isMe ? 'bg-emerald-600 text-white rounded-tr-sm' : 'bg-white text-gray-800 shadow-sm rounded-tl-sm border border-gray-100'
                     )}
                   >
                     {msg.content}
                   </div>
                 )}
                 <div className={cn('flex items-center gap-1 mt-1 px-1', isMe ? 'justify-end' : '')}>
-                  <p className="text-xs text-gray-400">
-                    {formatMessageTime(msg.createdAt)}
-                  </p>
-                  {isMe && (
-                    <span className={cn('text-xs font-bold', msg.read ? 'text-emerald-500' : 'text-gray-300')}>
-                      {msg.read ? '✓✓' : '✓'}
-                    </span>
-                  )}
+                  <p className="text-xs text-gray-400">{formatMessageTime(msg.createdAt)}</p>
                 </div>
               </div>
             </div>
@@ -171,8 +175,8 @@ export default function ConversationPage() {
       <div className="bg-white border-t border-gray-100 px-4 py-3">
         <div className="flex items-end gap-2">
           <label className="p-2 text-gray-400 hover:text-gray-600 cursor-pointer flex-shrink-0">
-            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-            <ImageIcon size={20} />
+            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
+            {uploading ? <Loader2 size={20} className="animate-spin" /> : <ImageIcon size={20} />}
           </label>
 
           <div className="flex-1 relative">
@@ -188,16 +192,15 @@ export default function ConversationPage() {
           </div>
 
           <button
-            onClick={sendMessage}
+            onClick={handleSend}
             disabled={!input.trim()}
             className="w-10 h-10 bg-emerald-600 text-white rounded-full flex items-center justify-center flex-shrink-0 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            aria-label="Skicka meddelande"
           >
             <Send size={16} />
           </button>
         </div>
-        <p className="text-xs text-gray-400 mt-2 text-center">
-          Enter för att skicka · Shift+Enter för ny rad
-        </p>
+        <p className="text-xs text-gray-400 mt-2 text-center">Enter för att skicka · Shift+Enter för ny rad</p>
       </div>
     </div>
   )
