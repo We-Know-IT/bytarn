@@ -21,7 +21,7 @@ import type { Listing, SavedSearch, ListingStatus } from '@/types'
 type Tab = 'annonser' | 'favoriter' | 'intresse' | 'sparade'
 
 export default function MinaSidorPage() {
-  const { user, profile, signOut, refreshProfile } = useAuth()
+  const { user, profile, loading, signOut, refreshProfile } = useAuth()
   const [tab, setTab] = useState<Tab>('annonser')
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([])
   const [allListings, setAllListings] = useState<Listing[]>(MOCK_LISTINGS)
@@ -80,6 +80,32 @@ export default function MinaSidorPage() {
   ]
   const doneCount = onboardingSteps.filter((s) => s.done).length
   const allDone = doneCount === onboardingSteps.length
+
+  if (supabaseConfigured && loading) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-24 flex justify-center">
+        <Loader2 className="animate-spin text-gray-400" size={28} />
+      </div>
+    )
+  }
+
+  if (supabaseConfigured && !user) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-24 text-center">
+        <Home className="mx-auto mb-4 text-gray-300" size={40} />
+        <h1 className="text-xl font-bold text-gray-900 mb-2">Logga in för att se din profil</h1>
+        <p className="text-sm text-gray-500 mb-6">Här hittar du dina annonser, favoriter och intresseanmälningar.</p>
+        <div className="flex items-center justify-center gap-3">
+          <Link href="/logga-in" className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700">
+            Logga in
+          </Link>
+          <Link href="/registrera" className="px-4 py-2 border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50">
+            Skapa konto
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
