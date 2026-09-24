@@ -1,31 +1,32 @@
 import { createHash } from 'crypto'
-import { jwtVerify, createRemoteJWKSet } from 'jose'
 import { NextRequest, NextResponse } from 'next/server'
-import { exchangeBankIdCode, type BankIdClaims } from '@/lib/bankid'
+import { exchangeBankIdCode, verifyBankIdToken } from '@/lib/bankid'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+
+function redirectTo(path: string, request: NextRequest) {
+  const response = NextResponse.redirect(new URL(path, request.url))
+  response.cookies.delete('bankid_state')
+  response.cookies.delete('bankid_nonce')
+  return response
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
   const code = searchParams.get('code')
   const state = searchParams.get('state')
   const storedState = request.cookies.get('bankid_state')?.value
+  const storedNonce = request.cookies.get('bankid_nonce')?.value
 
-  if (!code || !state || !storedState || state !== storedState) {
-    return NextResponse.redirect(new URL('/logga-in?fel=bankid_state', request.url))
+  if (!code || !state || !storedState || !storedNonce || state !== storedState) {
+    return redirectTo('/logga-in?fel=bankid_state', request)
   }
 
   try {
-    const domain = process.env.CRIIPTO_DOMAIN!
     const { id_token } = await exchangeBankIdCode(code)
-    const jwks = createRemoteJWKSet(new URL(`https://${domain}/.well-known/jwks`))
-    const { payload } = await jwtVerify(id_token, jwks, {
-      issuer: `https://${domain}`,
-      audience: process.env.CRIIPTO_CLIENT_ID,
-    })
-    const claims = payload as unknown as BankIdClaims
+    const claims = await verifyBankIdToken(id_token, storedNonce)
 
-    const personalIdNumber = claims['https://claims.oidc.se/1.0/personalIdentityNumber']
+    const personalIdNumber = claims.ssn
     const name =
       claims.name ?? ([claims.given_name, claims.family_name].filter(Boolean).join(' ') || 'BankID-användare')
 
@@ -38,22 +39,14 @@ export async function GET(request: NextRequest) {
     const email = `bankid-${idHash}@bytarn.internal`
 
     const admin = createAdminClient()
-    let userId: string | undefined
 
-    const { data: existing } = await admin.auth.admin.listUsers()
-    const existingUser = existing?.users.find((u) => u.email === email)
-
-    if (existingUser) {
-      userId = existingUser.id
-    } else {
-      const { data: created, error: createError } = await admin.auth.admin.createUser({
-        email,
-        email_confirm: true,
-        user_metadata: { name, auth_provider: 'bankid' },
-      })
-      if (createError || !created.user) throw createError ?? new Error('Kunde inte skapa BankID-konto.')
-      userId = created.user.id
-    }
+    // Skapa kontot vid första inloggningen; finns det redan loggar vi bara in.
+    const { error: createError } = await admin.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: { name, auth_provider: 'bankid' },
+    })
+    if (createError && createError.code !== 'email_exists') throw createError
 
     const { data: link, error: linkError } = await admin.auth.admin.generateLink({
       type: 'magiclink',
@@ -69,10 +62,9 @@ export async function GET(request: NextRequest) {
     })
     if (verifyError) throw verifyError
 
-    void userId
-    return NextResponse.redirect(new URL('/mina-sidor', request.url))
+    return redirectTo('/mina-sidor', request)
   } catch (err) {
     console.error('BankID-inloggning misslyckades', err)
-    return NextResponse.redirect(new URL('/logga-in?fel=bankid', request.url))
+    return redirectTo('/logga-in?fel=bankid', request)
   }
 }
