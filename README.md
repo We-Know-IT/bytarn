@@ -36,12 +36,16 @@ The app runs on demo/mock data until a real backend is configured. To connect on
 
 ### BankID login
 
-BankID sign-in goes through [Criipto Verify](https://docs.criipto.com/verify/e-ids/sweden-bankid/),
-a hosted broker — going live requires a Criipto account with the Sweden BankID add-on (real BankID
-access needs a bank-issued agreement Criipto already holds; there's no way to test this without
-that account). Fill in `CRIIPTO_DOMAIN`, `CRIIPTO_CLIENT_ID`, `CRIIPTO_CLIENT_SECRET` and
-`NEXT_PUBLIC_APP_URL` in `.env.local` to enable the "Logga in med BankID" buttons on the
-login/register pages.
+BankID sign-in goes through [Idura Verify](https://docs.idura.app/verify/e-ids/swedish-bankid/)
+(formerly Criipto), a hosted OIDC broker, using the Authorization Code Flow. Fill in
+`IDURA_DOMAIN`, `IDURA_CLIENT_ID`, `IDURA_CLIENT_SECRET` and `NEXT_PUBLIC_APP_URL` in
+`.env.local` to enable the "Logga in med BankID" buttons on the login/register pages. The older
+`CRIIPTO_*` names still work as a fallback.
+
+Idura application settings the code expects: OAuth2 Code Flow on, dynamic scopes off (the app
+sends `scope=openid` and relies on the per-eID scope configuration), and the callback URL
+`${NEXT_PUBLIC_APP_URL}/api/auth/bankid/callback` registered. The personal identity number is
+read from the `ssn` claim and only stored as a SHA-256 hash.
 
 ## Learn More
 
