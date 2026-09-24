@@ -54,11 +54,12 @@ export async function GET(request: NextRequest) {
     })
     if (linkError || !link) throw linkError ?? new Error('Kunde inte generera inloggningslänk.')
 
+    // Supabase tar bara emot type + token_hash när en token_hash verifieras. Sessionens
+    // cookies skrivs via cookies() och Next lägger på dem på redirect-svaret nedan.
     const supabase = await createClient()
     const { error: verifyError } = await supabase.auth.verifyOtp({
       type: 'email',
       token_hash: link.properties.hashed_token,
-      email,
     })
     if (verifyError) throw verifyError
 
