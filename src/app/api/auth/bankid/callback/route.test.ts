@@ -7,13 +7,23 @@ const DOMAIN = 'bytarn.test.idura.broker'
 const CLIENT_ID = 'urn:my:application:identifier:816684'
 const APP_URL = 'https://bytarn.example'
 const SSN = '198501011234'
+const SUPABASE_URL = 'https://proj.supabase.co'
+const SUPABASE_PROJECT_REF = 'proj'
+
+// Set before the route is imported: supabaseConfigured is read at module load.
+process.env.IDURA_DOMAIN = DOMAIN
+process.env.IDURA_CLIENT_ID = CLIENT_ID
+process.env.IDURA_CLIENT_SECRET = 'test-secret'
+process.env.NEXT_PUBLIC_APP_URL = APP_URL
+process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_URL
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key'
 
 const mocks = vi.hoisted(() => ({
   jwks: { keys: [] as JWK[] },
   jwksUrls: [] as string[],
   createUser: vi.fn(),
   generateLink: vi.fn(),
-  verifyOtp: vi.fn(),
+  cookieJar: new Map<string, { value: string; options?: Record<string, unknown> }>(),
 }))
 
 // jose fetches the JWKS over node:https, so serve the test key locally instead.
@@ -34,19 +44,21 @@ vi.mock('@/lib/supabase/admin', () => ({
   }),
 }))
 
-vi.mock('@/lib/supabase/server', () => ({
-  createClient: async () => ({ auth: { verifyOtp: mocks.verifyOtp } }),
+// The real server client (@supabase/ssr) runs against this cookie store, the
+// way Next's cookies() does inside a route handler.
+vi.mock('next/headers', () => ({
+  cookies: async () => ({
+    getAll: () => [...mocks.cookieJar].map(([name, { value }]) => ({ name, value })),
+    set: (name: string, value: string, options?: Record<string, unknown>) => {
+      mocks.cookieJar.set(name, { value, options })
+    },
+  }),
 }))
 
 let privateKey: KeyLike
 let otherKey: KeyLike
 
 beforeAll(async () => {
-  process.env.IDURA_DOMAIN = DOMAIN
-  process.env.IDURA_CLIENT_ID = CLIENT_ID
-  process.env.IDURA_CLIENT_SECRET = 'test-secret'
-  process.env.NEXT_PUBLIC_APP_URL = APP_URL
-
   const pair = await generateKeyPair('RS256')
   privateKey = pair.privateKey
   otherKey = (await generateKeyPair('RS256')).privateKey
@@ -77,9 +89,38 @@ function callbackRequest(params: { code?: string; state?: string }, cookies = { 
 }
 
 let tokenFetch: ReturnType<typeof vi.fn>
+let verifyBodies: Record<string, unknown>[]
 
+// Stubs Idura's token endpoint and Supabase's /auth/v1/verify endpoint.
 function respondWithIdToken(idToken: string) {
-  tokenFetch = vi.fn(async () => Response.json({ id_token: idToken, access_token: 'at' }))
+  verifyBodies = []
+  tokenFetch = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input)
+    if (url === `https://${DOMAIN}/oauth2/token`) {
+      return Response.json({ id_token: idToken, access_token: 'at' })
+    }
+    if (url.startsWith(`${SUPABASE_URL}/auth/v1/verify`)) {
+      const body = JSON.parse(String(init?.body))
+      verifyBodies.push(body)
+      // Mirrors GoTrue: token_hash verification takes type and token_hash only.
+      if (body.token_hash && body.email) {
+        return Response.json(
+          { code: 400, error_code: 'validation_failed', msg: 'Only the token_hash and type should be provided' },
+          { status: 400 }
+        )
+      }
+      const now = Math.floor(Date.now() / 1000)
+      return Response.json({
+        access_token: 'supabase-access-token',
+        refresh_token: 'supabase-refresh-token',
+        token_type: 'bearer',
+        expires_in: 3600,
+        expires_at: now + 3600,
+        user: { id: 'u1', aud: 'authenticated', email: 'x@bytarn.internal', app_metadata: {}, user_metadata: {}, created_at: '' },
+      })
+    }
+    throw new Error(`Unexpected fetch: ${url}`)
+  })
   vi.stubGlobal('fetch', tokenFetch)
 }
 
@@ -88,7 +129,7 @@ const { GET } = await import('./route')
 beforeEach(() => {
   mocks.createUser.mockResolvedValue({ data: { user: { id: 'u1' } }, error: null })
   mocks.generateLink.mockResolvedValue({ data: { properties: { hashed_token: 'hashed' } }, error: null })
-  mocks.verifyOtp.mockResolvedValue({ error: null })
+  mocks.cookieJar.clear()
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 
@@ -128,7 +169,29 @@ describe('BankID callback (Idura Verify)', () => {
     })
     expect(JSON.stringify(mocks.createUser.mock.calls)).not.toContain(SSN)
     expect(mocks.generateLink).toHaveBeenCalledWith({ type: 'magiclink', email })
-    expect(mocks.verifyOtp).toHaveBeenCalledWith({ type: 'email', token_hash: 'hashed', email })
+
+    // Session is created from the magic link's token hash, without email.
+    expect(verifyBodies).toHaveLength(1)
+    expect(verifyBodies[0]).toMatchObject({ type: 'email', token_hash: 'hashed' })
+    expect(verifyBodies[0]).not.toHaveProperty('email')
+  })
+
+  it('writes the Supabase session to the auth cookie before redirecting', async () => {
+    respondWithIdToken(await signIdToken({ ssn: SSN, name: 'Anna Andersson', nonce: 'nn' }))
+
+    const res = await GET(callbackRequest({ code: 'c', state: 'st' }))
+
+    expect(new URL(res.headers.get('location')!).pathname).toBe('/mina-sidor')
+    const authCookie = mocks.cookieJar.get(`sb-${SUPABASE_PROJECT_REF}-auth-token`)
+    expect(authCookie).toBeDefined()
+    expect(authCookie!.options).toMatchObject({ path: '/', sameSite: 'lax' })
+    const session = JSON.parse(
+      Buffer.from(authCookie!.value.replace(/^base64-/, ''), 'base64url').toString('utf8')
+    )
+    expect(session).toMatchObject({
+      access_token: 'supabase-access-token',
+      refresh_token: 'supabase-refresh-token',
+    })
   })
 
   it('logs in an existing BankID user without creating a new account', async () => {
@@ -141,7 +204,7 @@ describe('BankID callback (Idura Verify)', () => {
     const res = await GET(callbackRequest({ code: 'c', state: 'st' }))
 
     expect(new URL(res.headers.get('location')!).pathname).toBe('/mina-sidor')
-    expect(mocks.verifyOtp).toHaveBeenCalled()
+    expect(mocks.cookieJar.has(`sb-${SUPABASE_PROJECT_REF}-auth-token`)).toBe(true)
   })
 
   it('ignores the old Criipto personalIdentityNumber claim', async () => {
@@ -165,6 +228,7 @@ describe('BankID callback (Idura Verify)', () => {
 
     expect(res.headers.get('location')).toBe(`${APP_URL}/logga-in?fel=bankid_state`)
     expect(tokenFetch).not.toHaveBeenCalled()
+    expect(mocks.cookieJar.size).toBe(0)
   })
 
   it.each([
