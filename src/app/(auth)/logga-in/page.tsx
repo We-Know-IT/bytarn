@@ -9,6 +9,7 @@ import { createClient, supabaseConfigured } from '@/lib/supabase/client'
 const BANKID_ERRORS: Record<string, string> = {
   bankid: 'BankID-inloggningen misslyckades. Försök igen.',
   bankid_state: 'Sessionen tog för lång tid. Försök igen.',
+  bankid_avbruten: 'BankID-inloggningen avbröts. Försök igen.',
 }
 
 export default function LoggaInPage() {

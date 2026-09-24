@@ -231,6 +231,41 @@ describe('BankID callback (Idura Verify)', () => {
     expect(mocks.cookieJar.size).toBe(0)
   })
 
+  it('reports an Idura error (e.g. cancelled in the BankID app) without calling Idura', async () => {
+    respondWithIdToken('unused')
+    const url = new URL(`${APP_URL}/api/auth/bankid/callback`)
+    url.searchParams.set('error', 'access_denied')
+    url.searchParams.set('error_description', 'User cancelled')
+    url.searchParams.set('state', 'st')
+    const req = new NextRequest(url, { headers: { cookie: 'bankid_state=st; bankid_nonce=nn' } })
+
+    const res = await GET(req)
+
+    expect(res.headers.get('location')).toBe(`${APP_URL}/logga-in?fel=bankid_avbruten`)
+    expect(tokenFetch).not.toHaveBeenCalled()
+  })
+
+  it('logs which state check failed, without the values', async () => {
+    respondWithIdToken('unused')
+    const url = new URL(`${APP_URL}/api/auth/bankid/callback`)
+    url.searchParams.set('code', 'secret-code')
+    url.searchParams.set('state', 'st')
+    const req = new NextRequest(url)
+
+    const res = await GET(req)
+
+    expect(res.headers.get('location')).toBe(`${APP_URL}/logga-in?fel=bankid_state`)
+    expect(console.error).toHaveBeenCalledWith('BankID-state kunde inte verifieras', {
+      host: 'bytarn.example',
+      code: true,
+      state: true,
+      stateCookie: false,
+      nonceCookie: false,
+      stateMatches: false,
+    })
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain('secret-code')
+  })
+
   it.each([
     ['wrong issuer', () => signIdToken({ ssn: SSN, nonce: 'nn' }, { issuer: 'https://evil.example' })],
     ['wrong audience', () => signIdToken({ ssn: SSN, nonce: 'nn' }, { audience: 'someone-else' })],

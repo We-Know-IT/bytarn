@@ -18,7 +18,23 @@ export async function GET(request: NextRequest) {
   const storedState = request.cookies.get('bankid_state')?.value
   const storedNonce = request.cookies.get('bankid_nonce')?.value
 
+  // Idura skickar tillbaka error (utan code) när BankID avbryts eller nekas.
+  const idpError = searchParams.get('error')
+  if (idpError) {
+    console.error('BankID-inloggning avbröts av Idura', idpError, searchParams.get('error_description'))
+    return redirectTo('/logga-in?fel=bankid_avbruten', request)
+  }
+
   if (!code || !state || !storedState || !storedNonce || state !== storedState) {
+    // Loggar bara vilken kontroll som fallerade, aldrig själva värdena.
+    console.error('BankID-state kunde inte verifieras', {
+      host: request.nextUrl.host,
+      code: !!code,
+      state: !!state,
+      stateCookie: !!storedState,
+      nonceCookie: !!storedNonce,
+      stateMatches: !!state && state === storedState,
+    })
     return redirectTo('/logga-in?fel=bankid_state', request)
   }
 
