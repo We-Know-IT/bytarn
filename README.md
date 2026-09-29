@@ -34,17 +34,21 @@ The app has no mock data — without a configured backend, listing pages show em
 4. Restart `npm run dev`. Auth (email/password), listings, and profiles now read and write to
    Supabase.
 
-Re-run `supabase/schema.sql` whenever it changes — it is idempotent. The v2 section adds listing
-video (`listing-videos` bucket, 100 MB), view counts, listing expiry, family accounts, admin
-moderation and SMTP settings.
+`supabase/schema.sql` is the full schema for a new project. For an existing database, run the
+migrations in `supabase/migrations/` in order instead (each is idempotent and wrapped in a
+transaction). `20260929_v2.sql` adds listing video (`listing-videos` bucket, 100 MB), view counts,
+listing expiry, family accounts, admin moderation and SMTP settings, and fixes the recursive RLS
+policies between `listings` and `listing_collaborators` that made reading and publishing listings
+fail. It does not change or end any existing listing.
 
 ### Listing lifecycle and cleanup
 
 Listings are live for 60 days (`expires_at`) and can be renewed from **Annonshanteraren**
-(`/annonshanterare`). Expired listings are hidden from the feed immediately, and
-`expire_stale_listings()` marks them `avslutad`. Enable the `pg_cron` extension before running the
-schema to have that happen nightly; admins can also run it from `/admin` ("Städa utgångna
-annonser"). The first time the v2 schema runs, listings untouched for 60+ days are retired.
+(`/annonshanterare`). Existing listings get 60 days from when the migration runs. Expired listings
+are hidden from the feed immediately, and `expire_stale_listings()` marks them `avslutad` — nightly
+if `pg_cron` is enabled when the migration runs, or on demand from `/admin` ("Städa utgångna
+annonser"). To retire old listings right away, use `supabase/cleanup_old_listings.sql` (preview
+first, then an opt-in update; nothing is deleted).
 
 ### Admins
 
