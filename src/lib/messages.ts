@@ -144,43 +144,19 @@ export async function markConversationRead(conversationId: string, userId: strin
 }
 
 // Finds an existing 1:1 conversation about this listing between the two
-// users, or creates one. Participants are added as two separate inserts —
-// RLS only lets you add yourself, or add someone else once you're already
-// a participant, so the second insert must happen after the first commits.
+// users, or creates one — atomically, in the get_or_create_conversation()
+// database function (the caller can't read a new conversation back until
+// they're a participant, so this can't be done as separate client inserts).
 export async function getOrCreateConversation(
   listingId: string,
-  userId: string,
+  // Kept for call-site compatibility; the database uses the session user.
+  _userId: string,
   otherUserId: string
 ): Promise<string> {
-  const supabase = createClient()
-
-  const { data: existing } = await supabase
-    .from('conversations')
-    .select('id, conversation_participants(user_id)')
-    .eq('listing_id', listingId)
-
-  const match = (existing ?? []).find((c: any) => {
-    const ids = c.conversation_participants.map((p: any) => p.user_id)
-    return ids.includes(userId) && ids.includes(otherUserId)
+  const { data, error } = await createClient().rpc('get_or_create_conversation', {
+    p_listing_id: listingId,
+    p_other_user_id: otherUserId,
   })
-  if (match) return match.id
-
-  const { data: conv, error } = await supabase
-    .from('conversations')
-    .insert({ listing_id: listingId })
-    .select('id')
-    .single()
-  if (error || !conv) throw error ?? new Error('Kunde inte starta konversationen.')
-
-  const { error: selfError } = await supabase
-    .from('conversation_participants')
-    .insert({ conversation_id: conv.id, user_id: userId })
-  if (selfError) throw selfError
-
-  const { error: otherError } = await supabase
-    .from('conversation_participants')
-    .insert({ conversation_id: conv.id, user_id: otherUserId })
-  if (otherError) throw otherError
-
-  return conv.id
+  if (error || !data) throw error ?? new Error('Kunde inte starta konversationen.')
+  return data as string
 }

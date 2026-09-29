@@ -73,7 +73,11 @@ export function isExpired(listing: Pick<Listing, 'expiresAt'>): boolean {
   return new Date(listing.expiresAt).getTime() < Date.now()
 }
 
-export const LISTING_SELECT = '*, profiles ( name, avatar_url )'
+// `profiles!user_id` names the relationship explicitly. A bare `profiles`
+// is ambiguous to PostgREST — favorites and listing_collaborators also link
+// listings to profiles — and it rejected every listings query with
+// PGRST201, which surfaced as "Annonsen hittades inte" / an empty feed.
+export const LISTING_SELECT = '*, profiles!user_id ( name, avatar_url )'
 export type { ListingRow }
 
 // Active, unexpired listings. Expired ones are filtered here as well as by

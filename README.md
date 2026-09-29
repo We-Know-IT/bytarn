@@ -39,7 +39,9 @@ migrations in `supabase/migrations/` in order instead (each is idempotent and wr
 transaction). `20260929_v2.sql` adds listing video (`listing-videos` bucket, 100 MB), view counts,
 listing expiry, family accounts, admin moderation and SMTP settings, and fixes the recursive RLS
 policies between `listings` and `listing_collaborators` that made reading and publishing listings
-fail. It does not change or end any existing listing.
+fail. It does not change or end any existing listing. `20260929_v2_1_messaging.sql` fixes the
+same kind of recursion in the messaging policies (`conversation_participants`) and adds
+`get_or_create_conversation()` for starting a chat from a listing.
 
 ### Listing lifecycle and cleanup
 
