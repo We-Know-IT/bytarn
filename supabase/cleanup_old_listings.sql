@@ -17,8 +17,12 @@ order by updated_at;
 -- where status in ('aktiv', 'pausad')
 --   and greatest(created_at, updated_at) < now() - interval '60 days';
 
--- 3. Optional: have expired listings ended every night. Enable pg_cron
---    first (Database → Extensions → pg_cron). With the v2 migration every
---    existing listing expires 60 days after the migration ran, so nothing
---    is ended before then unless the owner lets it lapse.
+-- 3. Optional: end expired listings automatically every night. Enable
+--    pg_cron first (Database → Extensions → pg_cron). cron.schedule() with a
+--    job name replaces an existing job of that name, so re-running this does
+--    not create duplicates. Every listing that existed when the v2 migration
+--    ran expires 60 days after that, unless its owner renews it.
 -- select cron.schedule('bytaren-expire-listings', '15 3 * * *', 'select public.expire_stale_listings()');
+--
+--    To stop it again:
+-- select cron.unschedule('bytaren-expire-listings');

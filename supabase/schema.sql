@@ -459,14 +459,9 @@ begin
 end;
 $$ language plpgsql security definer set search_path = public;
 
--- Nightly run when pg_cron is enabled (Database → Extensions → pg_cron).
--- Without it, expired listings are still hidden from the feed by the app.
-do $$
-begin
-  if exists (select 1 from pg_extension where extname = 'pg_cron') then
-    perform cron.schedule('bytaren-expire-listings', '15 3 * * *', 'select public.expire_stale_listings()');
-  end if;
-end $$;
+-- Not scheduled here: running expire_stale_listings() nightly with pg_cron
+-- is an opt-in step in supabase/cleanup_old_listings.sql. Without it,
+-- expired listings are still hidden from the feed by the app.
 
 -- Anyone may count a view (no auth needed), but only by one at a time.
 create or replace function increment_listing_view(p_listing_id uuid)
@@ -732,8 +727,7 @@ create policy "Admins can delete reports"
 -- ─── Storage: listing videos ─────────────────────────────────────────────
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('listing-videos', 'listing-videos', true, 104857600, array['video/mp4', 'video/webm', 'video/quicktime'])
-on conflict (id) do update
-  set public = true, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+on conflict (id) do nothing;
 
 -- Image bucket: create it if it's missing (a missing bucket made every
 -- image upload fail, and the form used to require an image). An existing

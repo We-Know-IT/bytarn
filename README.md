@@ -45,10 +45,10 @@ fail. It does not change or end any existing listing.
 
 Listings are live for 60 days (`expires_at`) and can be renewed from **Annonshanteraren**
 (`/annonshanterare`). Existing listings get 60 days from when the migration runs. Expired listings
-are hidden from the feed immediately, and `expire_stale_listings()` marks them `avslutad` — nightly
-if `pg_cron` is enabled when the migration runs, or on demand from `/admin` ("Städa utgångna
-annonser"). To retire old listings right away, use `supabase/cleanup_old_listings.sql` (preview
-first, then an opt-in update; nothing is deleted).
+are hidden from the feed immediately, and `expire_stale_listings()` marks them `avslutad` — on
+demand from `/admin` ("Städa utgångna annonser"), or nightly once you opt in to the pg_cron job in
+`supabase/cleanup_old_listings.sql`. That file also retires old listings right away if you want
+(preview first, then an opt-in update; nothing is deleted). The migration itself schedules nothing.
 
 ### Admins
 
