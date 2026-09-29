@@ -125,7 +125,7 @@ function NyAnnonsForm() {
         }))
         setImages(listing.images)
         setVideoUrl(listing.videoUrl ?? null)
-      })
+      }).catch((err) => setLoadError(`Kunde inte hämta annonsen: ${describeListingError(err)}`))
       fetchCollaborators(editId).then(setCollaborators)
       return
     }

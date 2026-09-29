@@ -86,7 +86,13 @@ export default function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col-reverse gap-4 border-t border-white/10 pt-6 text-[12.5px] text-white/40 sm:flex-row sm:items-center sm:justify-between">
-          <span>© {new Date().getFullYear()} Bytaren · Bostadsbyte i Stockholm</span>
+          <span>
+            © {new Date().getFullYear()} Bytaren · Bostadsbyte i Stockholm
+            {/* Vercel exposes the deployed commit; shows which build you're on. */}
+            {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA && (
+              <> · version {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA.slice(0, 7)}</>
+            )}
+          </span>
           <ul className="flex flex-wrap gap-x-5 gap-y-2">
             {LEGAL.map((l) => (
               <li key={l.href}>

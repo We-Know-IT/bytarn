@@ -95,7 +95,7 @@ export async function fetchListings(): Promise<Listing[]> {
 
   if (error) {
     console.error('Kunde inte hämta annonser', error)
-    return []
+    throw error
   }
   return (data as unknown as ListingRow[]).map(rowToListing)
 }
@@ -157,10 +157,16 @@ export async function fetchMyListings(userId: string): Promise<Listing[]> {
 export async function fetchListingById(id: string): Promise<Listing | null> {
   if (!supabaseConfigured) return null
   const supabase = createClient()
-  const { data, error } = await supabase.from('listings').select(LISTING_SELECT).eq('id', id).single()
+  const { data, error } = await supabase.from('listings').select(LISTING_SELECT).eq('id', id).maybeSingle()
 
-  if (error || !data) return null
-  return rowToListing(data as unknown as ListingRow)
+  // Only "no such row" means not found — anything else is a real failure
+  // and is thrown so the page can show it instead of a misleading
+  // "Annonsen hittades inte".
+  if (error) {
+    console.error('Kunde inte hämta annonsen', error)
+    throw error
+  }
+  return data ? rowToListing(data as unknown as ListingRow) : null
 }
 
 export interface CreateListingInput {
@@ -317,7 +323,8 @@ export function describeListingError(err: unknown): string {
   }
   if (/jwt|not authenticated|auth session missing/i.test(msg)) return 'Din inloggning har gått ut. Logga in igen.'
   if (/failed to fetch|network/i.test(msg)) return 'Kunde inte nå servern. Kontrollera din uppkoppling.'
-  return msg || 'Något gick fel. Försök igen.'
+  const code = e?.code ? ` (${e.code})` : ''
+  return msg ? `${msg}${code}` : 'Något gick fel. Försök igen.'
 }
 
 export async function reportListing(listingId: string, reporterId: string, reason: string): Promise<void> {

@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { fetchListings } from '@/lib/listings'
+import { fetchListings, describeListingError } from '@/lib/listings'
 import { fetchFavoriteListingIds } from '@/lib/favorites'
 import { fetchMutualMatchUserIds } from '@/lib/interests'
 import { useAuth } from '@/context/AuthContext'
@@ -60,6 +60,7 @@ function AnnonserView() {
   // Phones only: the map is full-width and the list is an overlay toggled
   // by a floating button (there's no room for a side-by-side split).
   const [mobileListOpen, setMobileListOpen] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const cardRefs = useRef(new Map<string, HTMLDivElement>())
   const { user } = useAuth()
   const home = useHomeLocation()
@@ -69,6 +70,7 @@ function AnnonserView() {
   useEffect(() => {
     fetchListings()
       .then(setListings)
+      .catch((err) => setLoadError(describeListingError(err)))
       .finally(() => setLoading(false))
   }, [])
 
@@ -121,6 +123,11 @@ function AnnonserView() {
 
   return (
     <div className="flex flex-col h-[calc(100dvh-64px)]">
+      {loadError && (
+        <div role="alert" className="px-4 py-2.5 bg-red-50 text-red-700 text-sm border-b border-red-100 break-words">
+          Kunde inte hämta annonser: {loadError}
+        </div>
+      )}
       <SearchFiltersComponent
         filters={filters}
         onFiltersChange={setFilters}

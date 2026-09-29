@@ -24,7 +24,7 @@ import {
   Eye,
   Clock,
 } from 'lucide-react'
-import { fetchListingById, fetchListings, fetchMyListings, reportListing, recordListingView, isExpired } from '@/lib/listings'
+import { fetchListingById, fetchListings, fetchMyListings, reportListing, recordListingView, isExpired, describeListingError } from '@/lib/listings'
 import { addFavorite, removeFavorite, fetchFavoriteListingIds } from '@/lib/favorites'
 import { expressInterest, removeInterest, fetchMyInterestListingIds, fetchInterestCount, fetchMutualMatchUserIds } from '@/lib/interests'
 import { getOrCreateConversation } from '@/lib/messages'
@@ -53,12 +53,18 @@ export default function ListingDetailPage() {
   const [mutualMatch, setMutualMatch] = useState(false)
   const [messaging, setMessaging] = useState(false)
   const [canManage, setCanManage] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const resetAutoPlay = useRef(0)
 
   useEffect(() => {
     const id = params.id as string
-    fetchListingById(id).then(setListing)
-    fetchListings().then(setAllListings)
+    fetchListingById(id)
+      .then(setListing)
+      .catch((err) => {
+        setLoadError(describeListingError(err))
+        setListing(null)
+      })
+    fetchListings().then(setAllListings).catch(() => {})
     fetchInterestCount(id).then(setInterestCount)
     recordListingView(id).catch(() => {})
   }, [params.id])
@@ -108,7 +114,12 @@ export default function ListingDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Annonsen hittades inte</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {loadError ? 'Kunde inte hämta annonsen' : 'Annonsen hittades inte'}
+          </h1>
+          {loadError && (
+            <p className="max-w-md mx-auto mb-4 px-4 py-3 rounded-xl bg-red-50 text-red-700 text-sm break-words">{loadError}</p>
+          )}
           <Link href="/annonser" className="text-emerald-600 hover:underline">
             Tillbaka till annonser
           </Link>
@@ -165,8 +176,8 @@ export default function ListingDetailPage() {
     try {
       const conversationId = await getOrCreateConversation(listing.id, user.id, listing.userId)
       router.push(`/meddelanden/${conversationId}`)
-    } catch {
-      alert('Kunde inte starta konversationen. Försök igen.')
+    } catch (err) {
+      alert(`Kunde inte starta konversationen: ${describeListingError(err)}`)
       setMessaging(false)
     }
   }
