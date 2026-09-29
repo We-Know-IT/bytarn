@@ -13,6 +13,24 @@ export interface Profile {
   homeDistrict: string | null
   homeLat: number | null
   homeLng: number | null
+  isAdmin: boolean
+  notifyEmail: boolean
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToProfile(data: any): Profile {
+  return {
+    id: data.id,
+    name: data.name,
+    bio: data.bio,
+    avatarUrl: data.avatar_url,
+    homeAddress: data.home_address,
+    homeDistrict: data.home_district,
+    homeLat: data.home_lat,
+    homeLng: data.home_lng,
+    isAdmin: data.is_admin ?? false,
+    notifyEmail: data.notify_email ?? true,
+  }
 }
 
 interface AuthContextValue {
@@ -41,19 +59,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = createClient()
 
     async function loadProfile(userId: string) {
-      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
-      if (data) {
-        setProfile({
-          id: data.id,
-          name: data.name,
-          bio: data.bio,
-          avatarUrl: data.avatar_url,
-          homeAddress: data.home_address,
-          homeDistrict: data.home_district,
-          homeLat: data.home_lat,
-          homeLng: data.home_lng,
-        })
-      }
+      const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
+      if (data) setProfile(rowToProfile(data))
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -82,19 +89,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function refreshProfile() {
     if (!supabaseConfigured || !user) return
     const supabase = createClient()
-    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-    if (data) {
-      setProfile({
-        id: data.id,
-        name: data.name,
-        bio: data.bio,
-        avatarUrl: data.avatar_url,
-        homeAddress: data.home_address,
-        homeDistrict: data.home_district,
-        homeLat: data.home_lat,
-        homeLng: data.home_lng,
-      })
-    }
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
+    if (data) setProfile(rowToProfile(data))
   }
 
   return (

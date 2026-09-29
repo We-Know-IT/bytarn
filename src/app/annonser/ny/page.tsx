@@ -2,17 +2,20 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Upload, X, Plus, MapPin, Info, MoveVertical, Trees, Sofa, PawPrint, Wand2, Loader2, Users, Mail } from 'lucide-react'
+import Link from 'next/link'
+import { Upload, X, Plus, MapPin, Info, MoveVertical, Trees, Sofa, PawPrint, Wand2, Loader2, Users, Mail, Video, AlertTriangle, LogIn } from 'lucide-react'
 import { STOCKHOLM_DISTRICTS } from '@/types'
 import { cn } from '@/lib/utils'
 import AddressInput from '@/components/AddressInput'
-import { createListing, updateListing, fetchListingById } from '@/lib/listings'
-import { uploadListingImage } from '@/lib/storage'
+import { createListing, updateListing, fetchListingById, geocodeAddress, describeListingError, LISTING_LIFETIME_DAYS } from '@/lib/listings'
+import { uploadListingImage, uploadListingVideo, validateImage, validateVideo } from '@/lib/storage'
+import { updateHome } from '@/lib/profile'
 import { fetchCollaborators, inviteCollaboratorByEmail, removeCollaborator, type Collaborator } from '@/lib/collaborators'
 import { useAuth } from '@/context/AuthContext'
 import { supabaseConfigured } from '@/lib/supabase/client'
 
 const MAX_IMAGES = 10
+const DRAFT_KEY = 'bytaren_my_listing_draft'
 
 interface ListingFormData {
   title: string
@@ -58,13 +61,19 @@ export default function NyAnnonsPage() {
 
 function NyAnnonsForm() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, profile, loading: authLoading, refreshProfile } = useAuth()
   const searchParams = useSearchParams()
   const editId = searchParams.get('redigera')
   const isEditing = Boolean(editId)
 
   const [images, setImages] = useState<string[]>([])
+  const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [uploadingImages, setUploadingImages] = useState(false)
+  const [uploadingVideo, setUploadingVideo] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [locating, setLocating] = useState(false)
+  const [approximateLocation, setApproximateLocation] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -93,7 +102,10 @@ function NyAnnonsForm() {
   useEffect(() => {
     if (editId) {
       fetchListingById(editId).then((listing) => {
-        if (!listing) return
+        if (!listing) {
+          setLoadError('Annonsen hittades inte, eller så har du inte behörighet att redigera den.')
+          return
+        }
         setForm((f) => ({
           ...f,
           title: listing.title,
@@ -112,13 +124,14 @@ function NyAnnonsForm() {
           petsAllowed: listing.petsAllowed ?? false,
         }))
         setImages(listing.images)
+        setVideoUrl(listing.videoUrl ?? null)
       })
       fetchCollaborators(editId).then(setCollaborators)
       return
     }
     // Otherwise pre-fill from onboarding draft
     try {
-      const raw = localStorage.getItem('bytaren_my_listing_draft')
+      const raw = localStorage.getItem(DRAFT_KEY)
       if (!raw) return
       const draft = JSON.parse(raw)
       setForm((f) => ({
@@ -135,23 +148,101 @@ function NyAnnonsForm() {
     } catch {}
   }, [editId])
 
+  // Uploads each file independently, so one oversized or failing image no
+  // longer throws away the others — the old all-or-nothing Promise.all left
+  // users stuck on this step with a generic error.
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || []).slice(0, MAX_IMAGES - images.length)
     e.target.value = ''
     if (files.length === 0) return
+    setUploadError(null)
     if (!supabaseConfigured || !user) {
-      setSubmitError('Du måste vara inloggad för att ladda upp bilder.')
+      setUploadError('Du måste vara inloggad för att ladda upp bilder.')
       return
     }
+    const problems: string[] = []
+    const valid = files.filter((file) => {
+      const problem = validateImage(file)
+      if (problem) problems.push(problem)
+      return !problem
+    })
     setUploadingImages(true)
-    try {
-      const uploaded = await Promise.all(files.map((file) => uploadListingImage(file, user.id)))
-      setImages((prev) => [...prev, ...uploaded].slice(0, MAX_IMAGES))
-    } catch {
-      setSubmitError('Kunde inte ladda upp en eller flera bilder. Försök igen.')
-    } finally {
-      setUploadingImages(false)
+    const results = await Promise.allSettled(valid.map((file) => uploadListingImage(file, user.id)))
+    const uploaded: string[] = []
+    results.forEach((r, i) => {
+      if (r.status === 'fulfilled') uploaded.push(r.value)
+      else problems.push(`${valid[i].name}: ${describeListingError(r.reason)}`)
+    })
+    setImages((prev) => [...prev, ...uploaded].slice(0, MAX_IMAGES))
+    setUploadingImages(false)
+    if (problems.length > 0) setUploadError(problems.join(' '))
+  }
+
+  async function handleVideoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploadError(null)
+    if (!supabaseConfigured || !user) {
+      setUploadError('Du måste vara inloggad för att ladda upp video.')
+      return
     }
+    const problem = validateVideo(file)
+    if (problem) {
+      setUploadError(problem)
+      return
+    }
+    setUploadingVideo(true)
+    try {
+      setVideoUrl(await uploadListingVideo(file, user.id))
+    } catch (err) {
+      setUploadError(`Kunde inte ladda upp videon: ${describeListingError(err)}`)
+    } finally {
+      setUploadingVideo(false)
+    }
+  }
+
+  function moveImageFirst(index: number) {
+    setImages((prev) => [prev[index], ...prev.filter((_, i) => i !== index)])
+  }
+
+  // Places the listing on the map when the address was typed rather than
+  // picked from the suggestions (previously this only surfaced as an error
+  // on the very last step, after images had been uploaded).
+  async function resolveLocation(): Promise<{ lat: number; lng: number } | null> {
+    if (form.lat && form.lng) return { lat: form.lat, lng: form.lng }
+    setLocating(true)
+    const result = await geocodeAddress(form.address, form.district)
+    setLocating(false)
+    if (!result) return null
+    setForm((f) => ({ ...f, lat: result.lat, lng: result.lng }))
+    setApproximateLocation(!result.exact)
+    return result
+  }
+
+  async function goToStep2() {
+    setSubmitError(null)
+    const errors = validateDetails()
+    if (errors) {
+      setSubmitError(errors)
+      return
+    }
+    const location = await resolveLocation()
+    if (!location) {
+      setSubmitError('Vi kunde inte hitta adressen. Välj en adress från förslagslistan.')
+      return
+    }
+    setStep(2)
+  }
+
+  function validateDetails(): string | null {
+    if (!form.title.trim()) return 'Skriv en rubrik.'
+    if (!form.rooms) return 'Välj antal rum.'
+    if (!(Number(form.area) > 0)) return 'Ange bostadens yta i m².'
+    if (!(Number(form.rent) > 0)) return 'Ange månadshyran i kronor.'
+    if (!form.district) return 'Välj stadsdel.'
+    if (!form.address.trim()) return 'Ange gatuadress.'
+    return null
   }
 
   function removeImage(index: number) {
@@ -189,12 +280,19 @@ function NyAnnonsForm() {
       )
       return
     }
-    if (!form.lat || !form.lng) {
-      setSubmitError('Välj en adress från förslagslistan så vi kan placera annonsen på kartan.')
+    const detailsError = validateDetails()
+    if (detailsError) {
+      setSubmitError(detailsError)
+      setStep(1)
       return
     }
     setSubmitting(true)
     try {
+      const location = await resolveLocation()
+      if (!location) {
+        setSubmitError('Vi kunde inte placera adressen på kartan. Gå tillbaka och välj en adress från förslagslistan.')
+        return
+      }
       const input = {
         title: form.title,
         description: form.description,
@@ -203,9 +301,10 @@ function NyAnnonsForm() {
         area: Number(form.area),
         district: form.district,
         address: form.address,
-        lat: form.lat,
-        lng: form.lng,
+        lat: location.lat,
+        lng: location.lng,
         images,
+        videoUrl,
         floor: form.floor ? Number(form.floor) : undefined,
         elevator: form.elevator,
         balcony: form.balcony,
@@ -216,11 +315,19 @@ function NyAnnonsForm() {
         await updateListing(editId, input)
         router.push(`/annonser/${editId}`)
       } else {
-        const id = await createListing(input, user.id)
+        const id = await createListing(input, user.id, profile?.name ?? user.email?.split('@')[0] ?? 'Användare')
+        try { localStorage.removeItem(DRAFT_KEY) } catch {}
+        // The first listing doubles as the user's home location (used for
+        // distances and the home marker on the map) if they haven't set one.
+        if (profile && profile.homeLat == null) {
+          updateHome(user.id, { address: input.address, district: input.district, lat: input.lat, lng: input.lng })
+            .then(refreshProfile)
+            .catch(() => {})
+        }
         router.push(`/annonser/${id}`)
       }
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Kunde inte publicera annonsen.')
+      setSubmitError(describeListingError(err))
     } finally {
       setSubmitting(false)
     }
@@ -229,7 +336,53 @@ function NyAnnonsForm() {
   const canGoToStep2 =
     form.title && form.rooms && form.area && form.rent && form.district && form.address
 
-  const canGoToStep3 = images.length > 0
+  // Images are recommended, not required — a failing upload must never
+  // block publishing.
+  const canGoToStep3 = !uploadingImages && !uploadingVideo
+
+  if (authLoading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center text-gray-400">
+        <Loader2 className="animate-spin" size={22} />
+      </div>
+    )
+  }
+
+  if (!supabaseConfigured || !user) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-20 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-5">
+          <LogIn size={24} />
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Logga in för att lägga upp annons</h1>
+        <p className="text-gray-500 text-sm mb-6">
+          {supabaseConfigured
+            ? 'Du behöver ett konto för att publicera en annons. Det är gratis och tar en minut.'
+            : 'Backend är inte konfigurerad i den här miljön ännu, så annonser kan inte publiceras.'}
+        </p>
+        {supabaseConfigured && (
+          <div className="flex gap-3 justify-center">
+            <Link href="/logga-in" className="px-5 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700">
+              Logga in
+            </Link>
+            <Link href="/registrera" className="px-5 py-3 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50">
+              Skapa konto
+            </Link>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-20 text-center">
+        <h1 className="text-xl font-bold text-gray-900 mb-2">Kan inte redigera annonsen</h1>
+        <p className="text-gray-500 text-sm mb-6">{loadError}</p>
+        <Link href="/annonshanterare" className="text-emerald-600 font-medium hover:underline">Till Annonshanteraren</Link>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
@@ -371,8 +524,10 @@ function NyAnnonsForm() {
                 ...f,
                 address: addr,
                 district: dist || f.district,
-                lat: lat ?? f.lat,
-                lng: lng ?? f.lng,
+                // Typing a new address invalidates the old coordinates;
+                // picking a suggestion supplies fresh ones.
+                lat,
+                lng,
               }))}
             />
           </div>
@@ -428,12 +583,17 @@ function NyAnnonsForm() {
             </div>
           </div>
 
+          {submitError && (
+            <div className="px-4 py-3 rounded-xl bg-red-50 text-red-700 text-sm">{submitError}</div>
+          )}
+
           <button
-            onClick={() => setStep(2)}
-            disabled={!canGoToStep2}
-            className="w-full py-3.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            onClick={goToStep2}
+            disabled={!canGoToStep2 || locating}
+            className="w-full py-3.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
-            Nästa — Lägg till bilder
+            {locating && <Loader2 size={16} className="animate-spin" />}
+            {locating ? 'Hittar adressen…' : 'Nästa — Bilder och video'}
           </button>
         </div>
       )}
@@ -476,8 +636,8 @@ function NyAnnonsForm() {
             </p>
           </label>
 
-          {submitError && (
-            <div className="px-4 py-3 rounded-xl bg-red-50 text-red-700 text-sm">{submitError}</div>
+          {uploadError && (
+            <div className="px-4 py-3 rounded-xl bg-red-50 text-red-700 text-sm">{uploadError}</div>
           )}
 
           {/* Image grid */}
@@ -491,9 +651,20 @@ function NyAnnonsForm() {
                       Omslagsbild
                     </div>
                   )}
+                  {i > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => moveImageFirst(i)}
+                      className="absolute bottom-2 left-2 bg-white/90 text-gray-800 text-xs px-2 py-0.5 rounded-full opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      Gör till omslag
+                    </button>
+                  )}
                   <button
+                    type="button"
                     onClick={() => removeImage(i)}
-                    className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label="Ta bort bild"
+                    className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <X size={12} />
                   </button>
@@ -514,6 +685,49 @@ function NyAnnonsForm() {
             </div>
           )}
 
+          {/* Video */}
+          <div className="border border-gray-200 rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Video size={16} className="text-emerald-600" />
+              <h3 className="font-semibold text-gray-900 text-sm">Video (valfritt)</h3>
+            </div>
+            <p className="text-xs text-gray-500 mb-4">
+              En kort visning med mobilen säger mer än tio bilder. MP4, WebM eller MOV, högst 100 MB.
+            </p>
+            {videoUrl ? (
+              <div className="space-y-2">
+                <video src={videoUrl} controls playsInline className="w-full rounded-xl bg-black max-h-72" />
+                <button type="button" onClick={() => setVideoUrl(null)} className="text-xs text-red-500 hover:text-red-700">
+                  Ta bort video
+                </button>
+              </div>
+            ) : (
+              <label className={cn(
+                'flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-5 text-sm font-medium cursor-pointer transition-colors',
+                uploadingVideo ? 'border-gray-200 text-gray-400 cursor-wait' : 'border-gray-300 text-gray-600 hover:border-emerald-400 hover:bg-emerald-50'
+              )}>
+                <input
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime"
+                  onChange={handleVideoUpload}
+                  disabled={uploadingVideo}
+                  className="hidden"
+                />
+                {uploadingVideo ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                {uploadingVideo ? 'Laddar upp video…' : 'Välj video'}
+              </label>
+            )}
+          </div>
+
+          {images.length === 0 && !uploadingImages && (
+            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <AlertTriangle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-700">
+                Annonser med bilder får betydligt fler intressenter. Du kan publicera utan och lägga till bilder senare.
+              </p>
+            </div>
+          )}
+
           {/* Dela annons med en medannonsör (t.ex. en sambo) */}
           {isEditing && editId && (
             <div className="border border-gray-200 rounded-2xl p-5">
@@ -522,7 +736,8 @@ function NyAnnonsForm() {
                 <h3 className="font-semibold text-gray-900 text-sm">Dela annonsen</h3>
               </div>
               <p className="text-xs text-gray-500 mb-4">
-                Bjud in t.ex. en sambo så kan ni båda hantera samma annons. Personen måste redan ha ett konto på Bytaren.
+                Bjud in någon att hantera just den här annonsen. Personen måste redan ha ett konto på Bytaren.
+                Vill ni dela alla era annonser? Skapa ett <Link href="/familj" className="text-emerald-700 underline">familjekonto</Link>.
               </p>
 
               {collaborators.length > 0 && (
@@ -583,7 +798,7 @@ function NyAnnonsForm() {
               disabled={!canGoToStep3}
               className="flex-1 py-3.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              Nästa — Granska
+              {uploadingImages || uploadingVideo ? 'Väntar på uppladdning…' : 'Nästa — Granska'}
             </button>
           </div>
         </div>
@@ -600,6 +815,17 @@ function NyAnnonsForm() {
               alt="Omslagsbild"
               className="w-full h-48 object-cover rounded-2xl"
             />
+          )}
+          {videoUrl && (
+            <p className="flex items-center gap-1.5 text-sm text-gray-600">
+              <Video size={14} className="text-emerald-600" /> Video bifogad
+            </p>
+          )}
+          {approximateLocation && (
+            <p className="flex items-start gap-1.5 text-sm text-amber-700">
+              <MapPin size={14} className="mt-0.5 flex-shrink-0" />
+              Vi hittade inte exakt adress, så annonsen placeras mitt i {form.district} på kartan.
+            </p>
           )}
 
           <div className="bg-gray-50 rounded-2xl p-5 space-y-3 text-sm">
@@ -620,7 +846,9 @@ function NyAnnonsForm() {
           <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
             <Info size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-amber-700">
-              Annonsen publiceras direkt och blir synlig för alla på Bytaren.
+              {isEditing
+                ? 'Ändringarna syns direkt för alla på Bytaren.'
+                : `Annonsen publiceras direkt och är synlig i ${LISTING_LIFETIME_DAYS} dagar. Du kan förlänga den i Annonshanteraren.`}
             </p>
           </div>
 

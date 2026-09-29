@@ -22,7 +22,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 ## Backend setup (Supabase)
 
-The app runs on demo/mock data until a real backend is configured. To connect one:
+The app has no mock data — without a configured backend, listing pages show empty states. To connect one:
 
 1. Create a [Supabase](https://supabase.com) project.
 2. Run `supabase/schema.sql` against it (SQL editor, or `supabase db push`) — this creates the
@@ -32,7 +32,30 @@ The app runs on demo/mock data until a real backend is configured. To connect on
    `NEXT_PUBLIC_SUPABASE_ANON_KEY` from your project's API settings, plus
    `SUPABASE_SERVICE_ROLE_KEY` (needed for BankID account provisioning).
 4. Restart `npm run dev`. Auth (email/password), listings, and profiles now read and write to
-   Supabase instead of the mock data in `src/lib/mock-data.ts`.
+   Supabase.
+
+Re-run `supabase/schema.sql` whenever it changes — it is idempotent. The v2 section adds listing
+video (`listing-videos` bucket, 100 MB), view counts, listing expiry, family accounts, admin
+moderation and SMTP settings.
+
+### Listing lifecycle and cleanup
+
+Listings are live for 60 days (`expires_at`) and can be renewed from **Annonshanteraren**
+(`/annonshanterare`). Expired listings are hidden from the feed immediately, and
+`expire_stale_listings()` marks them `avslutad`. Enable the `pg_cron` extension before running the
+schema to have that happen nightly; admins can also run it from `/admin` ("Städa utgångna
+annonser"). The first time the v2 schema runs, listings untouched for 60+ days are retired.
+
+### Admins
+
+Grant admin rights from the SQL editor (the client can't change this column):
+
+```sql
+update profiles set is_admin = true where id = '<user-id>';
+```
+
+Admins get `/admin` (stats, reports, bulk end/delete of any listing) and
+`/admin/installningar` (SMTP settings).
 
 ### BankID login
 

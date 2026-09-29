@@ -20,8 +20,11 @@ import {
   Sofa,
   PawPrint,
   Handshake,
+  Pencil,
+  Eye,
+  Clock,
 } from 'lucide-react'
-import { fetchListingById, fetchListings, reportListing } from '@/lib/listings'
+import { fetchListingById, fetchListings, fetchMyListings, reportListing, recordListingView, isExpired } from '@/lib/listings'
 import { addFavorite, removeFavorite, fetchFavoriteListingIds } from '@/lib/favorites'
 import { expressInterest, removeInterest, fetchMyInterestListingIds, fetchInterestCount, fetchMutualMatchUserIds } from '@/lib/interests'
 import { getOrCreateConversation } from '@/lib/messages'
@@ -49,6 +52,7 @@ export default function ListingDetailPage() {
   const [interestCount, setInterestCount] = useState(0)
   const [mutualMatch, setMutualMatch] = useState(false)
   const [messaging, setMessaging] = useState(false)
+  const [canManage, setCanManage] = useState(false)
   const resetAutoPlay = useRef(0)
 
   useEffect(() => {
@@ -56,7 +60,16 @@ export default function ListingDetailPage() {
     fetchListingById(id).then(setListing)
     fetchListings().then(setAllListings)
     fetchInterestCount(id).then(setInterestCount)
+    recordListingView(id).catch(() => {})
   }, [params.id])
+
+  // Owner, collaborator or family-account member — they get a management
+  // bar instead of the "contact the owner" actions.
+  useEffect(() => {
+    if (!user) return
+    const id = params.id as string
+    fetchMyListings(user.id).then((mine) => setCanManage(mine.some((l) => l.id === id)))
+  }, [user, params.id])
 
   useEffect(() => {
     if (!user) return
@@ -317,6 +330,45 @@ export default function ListingDetailPage() {
               </div>
             )}
           </div>
+
+          {listing.videoUrl && (
+            <div className="mb-6">
+              <video
+                src={listing.videoUrl}
+                controls
+                playsInline
+                preload="metadata"
+                className="w-full rounded-2xl bg-black max-h-[480px]"
+              />
+            </div>
+          )}
+
+          {canManage ? (
+            <div className="mb-6 flex flex-wrap items-center gap-3 p-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-sm">
+              <span className="font-semibold text-emerald-800">Din annons</span>
+              <span className="flex items-center gap-1 text-gray-600"><Eye size={14} /> {listing.viewCount} visningar</span>
+              <span className="flex items-center gap-1 text-gray-600">
+                <Clock size={14} />
+                {listing.status !== 'aktiv'
+                  ? listing.status === 'pausad' ? 'Pausad' : 'Avslutad'
+                  : isExpired(listing)
+                    ? 'Har gått ut'
+                    : `Aktiv till ${new Date(listing.expiresAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })}`}
+              </span>
+              <div className="flex gap-2 ml-auto">
+                <Link href={`/annonser/ny?redigera=${listing.id}`} className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-xl font-medium text-gray-700 hover:bg-gray-50">
+                  <Pencil size={14} /> Redigera
+                </Link>
+                <Link href="/annonshanterare" className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700">
+                  Annonshanteraren
+                </Link>
+              </div>
+            </div>
+          ) : (listing.status !== 'aktiv' || isExpired(listing)) && (
+            <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-sm text-amber-800">
+              Den här annonsen är inte längre aktiv.
+            </div>
+          )}
 
           {/* Title & meta */}
           <div className="mb-6">
