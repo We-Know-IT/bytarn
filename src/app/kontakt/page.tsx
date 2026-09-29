@@ -1,32 +1,42 @@
-import { Mail } from 'lucide-react'
+import Link from 'next/link'
+import { Mail, ArrowUpRight, Shield, BookOpen } from 'lucide-react'
+import PageHeader from '@/components/ui/PageHeader'
 
 const CONTACT_EMAIL = 'hej@bytaren.se'
 
 export default function KontaktPage() {
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] mb-3" style={{ color: '#A8B9A4' }}>
-        Kontakt
-      </p>
-      <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">Hör av dig</h1>
+    <div className="container-page py-14 sm:py-20">
+      <PageHeader
+        eyebrow="Kontakt"
+        title="Hör av dig"
+        lead="Frågor om ditt konto, en annons, eller något som känns fel? Mejla oss så återkommer vi så snart vi kan."
+      />
 
-      <p className="text-[15px] leading-[1.75] text-gray-600 mb-8 max-w-xl">
-        Frågor om ditt konto, en annons, eller något som känns fel? Mejla oss så återkommer vi så
-        snart vi kan.
-      </p>
+      <div className="mt-10 grid max-w-3xl gap-4 sm:grid-cols-2">
+        <a
+          href={`mailto:${CONTACT_EMAIL}`}
+          className="card card-hover group flex items-start gap-4 p-5 sm:col-span-2 sm:p-6"
+        >
+          <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-[#E3EBE2] text-emerald-600">
+            <Mail size={20} strokeWidth={1.75} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[16px] font-semibold text-gray-900 group-hover:text-emerald-600">{CONTACT_EMAIL}</span>
+            <span className="mt-0.5 block text-[13.5px] text-gray-500">Vi svarar vanligtvis inom ett par arbetsdagar</span>
+          </span>
+          <ArrowUpRight size={18} className="mt-1 text-gray-400 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+        </a>
 
-      <a
-        href={`mailto:${CONTACT_EMAIL}`}
-        className="inline-flex items-center gap-3 px-5 py-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
-      >
-        <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
-          <Mail size={18} className="text-emerald-600" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-900">{CONTACT_EMAIL}</p>
-          <p className="text-xs text-gray-400">Vi svarar vanligtvis inom ett par arbetsdagar</p>
-        </div>
-      </a>
+        <Link href="/trygghet" className="card-muted card-hover group flex items-center gap-3 p-5">
+          <Shield size={18} strokeWidth={1.75} className="text-emerald-600" />
+          <span className="text-[14.5px] font-medium text-gray-900">Råd för ett tryggt byte</span>
+        </Link>
+        <Link href="/hur-det-fungerar" className="card-muted card-hover group flex items-center gap-3 p-5">
+          <BookOpen size={18} strokeWidth={1.75} className="text-emerald-600" />
+          <span className="text-[14.5px] font-medium text-gray-900">Vanliga frågor</span>
+        </Link>
+      </div>
     </div>
   )
 }

@@ -59,8 +59,9 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-gray-50 flex items-start justify-center py-10 px-4">
-      <div className="w-full max-w-lg">
+    <div className="min-h-[calc(100vh-var(--nav-h))] bg-[#F5F0E8] flex items-start justify-center py-8 px-4 sm:py-14"
+      style={{ backgroundImage: 'radial-gradient(60% 40% at 50% 0%, rgba(168,185,164,0.26) 0%, transparent 70%)' }}>
+      <div className="w-full max-w-xl">
 
         {/* Progress */}
         <div className="flex items-center gap-2 mb-8">
@@ -72,27 +73,27 @@ export default function OnboardingPage() {
               <div key={s.label} className="flex items-center gap-2 flex-1">
                 <div className={cn(
                   'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all',
-                  done ? 'bg-emerald-600 text-white' : active ? 'bg-emerald-600 text-white ring-4 ring-emerald-100' : 'bg-white border-2 border-gray-200 text-gray-400'
+                  done ? 'bg-emerald-600 text-white' : active ? 'bg-emerald-600 text-white ring-4 ring-[rgba(21,63,50,0.12)]' : 'bg-white border border-gray-300 text-gray-400'
                 )}>
                   {done ? <CheckCircle size={16} /> : <Icon size={14} />}
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div className={cn('flex-1 h-0.5 transition-colors', done ? 'bg-emerald-500' : 'bg-gray-200')} />
+                  <div className={cn('flex-1 h-0.5 rounded-full transition-colors', done ? 'bg-emerald-600' : 'bg-gray-300')} />
                 )}
               </div>
             )
           })}
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+        <div className="card p-5 sm:p-9">
 
           {/* ── Step 0 — Welcome ── */}
           {step === 0 && (
             <div className="text-center">
-              <div className="w-20 h-20 bg-emerald-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <div className="w-20 h-20 bg-[#E3EBE2] rounded-3xl flex items-center justify-center mx-auto mb-6">
                 <Home size={36} className="text-emerald-600" strokeWidth={1.75} />
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-3">Välkommen till Bytaren!</h1>
+              <h1 className="font-display text-[36px] italic leading-[1.08] tracking-[-0.02em] text-gray-900 mb-3">Välkommen till Bytaren!</h1>
               <p className="text-gray-500 mb-6 leading-relaxed">
                 Bytaren är Stockholms enklaste sätt att byta bostad direkt — utan mäklare och utan kö.
                 Vi hjälper dig hitta rätt match på bara några minuter.
@@ -112,7 +113,7 @@ export default function OnboardingPage() {
               </div>
               <button
                 onClick={() => setStep(1)}
-                className="w-full py-3.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
+                className="btn btn-primary btn-lg btn-block"
               >
                 Kom igång <ArrowRight size={18} />
               </button>
@@ -123,7 +124,7 @@ export default function OnboardingPage() {
           {/* ── Step 1 — Din bostad ── */}
           {step === 1 && (
             <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-1">Hur bor du idag?</h2>
+              <h2 className="font-display text-[30px] italic leading-[1.1] tracking-[-0.02em] text-gray-900 mb-1.5">Hur bor du idag?</h2>
               <p className="text-gray-500 text-sm mb-6">
                 Berätta om bostaden du vill byta. Vi förinställer dessa uppgifter i din annons.
               </p>
@@ -131,7 +132,7 @@ export default function OnboardingPage() {
               <div className="space-y-4">
                 {/* Address */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="label">
                     <span className="flex items-center gap-1"><MapPin size={13} /> Gatuadress</span>
                   </label>
                   <AddressInput value={address} onChange={handleAddressChange} />
@@ -139,11 +140,11 @@ export default function OnboardingPage() {
 
                 {/* Stadsdel */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Stadsdel *</label>
+                  <label className="label">Stadsdel *</label>
                   <select
                     value={district}
                     onChange={(e) => setDistrict(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                    className="input"
                   >
                     <option value="">Välj stadsdel</option>
                     {STOCKHOLM_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
@@ -152,15 +153,15 @@ export default function OnboardingPage() {
 
                 {/* Antal rum */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Antal rum *</label>
+                  <label className="label">Antal rum *</label>
                   <div className="flex gap-2">
                     {['1', '2', '3', '4', '5+'].map((r) => (
                       <button
                         key={r}
                         onClick={() => setRooms(r)}
                         className={cn(
-                          'flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all',
-                          rooms === r ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:border-emerald-300'
+                          'flex-1 min-h-[44px] rounded-xl text-sm font-medium border transition-colors',
+                          rooms === r ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:border-emerald-600 hover:text-emerald-600'
                         )}
                       >
                         {r}
@@ -170,21 +171,21 @@ export default function OnboardingPage() {
                 </div>
 
                 {/* Yta + Våning + Hyra */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Yta (m²)</label>
+                    <label className="label">Yta (m²)</label>
                     <input type="number" placeholder="65" value={area} onChange={(e) => setArea(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                      className="input" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Våning</label>
+                    <label className="label">Våning</label>
                     <input type="number" placeholder="3" value={floor} onChange={(e) => setFloor(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                      className="input" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Hyra (kr/mån)</label>
+                    <label className="label">Hyra (kr/mån)</label>
                     <input type="number" placeholder="8 500" value={rent} onChange={(e) => setRent(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                      className="input" />
                   </div>
                 </div>
 
@@ -201,8 +202,8 @@ export default function OnboardingPage() {
                         type="button"
                         onClick={() => item.set(!item.value)}
                         className={cn(
-                          'flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all',
-                          item.value ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-emerald-300'
+                          'flex-1 min-h-[44px] rounded-xl text-sm font-medium border transition-colors',
+                          item.value ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:border-emerald-600 hover:text-emerald-600'
                         )}
                       >
                         {item.label}
@@ -213,13 +214,13 @@ export default function OnboardingPage() {
               </div>
 
               <div className="flex gap-3 mt-8">
-                <button onClick={() => setStep(0)} className="flex-1 py-3 border border-gray-200 text-gray-600 font-medium rounded-xl hover:bg-gray-50">
+                <button onClick={() => setStep(0)} className="btn btn-secondary flex-1">
                   Tillbaka
                 </button>
                 <button
                   onClick={saveDraftAndContinue}
                   disabled={!district || !rooms}
-                  className="flex-1 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-40 transition-colors"
+                  className="btn btn-primary flex-1"
                 >
                   Nästa
                 </button>
@@ -230,7 +231,7 @@ export default function OnboardingPage() {
           {/* ── Step 2 — Du söker ── */}
           {step === 2 && (
             <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-1">Vad söker du?</h2>
+              <h2 className="font-display text-[30px] italic leading-[1.1] tracking-[-0.02em] text-gray-900 mb-1.5">Vad söker du?</h2>
               <p className="text-gray-500 text-sm mb-6">Välj de stadsdelar och rum du är intresserad av.</p>
               <div className="space-y-5">
                 <div>
@@ -238,8 +239,8 @@ export default function OnboardingPage() {
                   <div className="flex flex-wrap gap-2">
                     {STOCKHOLM_DISTRICTS.map((d) => (
                       <button key={d} onClick={() => toggleWantDistrict(d)}
-                        className={cn('px-3 py-1.5 rounded-lg text-xs font-medium border transition-all',
-                          wantDistricts.includes(d) ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-emerald-300'
+                        className={cn('px-3 py-1.5 rounded-full text-[13px] font-medium border transition-colors',
+                          wantDistricts.includes(d) ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:border-emerald-600 hover:text-emerald-600'
                         )}>
                         {d}
                       </button>
@@ -251,8 +252,8 @@ export default function OnboardingPage() {
                   <div className="flex gap-2">
                     {['1', '2', '3', '4', '5+'].map((r) => (
                       <button key={r} onClick={() => toggleWantRoom(r)}
-                        className={cn('flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all',
-                          wantRooms.includes(r) ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:border-emerald-300'
+                        className={cn('flex-1 min-h-[44px] rounded-xl text-sm font-medium border transition-colors',
+                          wantRooms.includes(r) ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:border-emerald-600 hover:text-emerald-600'
                         )}>
                         {r}
                       </button>
@@ -261,8 +262,8 @@ export default function OnboardingPage() {
                 </div>
               </div>
               <div className="flex gap-3 mt-8">
-                <button onClick={() => setStep(1)} className="flex-1 py-3 border border-gray-200 text-gray-600 font-medium rounded-xl hover:bg-gray-50">Tillbaka</button>
-                <button onClick={() => setStep(3)} className="flex-1 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors">Nästa</button>
+                <button onClick={() => setStep(1)} className="btn btn-secondary flex-1">Tillbaka</button>
+                <button onClick={() => setStep(3)} className="btn btn-primary flex-1">Nästa</button>
               </div>
             </div>
           )}
@@ -270,14 +271,14 @@ export default function OnboardingPage() {
           {/* ── Step 3 — Notiser ── */}
           {step === 3 && (
             <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-1">Notifikationer</h2>
+              <h2 className="font-display text-[30px] italic leading-[1.1] tracking-[-0.02em] text-gray-900 mb-1.5">Notifikationer</h2>
               <p className="text-gray-500 text-sm mb-6">Vi meddelar dig när något händer med dina annonser.</p>
               <div className="space-y-3">
                 {[
                   { key: 'email', label: 'E-postnotiser vid nytt meddelande', desc: 'Vi skickar ett mail när du får ett nytt meddelande.' },
                   { key: 'matches', label: 'Notiser vid ny match', desc: 'Få reda på det direkt när du och en annan bytare visat ömsesidigt intresse.' },
                 ].map((item) => (
-                  <label key={item.key} className="flex items-start gap-4 p-4 border border-gray-100 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                  <label key={item.key} className="flex items-start gap-4 p-4 border border-gray-200 rounded-[14px] cursor-pointer hover:bg-gray-50 transition-colors">
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-900">{item.label}</p>
                       <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
@@ -304,14 +305,14 @@ export default function OnboardingPage() {
               </div>
 
               <p className="text-sm font-medium text-gray-700 mt-8 mb-3">Vad vill du göra härnäst?</p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
                 <Link href="/annonser/ny"
-                  className="py-4 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors text-center flex flex-col items-center justify-center gap-1">
+                  className="btn btn-primary h-auto flex-col gap-1 whitespace-normal py-4 text-center">
                   <span className="flex items-center gap-2">Lägg upp annons <ArrowRight size={16} /></span>
-                  <span className="text-xs font-normal text-emerald-100">Annonsera din bostad</span>
+                  <span className="text-xs font-normal text-white/70">Annonsera din bostad</span>
                 </Link>
                 <Link href="/annonser"
-                  className="py-4 border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors text-center flex flex-col items-center justify-center gap-1">
+                  className="btn btn-secondary h-auto flex-col gap-1 whitespace-normal py-4 text-center text-gray-800">
                   <span>Utforska annonser</span>
                   <span className="text-xs font-normal text-gray-400">Titta runt först</span>
                 </Link>

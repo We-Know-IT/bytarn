@@ -148,11 +148,11 @@ function AcceptInvite() {
       {!user ? (
         <div className="space-y-3">
           <p className="text-sm text-gray-600">
-            Logga in eller skapa ett konto med <strong>{info.email}</strong> och öppna sedan länken i mejlet igen.
+            Logga in eller skapa ett konto med <strong>{info.email}</strong> och kom sedan tillbaka hit.
           </p>
           <div className="flex justify-center gap-3">
             <Link
-              href="/logga-in"
+              href={`/logga-in?nasta=${encodeURIComponent(`/familj/acceptera?token=${token}`)}`}
               className="inline-flex bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl"
             >
               Logga in

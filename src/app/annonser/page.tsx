@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { fetchListings } from '@/lib/listings'
 import { fetchFavoriteListingIds } from '@/lib/favorites'
@@ -10,7 +11,7 @@ import { useHomeLocation } from '@/lib/useHomeLocation'
 import SearchFiltersComponent from '@/components/SearchFilters'
 import ListingCard from '@/components/ListingCard'
 import { isInBounds, type MapBounds } from '@/components/map/bounds'
-import type { Listing, SearchFilters } from '@/types'
+import { STOCKHOLM_DISTRICTS, type Listing, type SearchFilters } from '@/types'
 import { cn, haversineKm } from '@/lib/utils'
 import { Home, List, Map as MapIcon } from 'lucide-react'
 
@@ -24,13 +25,30 @@ const ListingMap = dynamic(() => import('@/components/ListingMap'), {
 })
 
 export default function AnnonserPage() {
-  const [filters, setFilters] = useState<SearchFilters>({
-    districts: [],
+  return (
+    <Suspense>
+      <AnnonserView />
+    </Suspense>
+  )
+}
+
+// ?omrade=… comes from the home page search; it pre-selects a district
+// when the text matches one (case-insensitive, partial match allowed).
+function districtsFromQuery(q: string | null): string[] {
+  const needle = q?.trim().toLowerCase()
+  if (!needle) return []
+  return STOCKHOLM_DISTRICTS.filter((d) => d.toLowerCase().includes(needle))
+}
+
+function AnnonserView() {
+  const searchParams = useSearchParams()
+  const [filters, setFilters] = useState<SearchFilters>(() => ({
+    districts: districtsFromQuery(searchParams.get('omrade')),
     rooms: [],
     maxRent: null,
     view: 'list',
     sort: 'newest',
-  })
+  }))
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [listings, setListings] = useState<Listing[]>([])

@@ -92,7 +92,7 @@ export default function FamiljPage() {
         <div className="bg-white border border-gray-100 rounded-2xl p-6 text-center">
           <p className="text-gray-600 text-sm mb-4">Logga in för att skapa eller gå med i ett familjekonto.</p>
           <div className="flex justify-center gap-3">
-            <Link href="/logga-in" className={primaryBtn}>
+            <Link href="/logga-in?nasta=/familj" className={primaryBtn}>
               Logga in
             </Link>
             <Link

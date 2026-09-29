@@ -1,28 +1,35 @@
 import Link from 'next/link'
-import { Shield, ArrowRight } from 'lucide-react'
+import { ArrowRight, Check, MailCheck, MessageSquare, Flag, Wallet, UserCheck, Lock } from 'lucide-react'
+import PageHeader from '@/components/ui/PageHeader'
 
 const FEATURES = [
   {
+    icon: MailCheck,
     title: 'E-postverifierade profiler',
     desc: 'Alla konton bekräftas via e-post innan de är aktiva. Vill du logga in med BankID är det verifierad legitimation.',
   },
   {
+    icon: MessageSquare,
     title: 'Transparent kommunikation',
     desc: 'All kommunikation sker via vår interna chatt. Dela aldrig personliga uppgifter utanför plattformen.',
   },
   {
+    icon: Flag,
     title: 'Rapporteringsfunktion',
     desc: 'Om något känns fel kan du rapportera en annons direkt från dess sida. Vi går igenom rapporter manuellt.',
   },
   {
+    icon: Wallet,
     title: 'Inga dolda avgifter',
     desc: 'Bytaren är gratis och öppen. Vi tjänar inga pengar på att dölja information för dig.',
   },
   {
+    icon: UserCheck,
     title: 'Du bestämmer alltid',
     desc: 'Du väljer vem du svarar och när. Alla meddelanden stannar i appen — inga privata uppgifter delas automatiskt.',
   },
   {
+    icon: Lock,
     title: 'Säker plattform',
     desc: 'All data krypteras och lagras säkert. Vi säljer aldrig din information till tredje part.',
   },
@@ -38,68 +45,38 @@ const TIPS = [
 
 function CheckIcon() {
   return (
-    <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#153F32' }}>
-      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-        <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    </div>
+    <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-emerald-600">
+      <Check size={12} strokeWidth={3} className="text-white" />
+    </span>
   )
 }
 
 export default function Trygghet() {
   return (
-    <div style={{ backgroundColor: '#FBFAF7' }}>
-
+    <div>
       {/* Hero */}
-      <section style={{ paddingTop: 80, paddingBottom: 80 }}>
-        <div className="max-w-[1360px] mx-auto px-6 sm:px-10">
-          <div className="max-w-2xl">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] mb-3" style={{ color: '#A8B9A4' }}>
-              Trygghet
-            </p>
-            <h1
-              className="font-display mb-6"
-              style={{
-                fontSize: 'clamp(40px, 5vw, 72px)',
-                fontStyle: 'italic',
-                lineHeight: 1.0,
-                letterSpacing: '-0.025em',
-                color: '#15211E',
-              }}
-            >
-              Din säkerhet<br />
-              <span style={{ color: '#153F32' }}>är vår prioritet.</span>
-            </h1>
-            <p className="text-[17px] leading-[1.65]" style={{ color: '#6D716C', maxWidth: 520 }}>
-              Bostadsbyte är ett stort steg. Bytaren är byggt från grunden för att du ska kunna
-              göra det tryggt, transparent och på dina egna villkor.
-            </p>
-          </div>
+      <section>
+        <div className="container-page py-14 sm:py-20">
+          <PageHeader
+            eyebrow="Trygghet"
+            title="Din säkerhet"
+            accent="är vår prioritet."
+            lead="Bostadsbyte är ett stort steg. Bytaren är byggt från grunden för att du ska kunna göra det tryggt, transparent och på dina egna villkor."
+          />
         </div>
       </section>
 
       {/* Features */}
-      <section style={{ backgroundColor: '#E3EBE2', paddingTop: 80, paddingBottom: 96 }}>
-        <div className="max-w-[1360px] mx-auto px-6 sm:px-10">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {FEATURES.map((f) => (
-              <div
-                key={f.title}
-                className="p-7 rounded-[20px]"
-                style={{ backgroundColor: 'white', boxShadow: '0 2px 8px rgba(15,30,24,0.04), 0 16px 40px rgba(15,30,24,0.06)' }}
-              >
-                <div
-                  className="w-10 h-10 rounded-2xl flex items-center justify-center mb-5"
-                  style={{ backgroundColor: 'rgba(21,63,50,0.08)' }}
-                >
-                  <Shield size={18} style={{ color: '#153F32' }} />
-                </div>
-                <h3 className="text-[16px] font-semibold mb-2" style={{ color: '#15211E' }}>
-                  {f.title}
-                </h3>
-                <p className="text-[14px] leading-[1.65]" style={{ color: '#6D716C' }}>
-                  {f.desc}
-                </p>
+      <section className="section bg-[#E3EBE2]">
+        <div className="container-page">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+            {FEATURES.map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="card p-6 sm:p-7">
+                <span className="mb-5 flex h-11 w-11 items-center justify-center rounded-[14px] bg-[#E3EBE2] text-emerald-600">
+                  <Icon size={20} strokeWidth={1.75} />
+                </span>
+                <h3 className="mb-2 text-[16px] font-semibold text-gray-900">{title}</h3>
+                <p className="text-[14px] leading-[1.65] text-gray-600">{desc}</p>
               </div>
             ))}
           </div>
@@ -107,68 +84,39 @@ export default function Trygghet() {
       </section>
 
       {/* Safety tips */}
-      <section style={{ paddingTop: 80, paddingBottom: 80 }}>
-        <div className="max-w-[1360px] mx-auto px-6 sm:px-10">
-          <div className="max-w-xl">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] mb-3" style={{ color: '#A8B9A4' }}>
-              Tips från oss
-            </p>
-            <h2
-              className="font-display mb-8"
-              style={{
-                fontSize: 'clamp(28px, 3vw, 42px)',
-                fontStyle: 'italic',
-                lineHeight: 1.1,
-                color: '#15211E',
-              }}
-            >
-              Tänk på detta när du byter.
-            </h2>
-            <div className="space-y-4">
-              {TIPS.map((tip) => (
-                <div key={tip} className="flex items-start gap-3">
-                  <CheckIcon />
-                  <span className="text-[15px] leading-[1.5]" style={{ color: '#15211E' }}>{tip}</span>
-                </div>
-              ))}
+      <section className="section">
+        <div className="container-page">
+          <div className="grid gap-10 lg:grid-cols-[1fr_1.2fr] lg:gap-20">
+            <div>
+              <p className="eyebrow">Tips från oss</p>
+              <h2 className="display-md">Tänk på detta när du byter.</h2>
             </div>
+            <ul className="card-muted space-y-4 p-6 sm:p-8">
+              {TIPS.map((tip) => (
+                <li key={tip} className="flex items-start gap-3 text-[15px] leading-[1.55] text-gray-900">
+                  <CheckIcon />
+                  {tip}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section style={{ backgroundColor: '#0D2F26', paddingTop: 72, paddingBottom: 72 }}>
-        <div className="max-w-[1360px] mx-auto px-6 sm:px-10 text-center">
-          <h2
-            className="font-display mb-5"
-            style={{
-              fontSize: 'clamp(28px, 3.5vw, 48px)',
-              fontStyle: 'italic',
-              color: 'white',
-              lineHeight: 1.05,
-            }}
-          >
-            Tryggt att byta med Bytaren.
-          </h2>
-          <div className="flex items-center justify-center gap-4 flex-wrap">
-            <Link
-              href="/registrera"
-              className="flex items-center gap-2 px-7 py-3.5 rounded-[14px] text-[15px] font-semibold transition-all hover:-translate-y-[1px] hover:shadow-xl"
-              style={{ backgroundColor: 'white', color: '#153F32' }}
-            >
-              Skapa konto <ArrowRight size={15} />
+      <section className="section bg-[#0D2F26]">
+        <div className="container-page text-center">
+          <h2 className="display-md mb-8 text-white">Tryggt att byta med Bytaren.</h2>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link href="/registrera" className="btn btn-inverse btn-lg btn-arrow">
+              Skapa konto <ArrowRight size={15} className="arrow-icon" />
             </Link>
-            <Link
-              href="/hur-det-fungerar"
-              className="flex items-center gap-2 px-7 py-3.5 rounded-[14px] text-[15px] font-semibold text-white transition-all hover:-translate-y-[1px]"
-              style={{ border: '1.5px solid rgba(255,255,255,0.18)' }}
-            >
+            <Link href="/hur-det-fungerar" className="btn btn-outline-inverse btn-lg">
               Så fungerar det
             </Link>
           </div>
         </div>
       </section>
-
     </div>
   )
 }

@@ -362,7 +362,7 @@ function NyAnnonsForm() {
         </p>
         {supabaseConfigured && (
           <div className="flex gap-3 justify-center">
-            <Link href="/logga-in" className="px-5 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700">
+            <Link href="/logga-in?nasta=/annonser/ny" className="px-5 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700">
               Logga in
             </Link>
             <Link href="/registrera" className="px-5 py-3 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50">

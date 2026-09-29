@@ -155,7 +155,7 @@ export default function AnnonshanterarePage() {
       <div className="max-w-md mx-auto px-4 py-20 text-center">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Annonshanteraren</h1>
         <p className="text-gray-500 text-sm mb-6">Logga in för att hantera dina annonser.</p>
-        <Link href="/logga-in" className="px-5 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700">
+        <Link href="/logga-in?nasta=/annonshanterare" className="px-5 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700">
           Logga in
         </Link>
       </div>

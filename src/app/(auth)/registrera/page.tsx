@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { LogoMark } from '@/components/ui/Logo'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Eye, EyeOff, CheckCircle, Fingerprint, Mail } from 'lucide-react'
@@ -59,13 +60,14 @@ export default function RegistreraPage() {
 
   if (confirmSent) {
     return (
-      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12 bg-gray-50">
-        <div className="w-full max-w-sm">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
-            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      <div className="relative flex min-h-[calc(100vh-var(--nav-h))] items-start justify-center overflow-hidden bg-[#F5F0E8] px-4 py-10 sm:items-center sm:py-16"
+      style={{ backgroundImage: 'radial-gradient(60% 50% at 50% 0%, rgba(168,185,164,0.28) 0%, transparent 70%)' }}>
+        <div className="w-full max-w-[420px]">
+          <div className="card p-6 text-center sm:p-9">
+            <div className="w-16 h-16 bg-[#E3EBE2] rounded-2xl flex items-center justify-center mx-auto mb-5">
               <Mail size={28} className="text-emerald-600" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Bekräfta din e-post</h2>
+            <h2 className="font-display text-[30px] italic leading-[1.1] text-gray-900 mb-2">Bekräfta din e-post</h2>
             <p className="text-gray-500 text-sm mb-6">
               Vi har skickat ett bekräftelsemail till <strong className="text-gray-700">{form.email}</strong>.
               Klicka på länken i mejlet för att aktivera kontot och logga in.
@@ -88,21 +90,20 @@ export default function RegistreraPage() {
     : 3
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12 bg-gray-50">
-      <div className="w-full max-w-sm">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+    <div className="relative flex min-h-[calc(100vh-var(--nav-h))] items-start justify-center overflow-hidden bg-[#F5F0E8] px-4 py-10 sm:items-center sm:py-16"
+      style={{ backgroundImage: 'radial-gradient(60% 50% at 50% 0%, rgba(168,185,164,0.28) 0%, transparent 70%)' }}>
+      <div className="w-full max-w-[420px]">
+        <div className="card p-6 sm:p-9">
           <div className="text-center mb-8">
-            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <span className="text-white font-bold">B</span>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Skapa konto</h1>
-            <p className="text-gray-500 text-sm mt-1">Gratis, alltid</p>
+            <LogoMark size={40} className="mx-auto mb-5" />
+            <h1 className="font-display text-[34px] italic leading-[1.1] tracking-[-0.02em] text-gray-900">Skapa konto</h1>
+            <p className="text-gray-600 text-[14.5px] mt-2">Gratis, alltid</p>
           </div>
 
           {/* BankID */}
           <a
             href="/api/auth/bankid/start"
-            className="w-full flex items-center justify-center gap-2 py-3 bg-[#0e5c9e] text-white rounded-xl text-sm font-semibold hover:bg-[#0a4a80] transition-colors mb-3"
+            className="btn btn-block mb-3 bg-[#0e5c9e] text-white hover:bg-[#0a4a80]"
           >
             <Fingerprint size={18} strokeWidth={2} />
             Skapa konto med BankID
@@ -112,7 +113,7 @@ export default function RegistreraPage() {
           <button
             type="button"
             onClick={handleGoogleSignUp}
-            className="w-full flex items-center justify-center gap-3 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors mb-4"
+            className="btn btn-secondary btn-block mb-4 gap-3 text-gray-800"
           >
             <svg width="18" height="18" viewBox="0 0 18 18">
               <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z" />
@@ -124,50 +125,51 @@ export default function RegistreraPage() {
           </button>
 
           <div className="flex items-center gap-3 my-4">
-            <div className="flex-1 h-px bg-gray-100" />
-            <span className="text-xs text-gray-400">eller med lösenord</span>
-            <div className="flex-1 h-px bg-gray-100" />
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-xs text-gray-500">eller med lösenord</span>
+            <div className="flex-1 h-px bg-gray-200" />
           </div>
 
           {error && (
-            <div className="mb-4 px-3 py-2.5 rounded-lg bg-red-50 text-red-700 text-sm">{error}</div>
+            <div role="alert" className="mb-4 rounded-[12px] border border-red-100 bg-red-50 px-3.5 py-3 text-[14px] text-red-700">{error}</div>
           )}
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Namn</label>
+              <label className="label">Namn</label>
               <input
                 type="text"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Anna Svensson"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="input"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">E-post</label>
+              <label className="label">E-post</label>
               <input
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="din@email.se"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="input"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Lösenord</label>
+              <label className="label">Lösenord</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   placeholder="Minst 8 tecken"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-10"
+                  className="input pr-11"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                  aria-label={showPassword ? 'Dölj lösenord' : 'Visa lösenord'}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -214,7 +216,7 @@ export default function RegistreraPage() {
             <button
               disabled={loading || !agreed || !form.name || !form.email || form.password.length < 8}
               onClick={handleSignUp}
-              className="w-full py-3.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="btn btn-primary btn-lg btn-block"
             >
               {loading ? 'Skapar konto…' : 'Skapa konto'}
             </button>

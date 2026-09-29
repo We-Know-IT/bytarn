@@ -1,11 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { Heart, Home, MapPin, Handshake } from 'lucide-react'
+import { Heart, Home, MapPin, Handshake, Video, BedDouble, Ruler, Images } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import type { Listing } from '@/types'
 import { cn, haversineKm, formatDistance } from '@/lib/utils'
-import { CURRENT_USER_HOME } from '@/lib/mock-data'
+import { useHomeLocation } from '@/lib/useHomeLocation'
 import { useAuth } from '@/context/AuthContext'
 import { supabaseConfigured } from '@/lib/supabase/client'
 import { addFavorite, removeFavorite } from '@/lib/favorites'
@@ -17,19 +17,36 @@ interface ListingCardProps {
   mutualMatch?: boolean
 }
 
+const NEW_MS = 7 * 24 * 60 * 60 * 1000
+
 export default function ListingCard({ listing, compact = false, favorited: initialFavorited = false, mutualMatch = false }: ListingCardProps) {
   const { user } = useAuth()
+  const home = useHomeLocation()
   const [favorited, setFavorited] = useState(initialFavorited)
   const [imgIndex, setImgIndex] = useState(0)
   const [imgError, setImgError] = useState(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const distKm = haversineKm(CURRENT_USER_HOME.lat, CURRENT_USER_HOME.lng, listing.lat, listing.lng)
-  const distLabel = formatDistance(distKm)
 
-  useEffect(() => setFavorited(initialFavorited), [initialFavorited])
+  // Keep local state in sync when the parent's favorited prop changes.
+  const [prevInitial, setPrevInitial] = useState(initialFavorited)
+  if (prevInitial !== initialFavorited) {
+    setPrevInitial(initialFavorited)
+    setFavorited(initialFavorited)
+  }
+
+  const distLabel = home
+    ? formatDistance(haversineKm(home.lat, home.lng, listing.lat, listing.lng))
+    : null
+
+  // "Ny" = published within the last week. Computed once per mount so render stays pure.
+  const [isNew] = useState(() => {
+    const t = Date.parse(listing.createdAt)
+    return Number.isFinite(t) && Date.now() - t < NEW_MS
+  })
 
   async function handleFavoriteClick(e: React.MouseEvent) {
     e.preventDefault()
+    e.stopPropagation()
     if (!supabaseConfigured || !user) {
       alert('Du måste vara inloggad för att spara favoriter.')
       return
@@ -48,10 +65,10 @@ export default function ListingCard({ listing, compact = false, favorited: initi
   const hasMultiple = images.length > 1
 
   function startRotation() {
-    if (!hasMultiple) return
+    if (!hasMultiple || intervalRef.current) return
     intervalRef.current = setInterval(() => {
       setImgIndex((i) => (i + 1) % images.length)
-    }, 3000)
+    }, 2600)
   }
 
   function stopRotation() {
@@ -62,160 +79,182 @@ export default function ListingCard({ listing, compact = false, favorited: initi
     setImgIndex(0)
   }
 
-  useEffect(() => () => stopRotation(), [])
+  useEffect(() => () => {
+    if (intervalRef.current) clearInterval(intervalRef.current)
+  }, [])
+
+  const rent = new Intl.NumberFormat('sv-SE').format(listing.rent)
+  const inactive = listing.status !== 'aktiv'
 
   return (
     <Link
       href={`/annonser/${listing.id}`}
-      className="group block"
+      className="group block h-full rounded-[20px] focus-visible:outline-offset-4"
       onMouseEnter={startRotation}
       onMouseLeave={stopRotation}
+      onFocus={startRotation}
+      onBlur={stopRotation}
     >
       <article
-        className="bg-white card-lift"
-        style={{
-          borderRadius: 20,
-          boxShadow: '0 2px 8px rgba(15,30,24,0.04), 0 16px 40px rgba(15,30,24,0.08)',
-          border: '1px solid rgba(21,63,50,0.06)',
-          overflow: 'hidden',
-        }}
+        className={cn(
+          'card card-hover flex h-full flex-col overflow-hidden',
+          compact && 'rounded-[16px]'
+        )}
       >
         {/* ─── Image ─── */}
-        <div className="relative overflow-hidden" style={{ aspectRatio: '4/3', backgroundColor: '#E3EBE2' }}>
+        <div
+          className="relative overflow-hidden bg-[#E3EBE2]"
+          style={{ aspectRatio: compact ? '16/10' : '4/3' }}
+        >
           {!imgError && images[imgIndex] ? (
+            // eslint-disable-next-line @next/next/no-img-element -- user-uploaded Supabase URLs, no loader configured
             <img
               src={images[imgIndex]}
               alt={listing.title}
-              className="w-full h-full object-cover img-zoom transition-opacity duration-300"
+              loading="lazy"
+              decoding="async"
+              className={cn('img-zoom h-full w-full object-cover', inactive && 'grayscale-[40%]')}
               onError={() => setImgError(true)}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Home size={36} style={{ color: '#A8B9A4' }} />
+            <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#E3EBE2] to-[#F5F0E8]">
+              <Home size={compact ? 26 : 34} strokeWidth={1.5} className="text-[#A8B9A4]" />
+              {!compact && <span className="text-[12px] font-medium text-gray-400">Ingen bild ännu</span>}
             </div>
           )}
 
-          {/* Match badge — top left */}
-          {mutualMatch && (
-            <div
-              className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-semibold text-white"
-              style={{ backgroundColor: '#153F32' }}
-            >
-              <Handshake size={11} strokeWidth={2} />
-              <span>Match</span>
-            </div>
-          )}
+          {/* soft gradient so overlay badges stay legible on bright photos */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/20 to-transparent opacity-70"
+          />
 
-          {/* Status badge (if no match badge) */}
-          {!mutualMatch && listing.status !== 'aktiv' && (
-            <div className="absolute top-3 left-3 px-2.5 py-1.5 rounded-full text-[11px] font-semibold bg-white/90 text-amber-700">
-              {listing.status === 'pausad' ? 'Pausad' : 'Avslutad'}
-            </div>
-          )}
+          {/* Badges — top left */}
+          <div className="absolute left-3 top-3 flex max-w-[calc(100%-64px)] flex-wrap gap-1.5">
+            {mutualMatch && (
+              <span className="badge badge-solid shadow-sm">
+                <Handshake size={12} strokeWidth={2} />
+                Match
+              </span>
+            )}
+            {inactive && (
+              <span className="badge badge-overlay text-amber-800">
+                {listing.status === 'pausad' ? 'Pausad' : 'Avslutad'}
+              </span>
+            )}
+            {!inactive && isNew && !mutualMatch && (
+              <span className="badge badge-overlay text-emerald-600">Ny</span>
+            )}
+            {listing.videoUrl && (
+              <span className="badge badge-overlay">
+                <Video size={12} strokeWidth={2} />
+                Video
+              </span>
+            )}
+          </div>
 
           {/* Favorite — top right */}
           <button
+            type="button"
             onClick={handleFavoriteClick}
+            aria-pressed={favorited}
             className={cn(
-              'absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200',
+              'absolute right-3 top-3 flex items-center justify-center rounded-full transition-all duration-200 active:scale-90',
+              compact ? 'h-8 w-8' : 'h-9 w-9',
               favorited
-                ? 'bg-red-500 text-white shadow-md'
-                : 'bg-white/90 text-[#9EA69D] hover:text-red-400 hover:bg-white shadow-sm'
+                ? 'bg-white text-red-500 shadow-md'
+                : 'bg-white/90 text-gray-600 shadow-sm hover:bg-white hover:text-red-500'
             )}
             aria-label={favorited ? 'Ta bort från favoriter' : 'Spara som favorit'}
           >
-            <Heart size={14} fill={favorited ? 'currentColor' : 'none'} />
+            <Heart size={compact ? 14 : 16} strokeWidth={2} fill={favorited ? 'currentColor' : 'none'} />
           </button>
 
-          {/* Image counter / dots */}
+          {/* Image count + dots */}
           {hasMultiple && (
-            <div className="absolute bottom-3 right-3 bg-black/35 text-white text-[11px] px-2 py-0.5 rounded-full font-medium">
-              {imgIndex + 1}/{images.length}
-            </div>
-          )}
-
-          {/* Dot indicators */}
-          {hasMultiple && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
-              {images.map((_, i) => (
-                <div
-                  key={i}
-                  className="rounded-full transition-all duration-300"
-                  style={{
-                    width: i === imgIndex ? 16 : 6,
-                    height: 6,
-                    backgroundColor: i === imgIndex ? 'white' : 'rgba(255,255,255,0.5)',
-                  }}
-                />
-              ))}
-            </div>
+            <>
+              <span className="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
+                <Images size={11} />
+                {imgIndex + 1}/{images.length}
+              </span>
+              {images.length <= 8 && (
+                <div className="absolute bottom-3.5 left-1/2 flex -translate-x-1/2 gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                  {images.map((_, i) => (
+                    <span
+                      key={i}
+                      className="h-1.5 rounded-full transition-all duration-300"
+                      style={{
+                        width: i === imgIndex ? 14 : 6,
+                        backgroundColor: i === imgIndex ? 'white' : 'rgba(255,255,255,0.55)',
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
 
         {/* ─── Content ─── */}
-        <div className={cn('p-4', compact && 'p-3.5')}>
-          {/* District + distance */}
-          <div className="flex items-center justify-between mb-1.5">
-            <p
-              className="text-[10px] font-semibold uppercase tracking-[0.10em]"
-              style={{ color: '#A8B9A4' }}
-            >
-              {listing.district}, Stockholm
+        <div className={cn('flex flex-1 flex-col', compact ? 'p-3.5' : 'p-4 sm:p-5')}>
+          {/* Location row */}
+          <div className="mb-1.5 flex items-center justify-between gap-3">
+            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6F8A6A]">
+              {listing.district}
             </p>
-            <span
-              className="inline-flex items-center gap-0.5 text-[10px] font-semibold"
-              style={{ color: '#153F32' }}
-            >
-              <MapPin size={10} strokeWidth={2} />
-              {distLabel}
-            </span>
+            {distLabel && (
+              <span
+                className="inline-flex flex-shrink-0 items-center gap-0.5 text-[11.5px] font-medium text-gray-500"
+                title="Avstånd från din bostad"
+              >
+                <MapPin size={11} strokeWidth={2} />
+                {distLabel}
+              </span>
+            )}
           </div>
 
           {/* Title */}
           <h3
             className={cn(
-              'font-semibold leading-snug mb-2.5 line-clamp-2',
-              compact ? 'text-[14px]' : 'text-[16px]'
+              'line-clamp-2 font-semibold leading-snug text-gray-900 transition-colors group-hover:text-emerald-600',
+              compact ? 'mb-2 text-[14px]' : 'mb-3 text-[16px]'
             )}
-            style={{ color: '#15211E' }}
           >
             {listing.title}
           </h3>
 
           {/* Specs */}
-          <p className="text-[13px] mb-4" style={{ color: '#6D716C' }}>
-            {listing.area} m²
-            <span className="mx-1.5" style={{ color: '#D9C2A3' }}>·</span>
-            {new Intl.NumberFormat('sv-SE').format(listing.rent)} kr/mån
-            {listing.balcony && (
-              <>
-                <span className="mx-1.5" style={{ color: '#D9C2A3' }}>·</span>
-                Balkong
-              </>
-            )}
-          </p>
+          <ul className={cn('flex flex-wrap items-center gap-x-3 gap-y-1 text-gray-600', compact ? 'text-[12.5px]' : 'mb-4 text-[13px]')}>
+            <li className="inline-flex items-center gap-1">
+              <BedDouble size={14} strokeWidth={1.75} className="text-gray-400" />
+              {listing.rooms} rok
+            </li>
+            <li className="inline-flex items-center gap-1">
+              <Ruler size={14} strokeWidth={1.75} className="text-gray-400" />
+              {listing.area} m²
+            </li>
+            {listing.balcony && !compact && <li>Balkong</li>}
+          </ul>
 
-          {/* Footer */}
-          {!compact && (
-            <div
-              className="flex items-center justify-between pt-3.5 border-t"
-              style={{ borderColor: 'rgba(21,63,50,0.08)' }}
-            >
-              <div className="flex items-center gap-2">
-                {listing.interestedCount > 0 && (
-                  <span className="text-[12px]" style={{ color: '#9EA69D' }}>
-                    {listing.interestedCount} intresserade
-                  </span>
-                )}
-              </div>
-              <span
-                className="text-[11px] font-semibold uppercase tracking-wide"
-                style={{ color: '#C8D0C5' }}
-              >
-                {listing.rooms} rok
+          {/* Price */}
+          <div
+            className={cn(
+              'mt-auto flex items-end justify-between gap-3',
+              compact ? 'pt-2.5' : 'border-t border-[rgba(21,63,50,0.07)] pt-3.5'
+            )}
+          >
+            <p className="leading-none text-gray-900">
+              <span className={cn('font-semibold tracking-[-0.01em]', compact ? 'text-[15px]' : 'text-[18px]')}>
+                {rent}
               </span>
-            </div>
-          )}
+              <span className="ml-1 text-[12.5px] font-medium text-gray-500">kr/mån</span>
+            </p>
+            {!compact && listing.interestedCount > 0 && (
+              <span className="text-[12px] text-gray-500">
+                {listing.interestedCount} intresserade
+              </span>
+            )}
+          </div>
         </div>
       </article>
     </Link>
