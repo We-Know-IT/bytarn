@@ -114,10 +114,22 @@ export async function sendMessage(
   imageUrl?: string
 ): Promise<void> {
   const supabase = createClient()
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('messages')
     .insert({ conversation_id: conversationId, sender_id: senderId, content, image_url: imageUrl })
+    .select('id')
+    .single()
   if (error) throw error
+
+  // Email the other participant(s). Fire-and-forget: never blocks or fails the send.
+  if (data?.id) {
+    fetch('/api/notify/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId: data.id }),
+      keepalive: true,
+    }).catch(() => {})
+  }
 }
 
 export async function markConversationRead(conversationId: string, userId: string): Promise<void> {

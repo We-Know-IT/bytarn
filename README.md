@@ -70,6 +70,34 @@ sends `scope=openid` and relies on the per-eID scope configuration), and the cal
 `${NEXT_PUBLIC_APP_URL}/api/auth/bankid/callback` registered. The personal identity number is
 read from the `ssn` claim and only stored as a SHA-256 hash.
 
+### Email (SMTP / Gmail)
+
+Bytaren sends household invites and new-message notifications over SMTP. Configure it either with
+`SMTP_*` env vars (see `.env.example`; these take precedence and make the admin form read-only) or
+at `/admin/installningar` (admins only). Settings are stored in the `smtp_settings` table, which
+only the service role can read; the password is never sent back to the browser.
+
+For Gmail: host `smtp.gmail.com`, port 465 (SSL) or 587 (STARTTLS), the full Gmail/Workspace
+address as username, and a 16-character **App Password** (enable 2-step verification, then create
+one at https://myaccount.google.com/apppasswords) — your normal Google password won't work. The
+From address must be the Gmail address or a verified "Send mail as" alias. Use "Skicka testmejl" to
+verify.
+
+Supabase Auth's own emails (signup confirmation, password reset) are configured separately under
+Supabase Dashboard → Authentication → SMTP Settings — use the same Gmail values there.
+
+Without SMTP everything still works: invites show a copyable link and notifications are skipped.
+Users can opt out of message emails via `profiles.notify_email`; only the first unread message per
+conversation triggers an email.
+
+### Family accounts (`/familj`)
+
+People who live together can join one household (familjekonto). Every member can edit, pause,
+renew and delete every other member's listings, so a family or sambos can run their swap together.
+The owner invites members by email; invitees accept at `/familj/acceptera?token=…` and must sign in
+with the invited address. A user can be in one household at a time and can leave at any time; if
+the owner leaves, the longest-standing member takes over.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
