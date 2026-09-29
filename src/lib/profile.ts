@@ -16,3 +16,18 @@ export async function updateProfile(userId: string, update: ProfileUpdate): Prom
   const { error } = await supabase.from('profiles').update(payload).eq('id', userId)
   if (error) throw error
 }
+
+export interface HomeUpdate {
+  address: string
+  district: string
+  lat: number
+  lng: number
+}
+
+export async function updateHome(userId: string, home: HomeUpdate): Promise<void> {
+  const { error } = await createClient()
+    .from('profiles')
+    .update({ home_address: home.address, home_district: home.district, home_lat: home.lat, home_lng: home.lng })
+    .eq('id', userId)
+  if (error) throw error
+}

@@ -1,7 +1,8 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter, Instrument_Serif } from 'next/font/google'
 import './globals.css'
 import Navbar from '@/components/Navbar'
+import Footer from '@/components/ui/Footer'
 import { AuthProvider } from '@/context/AuthContext'
 
 const inter = Inter({
@@ -29,15 +30,21 @@ export const metadata: Metadata = {
   },
 }
 
+export const viewport: Viewport = {
+  themeColor: '#FBFAF7',
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="sv">
       <body className={`${inter.variable} ${instrumentSerif.variable} font-sans`}>
+        <a href="#innehall" className="skip-link">Hoppa till innehållet</a>
         <AuthProvider>
           <Navbar />
-          <main className="min-h-screen">
+          <main id="innehall" className="min-h-[calc(100vh-var(--nav-h))]">
             {children}
           </main>
+          <Footer />
         </AuthProvider>
       </body>
     </html>

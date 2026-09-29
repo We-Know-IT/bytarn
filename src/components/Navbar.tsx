@@ -1,230 +1,388 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Menu, X, MessageSquare, Heart, PlusCircle, ChevronDown } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import {
+  Menu, X, MessageSquare, Heart, Plus, ChevronDown, User, LayoutGrid, Users,
+  ShieldCheck, Mail, LogOut, Search, BookOpen, Shield,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
+import Logo from '@/components/ui/Logo'
 
 const NAV_LINKS = [
-  { href: '/annonser', label: 'Hitta byte' },
-  { href: '/hur-det-fungerar', label: 'Så fungerar det' },
-  { href: '/trygghet', label: 'Trygghet' },
+  { href: '/annonser', label: 'Hitta byte', icon: Search },
+  { href: '/hur-det-fungerar', label: 'Så fungerar det', icon: BookOpen },
+  { href: '/trygghet', label: 'Trygghet', icon: Shield },
 ]
 
-const MOBILE_LINKS = [
-  { href: '/annonser', label: 'Hitta byte' },
-  { href: '/hur-det-fungerar', label: 'Så fungerar det' },
-  { href: '/trygghet', label: 'Trygghet' },
-  { href: '/annonser/ny', label: 'Annonsera' },
-  { href: '/meddelanden', label: 'Meddelanden' },
-  { href: '/mina-sidor', label: 'Mina sidor' },
+interface MenuLink {
+  href: string
+  label: string
+  icon: LucideIcon
+}
+
+const ACCOUNT_LINKS: MenuLink[] = [
+  { href: '/mina-sidor', label: 'Mina sidor', icon: User },
+  { href: '/meddelanden', label: 'Meddelanden', icon: MessageSquare },
+  { href: '/annonshanterare', label: 'Annonshanteraren', icon: LayoutGrid },
+  { href: '/familj', label: 'Familjekonto', icon: Users },
+]
+
+const ADMIN_LINKS: MenuLink[] = [
+  { href: '/admin', label: 'Admin', icon: ShieldCheck },
+  { href: '/admin/installningar', label: 'SMTP-inställningar', icon: Mail },
 ]
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const pathname = usePathname()
-  const { user, profile } = useAuth()
-  const initial = (profile?.name ?? user?.email ?? '?').charAt(0).toUpperCase()
+  const router = useRouter()
+  const { user, profile, signOut } = useAuth()
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  const displayName = profile?.name?.split(' ')[0] || 'Konto'
+  const initial = (profile?.name || user?.email || '?').charAt(0).toUpperCase()
+  const isAdmin = !!profile?.isAdmin
+
+  // Close menus whenever the route changes (incl. back/forward).
+  const [lastPath, setLastPath] = useState(pathname)
+  if (pathname !== lastPath) {
+    setLastPath(pathname)
+    setMobileOpen(false)
+    setMenuOpen(false)
+  }
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24)
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // Escape closes any open menu
+  useEffect(() => {
+    if (!mobileOpen && !menuOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileOpen(false)
+        setMenuOpen(false)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [mobileOpen, menuOpen])
+
+  // Click outside closes the account dropdown
+  useEffect(() => {
+    if (!menuOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [menuOpen])
+
+  // Lock page scroll behind the mobile menu
+  useEffect(() => {
+    if (!mobileOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [mobileOpen])
+
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
+  async function handleSignOut() {
+    setMenuOpen(false)
+    setMobileOpen(false)
+    await signOut()
+    router.push('/')
+    router.refresh()
+  }
+
+  const menuItemClass =
+    'flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-[14px] font-medium text-gray-800 transition-colors hover:bg-[rgba(21,63,50,0.06)] hover:text-emerald-600'
+
   return (
-    <nav
+    <>
+    <header
       className={cn(
-        'sticky top-0 z-50 transition-all duration-300',
-        scrolled
-          ? 'h-[70px] shadow-[0_1px_0_rgba(21,63,50,0.08),0_4px_16px_rgba(21,63,50,0.06)]'
-          : 'h-[86px]'
+        'sticky top-0 z-50 h-[var(--nav-h)] border-b transition-[background-color,border-color,box-shadow] duration-300',
+        scrolled || mobileOpen
+          ? 'border-[rgba(21,63,50,0.08)] bg-[rgba(251,250,247,0.92)] shadow-[0_4px_20px_rgba(21,63,50,0.05)]'
+          : 'border-transparent bg-[rgba(251,250,247,0.75)]'
       )}
-      style={{ backgroundColor: 'rgba(251,250,247,0.96)', backdropFilter: 'blur(12px)' }}
+      style={{ WebkitBackdropFilter: 'saturate(1.4) blur(14px)', backdropFilter: 'saturate(1.4) blur(14px)' }}
     >
-      <div className="max-w-[1440px] mx-auto px-6 sm:px-10 h-full flex items-center justify-between gap-8">
+      <nav
+        aria-label="Huvudmeny"
+        className="mx-auto flex h-full max-w-[1440px] items-center justify-between gap-6 px-4 sm:px-6 lg:px-10"
+      >
+        <Logo onClick={() => setMobileOpen(false)} />
 
-        {/* ─── Logo ─── */}
-        <Link href="/" className="flex items-center gap-3 flex-shrink-0 group">
-          <div
-            className="rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-[0.96]"
-            style={{ width: 36, height: 36, backgroundColor: '#153F32' }}
-          >
-            <svg width="22" height="22" viewBox="0 0 28 27" fill="none">
-              <path d="M14 3L22 11V22H6V11L14 3Z" stroke="white" strokeWidth="1.8" strokeLinejoin="round"/>
-              <path d="M22 11V3" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
-              <path d="M19.5 5.5L22 3L24.5 5.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M6 22V25" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
-              <path d="M3.5 23L6 25L8.5 23" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <span
-            className="text-[14px] font-bold tracking-[0.13em] uppercase"
-            style={{ color: '#15211E' }}
-          >
-            BYTAREN
-          </span>
-        </Link>
-
-        {/* ─── Desktop nav center ─── */}
-        <div className="hidden lg:flex items-center gap-7 flex-1 justify-center">
+        {/* ─── Desktop center ─── */}
+        <ul className="hidden flex-1 items-center justify-center gap-8 lg:flex">
           {NAV_LINKS.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                'nav-link text-[14px] font-medium transition-colors duration-200 py-1',
-                isActive(href) ? 'active text-[#153F32]' : 'text-[#6D716C] hover:text-[#15211E]'
-              )}
-            >
-              {label}
-            </Link>
-          ))}
-
-          <div className="w-px h-4" style={{ backgroundColor: 'rgba(21,63,50,0.15)' }} />
-
-          <Link
-            href="/annonser/ny"
-            className={cn(
-              'flex items-center gap-1.5 text-[14px] font-medium transition-colors duration-200 py-1',
-              isActive('/annonser/ny') ? 'text-[#153F32]' : 'text-[#6D716C] hover:text-[#153F32]'
-            )}
-          >
-            <PlusCircle size={14} strokeWidth={2} />
-            Annonsera
-          </Link>
-        </div>
-
-        {/* ─── Desktop right ─── */}
-        <div className="hidden lg:flex items-center gap-1 flex-shrink-0">
-          <Link
-            href="/meddelanden"
-            className="relative p-2.5 rounded-xl transition-colors hover:bg-[rgba(21,63,50,0.06)]"
-            style={{ color: '#6D716C' }}
-            title="Meddelanden"
-          >
-            <MessageSquare size={18} strokeWidth={1.75} />
-            <span
-              className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full ring-2 ring-[#FBFAF7]"
-              style={{ backgroundColor: '#E05D5D' }}
-            />
-          </Link>
-
-          <Link
-            href="/mina-sidor"
-            className="p-2.5 rounded-xl transition-colors hover:bg-[rgba(21,63,50,0.06)]"
-            style={{ color: '#6D716C' }}
-            title="Favoriter"
-          >
-            <Heart size={18} strokeWidth={1.75} />
-          </Link>
-
-          <div className="w-px h-5 mx-1" style={{ backgroundColor: 'rgba(21,63,50,0.12)' }} />
-
-          {user ? (
-            <Link
-              href="/mina-sidor"
-              className="flex items-center gap-2 px-3 py-2 rounded-xl transition-colors hover:bg-[rgba(21,63,50,0.06)]"
-            >
-              <div
-                className="w-7 h-7 rounded-full flex items-center justify-center ring-1 ring-[#A8B9A4] flex-shrink-0"
-                style={{ backgroundColor: '#E3EBE2' }}
-              >
-                <span className="text-[11px] font-bold" style={{ color: '#153F32' }}>{initial}</span>
-              </div>
-              <span className="text-[14px] font-medium" style={{ color: '#15211E' }}>
-                {profile?.name?.split(' ')[0] ?? 'Konto'}
-              </span>
-              <ChevronDown size={12} style={{ color: '#9EA69D' }} />
-            </Link>
-          ) : (
-            <div className="flex items-center gap-2 ml-1">
+            <li key={href}>
               <Link
-                href="/logga-in"
-                className="px-4 py-2.5 text-[14px] font-semibold rounded-xl transition-colors hover:bg-[rgba(21,63,50,0.06)]"
-                style={{ color: '#153F32' }}
-              >
-                Logga in
-              </Link>
-              <Link
-                href="/registrera"
-                className="px-5 py-2.5 text-[14px] font-semibold rounded-xl text-white transition-all hover:-translate-y-[1px] hover:shadow-lg active:translate-y-0"
-                style={{ backgroundColor: '#153F32' }}
-              >
-                Skapa konto
-              </Link>
-            </div>
-          )}
-        </div>
-
-        {/* ─── Mobile toggle ─── */}
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="lg:hidden p-2 rounded-lg transition-colors hover:bg-[rgba(21,63,50,0.06)]"
-          style={{ color: '#6D716C' }}
-          aria-label={mobileOpen ? 'Stäng meny' : 'Öppna meny'}
-        >
-          {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
-      </div>
-
-      {/* ─── Mobile menu ─── */}
-      {mobileOpen && (
-        <div
-          className="lg:hidden border-t"
-          style={{ backgroundColor: '#FBFAF7', borderColor: 'rgba(21,63,50,0.10)' }}
-        >
-          <div className="px-6 py-4 space-y-0.5">
-            {MOBILE_LINKS.map(({ href, label }) => (
-              <Link
-                key={href}
                 href={href}
-                onClick={() => setMobileOpen(false)}
-                className="block px-3 py-3 text-[15px] font-medium rounded-xl transition-colors hover:bg-[rgba(21,63,50,0.06)]"
-                style={{ color: isActive(href) ? '#153F32' : '#15211E' }}
+                aria-current={isActive(href) ? 'page' : undefined}
+                className={cn(
+                  'nav-link py-1 text-[14px] font-medium transition-colors duration-200',
+                  isActive(href) ? 'active text-emerald-600' : 'text-gray-600 hover:text-gray-900'
+                )}
               >
                 {label}
               </Link>
-            ))}
-            <div className="pt-3 border-t space-y-2" style={{ borderColor: 'rgba(21,63,50,0.10)' }}>
-              {user ? (
-                <Link
-                  href="/mina-sidor"
-                  onClick={() => setMobileOpen(false)}
-                  className="block px-3 py-3.5 text-[15px] font-semibold text-white rounded-xl text-center transition-colors"
-                  style={{ backgroundColor: '#153F32' }}
+            </li>
+          ))}
+        </ul>
+
+        {/* ─── Desktop right ─── */}
+        <div className="hidden flex-shrink-0 items-center gap-1.5 lg:flex">
+          {user ? (
+            <>
+              <Link
+                href="/meddelanden"
+                className={cn('btn btn-ghost btn-icon btn-sm text-gray-600', isActive('/meddelanden') && 'text-emerald-600 bg-[rgba(21,63,50,0.06)]')}
+                aria-label="Meddelanden"
+                title="Meddelanden"
+              >
+                <MessageSquare size={18} strokeWidth={1.75} />
+              </Link>
+              <Link
+                href="/mina-sidor"
+                className="btn btn-ghost btn-icon btn-sm text-gray-600"
+                aria-label="Favoriter"
+                title="Favoriter"
+              >
+                <Heart size={18} strokeWidth={1.75} />
+              </Link>
+
+              <div ref={menuRef} className="relative ml-1">
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((o) => !o)}
+                  aria-haspopup="true"
+                  aria-expanded={menuOpen}
+                  aria-controls="konto-meny"
+                  className={cn(
+                    'flex h-10 items-center gap-2 rounded-full border py-1 pl-1 pr-3 transition-colors',
+                    menuOpen
+                      ? 'border-[rgba(21,63,50,0.22)] bg-white'
+                      : 'border-[rgba(21,63,50,0.12)] bg-white/70 hover:border-[rgba(21,63,50,0.22)] hover:bg-white'
+                  )}
                 >
-                  Min profil
-                </Link>
-              ) : (
-                <>
-                  <Link
-                    href="/registrera"
-                    onClick={() => setMobileOpen(false)}
-                    className="block px-3 py-3.5 text-[15px] font-semibold text-white rounded-xl text-center transition-colors"
-                    style={{ backgroundColor: '#153F32' }}
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E3EBE2] text-[12px] font-bold text-emerald-600">
+                    {initial}
+                  </span>
+                  <span className="max-w-[120px] truncate text-[14px] font-medium text-gray-900">{displayName}</span>
+                  <ChevronDown size={14} className={cn('text-gray-400 transition-transform', menuOpen && 'rotate-180')} />
+                </button>
+
+                {menuOpen && (
+                  <div
+                    id="konto-meny"
+                    className="card animate-menu-in absolute right-0 top-[calc(100%+10px)] w-[264px] p-2"
+                    style={{ boxShadow: 'var(--shadow-hover)' }}
                   >
-                    Skapa konto
+                    <div className="mb-1 border-b border-[rgba(21,63,50,0.08)] px-3 pb-3 pt-2">
+                      <p className="truncate text-[14px] font-semibold text-gray-900">{profile?.name || 'Ditt konto'}</p>
+                      {user.email && <p className="truncate text-[12.5px] text-gray-500">{user.email}</p>}
+                    </div>
+                    <ul>
+                      {ACCOUNT_LINKS.map(({ href, label, icon: Icon }) => (
+                        <li key={href}>
+                          <Link href={href} onClick={() => setMenuOpen(false)} className={menuItemClass}>
+                            <Icon size={16} strokeWidth={1.75} className="text-gray-500" />
+                            {label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                    {isAdmin && (
+                      <>
+                        <p className="mt-2 border-t border-[rgba(21,63,50,0.08)] px-3 pb-1 pt-3 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-gray-400">
+                          Administration
+                        </p>
+                        <ul>
+                          {ADMIN_LINKS.map(({ href, label, icon: Icon }) => (
+                            <li key={href}>
+                              <Link href={href} onClick={() => setMenuOpen(false)} className={menuItemClass}>
+                                <Icon size={16} strokeWidth={1.75} className="text-gray-500" />
+                                {label}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                    <div className="mt-1 border-t border-[rgba(21,63,50,0.08)] pt-1">
+                      <button type="button" onClick={handleSignOut} className={cn(menuItemClass, 'w-full')}>
+                        <LogOut size={16} strokeWidth={1.75} className="text-gray-500" />
+                        Logga ut
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <Link href="/logga-in" className="btn btn-ghost btn-sm">
+                Logga in
+              </Link>
+              <Link href="/registrera" className="btn btn-secondary btn-sm">
+                Skapa konto
+              </Link>
+            </>
+          )}
+
+          <Link href="/annonser/ny" className="btn btn-primary btn-sm ml-2">
+            <Plus size={16} strokeWidth={2.25} />
+            Lägg upp annons
+          </Link>
+        </div>
+
+        {/* ─── Mobile right ─── */}
+        <div className="flex items-center gap-1.5 lg:hidden">
+          <Link
+            href="/annonser/ny"
+            className="btn btn-primary btn-sm"
+            aria-label="Lägg upp annons"
+          >
+            <Plus size={16} strokeWidth={2.25} />
+            <span className="hidden min-[400px]:inline">Annonsera</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setMobileOpen((o) => !o)}
+            className="btn btn-ghost btn-icon text-gray-800"
+            aria-label={mobileOpen ? 'Stäng meny' : 'Öppna meny'}
+            aria-expanded={mobileOpen}
+            aria-controls="mobilmeny"
+          >
+            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
+      </nav>
+    </header>
+
+      {/* ─── Mobile menu (outside <header>: its backdrop-filter would trap position:fixed) ─── */}
+      {mobileOpen && (
+        <div
+          id="mobilmeny"
+          className="animate-fade-up fixed inset-x-0 bottom-0 top-[var(--nav-h)] z-40 overflow-y-auto border-t border-[rgba(21,63,50,0.08)] bg-[#FBFAF7] lg:hidden"
+        >
+          <div className="mx-auto max-w-lg px-4 pb-10 pt-4 sm:px-6">
+            <ul className="space-y-0.5">
+              {NAV_LINKS.map(({ href, label, icon: Icon }) => (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    onClick={() => setMobileOpen(false)}
+                    aria-current={isActive(href) ? 'page' : undefined}
+                    className={cn(
+                      'flex items-center gap-3 rounded-xl px-3 py-3.5 text-[16px] font-medium transition-colors hover:bg-[rgba(21,63,50,0.06)]',
+                      isActive(href) ? 'bg-[rgba(21,63,50,0.06)] text-emerald-600' : 'text-gray-900'
+                    )}
+                  >
+                    <Icon size={18} strokeWidth={1.75} className="text-gray-500" />
+                    {label}
                   </Link>
-                  <Link
-                    href="/logga-in"
-                    onClick={() => setMobileOpen(false)}
-                    className="block px-3 py-3 text-[15px] font-medium rounded-xl text-center transition-colors"
-                    style={{ color: '#153F32' }}
+                </li>
+              ))}
+            </ul>
+
+            <Link
+              href="/annonser/ny"
+              onClick={() => setMobileOpen(false)}
+              className="btn btn-primary btn-lg btn-block mt-4"
+            >
+              <Plus size={18} strokeWidth={2.25} />
+              Lägg upp annons
+            </Link>
+
+            <div className="mt-6 border-t border-[rgba(21,63,50,0.08)] pt-6">
+              {user ? (
+                <>
+                  <div className="mb-3 flex items-center gap-3 px-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E3EBE2] text-[14px] font-bold text-emerald-600">
+                      {initial}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-[15px] font-semibold text-gray-900">{profile?.name || 'Ditt konto'}</p>
+                      {user.email && <p className="truncate text-[13px] text-gray-500">{user.email}</p>}
+                    </div>
+                  </div>
+                  <MobileLinkList links={ACCOUNT_LINKS} isActive={isActive} onNavigate={() => setMobileOpen(false)} />
+                  {isAdmin && (
+                    <>
+                      <p className="px-3 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400">
+                        Administration
+                      </p>
+                      <MobileLinkList links={ADMIN_LINKS} isActive={isActive} onNavigate={() => setMobileOpen(false)} />
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="mt-4 flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-[15px] font-medium text-gray-600 transition-colors hover:bg-[rgba(21,63,50,0.06)]"
                   >
+                    <LogOut size={18} strokeWidth={1.75} className="text-gray-500" />
+                    Logga ut
+                  </button>
+                </>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <Link href="/logga-in" onClick={() => setMobileOpen(false)} className="btn btn-secondary">
                     Logga in
                   </Link>
-                </>
+                  <Link href="/registrera" onClick={() => setMobileOpen(false)} className="btn btn-secondary">
+                    Skapa konto
+                  </Link>
+                </div>
               )}
             </div>
           </div>
         </div>
       )}
-    </nav>
+    </>
+  )
+}
+
+function MobileLinkList({
+  links,
+  isActive,
+  onNavigate,
+}: {
+  links: MenuLink[]
+  isActive: (href: string) => boolean
+  onNavigate: () => void
+}) {
+  return (
+    <ul className="space-y-0.5">
+      {links.map(({ href, label, icon: Icon }) => (
+        <li key={href}>
+          <Link
+            href={href}
+            onClick={onNavigate}
+            aria-current={isActive(href) ? 'page' : undefined}
+            className={cn(
+              'flex items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-medium transition-colors hover:bg-[rgba(21,63,50,0.06)]',
+              isActive(href) ? 'text-emerald-600' : 'text-gray-800'
+            )}
+          >
+            <Icon size={18} strokeWidth={1.75} className="text-gray-500" />
+            {label}
+          </Link>
+        </li>
+      ))}
+    </ul>
   )
 }

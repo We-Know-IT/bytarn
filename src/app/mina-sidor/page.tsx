@@ -6,8 +6,7 @@ import {
   Settings, Heart, Home, MessageSquare, Plus, Edit2, Trash2, Eye, EyeOff,
   Bookmark, LogOut, CheckCircle2, Circle, Handshake, Loader2, X, CheckCircle,
 } from 'lucide-react'
-import { MOCK_LISTINGS } from '@/lib/mock-data'
-import { fetchListings, fetchMyListings, setListingStatus, deleteListing } from '@/lib/listings'
+import { fetchMyListings, setListingStatus, deleteListing } from '@/lib/listings'
 import { fetchFavoriteListings } from '@/lib/favorites'
 import { fetchIncomingInterests, type IncomingInterest } from '@/lib/interests'
 import { updateProfile } from '@/lib/profile'
@@ -24,7 +23,6 @@ export default function MinaSidorPage() {
   const { user, profile, loading, signOut, refreshProfile } = useAuth()
   const [tab, setTab] = useState<Tab>('annonser')
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([])
-  const [allListings, setAllListings] = useState<Listing[]>(MOCK_LISTINGS)
   const [myListingsReal, setMyListingsReal] = useState<Listing[]>([])
   const [favoriteListings, setFavoriteListings] = useState<Listing[]>([])
   const [incomingInterests, setIncomingInterests] = useState<IncomingInterest[]>([])
@@ -36,22 +34,16 @@ export default function MinaSidorPage() {
   }, [])
 
   useEffect(() => {
-    fetchListings().then(setAllListings)
-  }, [])
-
-  useEffect(() => {
     if (!supabaseConfigured || !user) return
     fetchMyListings(user.id).then(setMyListingsReal)
     fetchFavoriteListings(user.id).then(setFavoriteListings)
     fetchIncomingInterests(user.id).then(setIncomingInterests)
   }, [user])
 
-  const me = supabaseConfigured
-    ? { name: profile?.name ?? 'Din profil', email: user?.email ?? '', avatar: profile?.avatarUrl ?? undefined, bio: profile?.bio ?? '', joinedAt: user?.created_at ?? new Date().toISOString() }
-    : { name: 'Anna Svensson', email: 'anna@example.com', avatar: 'https://i.pravatar.cc/150?img=47', bio: '', joinedAt: '2026-06-01T00:00:00Z' }
+  const me = { name: profile?.name ?? 'Din profil', email: user?.email ?? '', avatar: profile?.avatarUrl ?? undefined, bio: profile?.bio ?? '', joinedAt: user?.created_at ?? new Date().toISOString() }
 
-  const myListings = supabaseConfigured ? myListingsReal : allListings.filter((l) => l.userId === 'u1')
-  const favorites = supabaseConfigured ? favoriteListings : allListings.filter((l) => ['2', '5', '6'].includes(l.id))
+  const myListings = myListingsReal
+  const favorites = favoriteListings
 
   function deleteSavedSearch(id: string) {
     const updated = savedSearches.filter((s) => s.id !== id)
@@ -209,6 +201,14 @@ export default function MinaSidorPage() {
       {/* Tab content */}
       {tab === 'annonser' && (
         <div>
+          <div className="flex flex-wrap gap-2 mb-6">
+            <Link href="/annonshanterare" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              <Settings size={14} /> Öppna Annonshanteraren
+            </Link>
+            <Link href="/familj" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              <Home size={14} /> Familjekonto
+            </Link>
+          </div>
           {!allDone && (
             <div className="border border-emerald-100 rounded-2xl p-5 mb-6 bg-emerald-50/40">
               <div className="flex items-center justify-between mb-3">

@@ -1,3 +1,5 @@
+import LegalPage from '@/components/ui/LegalPage'
+
 const SECTIONS = [
   {
     title: '1. Vilka uppgifter vi samlar in',
@@ -23,29 +25,11 @@ const SECTIONS = [
 
 export default function IntegritetspolicyPage() {
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] mb-3" style={{ color: '#A8B9A4' }}>
-        Integritetspolicy
-      </p>
-      <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">Hur vi hanterar dina uppgifter</h1>
-
-      <div className="mb-8 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
-        Utkast under juridisk granskning — inte slutgranskat av jurist. Senast uppdaterad{' '}
-        {new Date().toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' })}.
-      </div>
-
-      <div className="space-y-8">
-        {SECTIONS.map((s) => (
-          <div key={s.title}>
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">{s.title}</h2>
-            <p className="text-[15px] leading-[1.75] text-gray-600">{s.body}</p>
-          </div>
-        ))}
-      </div>
-
-      <p className="mt-10 text-sm text-gray-400">
-        Frågor om integritetspolicyn? <a href="/kontakt" className="text-emerald-600 hover:underline">Kontakta oss</a>.
-      </p>
-    </div>
+    <LegalPage
+      eyebrow="Integritetspolicy"
+      title="Hur vi hanterar dina uppgifter"
+      sections={SECTIONS}
+      contactLabel="Frågor om integritetspolicyn?"
+    />
   )
 }

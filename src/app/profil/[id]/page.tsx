@@ -3,33 +3,22 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { formatDate } from '@/lib/utils'
-import { fetchListings } from '@/lib/listings'
+import { fetchListingsByUser } from '@/lib/listings'
 import { createClient, supabaseConfigured } from '@/lib/supabase/client'
 import ListingCard from '@/components/ListingCard'
 import type { Listing } from '@/types'
 import Link from 'next/link'
 import { MessageSquare, ArrowLeft } from 'lucide-react'
 
-const MOCK_USERS: Record<string, { name: string; avatar?: string; bio?: string; joinedAt: string }> = {
-  u1: { name: 'Anna Svensson', avatar: 'https://i.pravatar.cc/150?img=47', bio: 'Söker ett lugnt byte på Östermalm.', joinedAt: '2026-06-01T00:00:00Z' },
-  u2: { name: 'Erik Lindqvist', avatar: 'https://i.pravatar.cc/150?img=12', bio: 'Aktiv bytare sedan 2025.', joinedAt: '2025-09-01T00:00:00Z' },
-  u3: { name: 'Maria Karlsson', avatar: 'https://i.pravatar.cc/150?img=32', joinedAt: '2026-04-15T00:00:00Z' },
-  u4: { name: 'Johan Holm', avatar: 'https://i.pravatar.cc/150?img=55', joinedAt: '2026-05-20T00:00:00Z' },
-}
-
 export default function ProfilPage() {
   const params = useParams()
   const id = params.id as string
-  const [profileUser, setProfileUser] = useState<{ name: string; avatar?: string; bio?: string; joinedAt: string } | null | undefined>(undefined)
+  const [profileUser, setProfileUser] = useState<{ name: string; avatar?: string; bio?: string; joinedAt: string } | null | undefined>(supabaseConfigured ? undefined : null)
   const [listings, setListings] = useState<Listing[]>([])
 
   useEffect(() => {
-    fetchListings().then((all) => setListings(all.filter((l) => l.userId === id && l.status === 'aktiv')))
-
-    if (!supabaseConfigured) {
-      setProfileUser(MOCK_USERS[id] ?? null)
-      return
-    }
+    if (!supabaseConfigured) return
+    fetchListingsByUser(id).then(setListings)
     createClient()
       .from('profiles')
       .select('name, avatar_url, bio, created_at')

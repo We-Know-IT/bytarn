@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { ArrowRight, Shield } from 'lucide-react'
+import {
+  ArrowRight, ArrowLeftRight, Wallet, ShieldCheck, Sparkles, Zap, BedDouble, Scale,
+  ListChecks, MessageSquare, Flag, Fingerprint, Home, Check, Plus,
+} from 'lucide-react'
 import { fetchListings } from '@/lib/listings'
 import type { Listing } from '@/types'
 import ListingCard from '@/components/ListingCard'
@@ -15,24 +18,47 @@ const ListingMap = dynamic(() => import('@/components/ListingMap'), { ssr: false
 
 const BENEFITS = [
   {
-    icon: '✦',
+    icon: Wallet,
     title: 'Kostnadsfritt',
     desc: 'Ingen mäklarprovision eller dolda avgifter. Alltid gratis att söka och byta.',
   },
   {
-    icon: '◈',
+    icon: ShieldCheck,
     title: 'Tryggt & säkert',
     desc: 'Verifierade användare och tydliga profiler. Du vet alltid vem du pratar med.',
   },
   {
-    icon: '⊕',
+    icon: Sparkles,
     title: 'Smart matchning',
     desc: 'Vi hjälper dig hitta personer med omvända behov. Rätt byte, snabbare.',
   },
   {
-    icon: '◎',
+    icon: Zap,
     title: 'Snabbt & enkelt',
     desc: 'Skapa din annons på några minuter. Kom igång redan idag.',
+  },
+]
+
+const MATCH_CRITERIA = [
+  {
+    icon: ArrowLeftRight,
+    title: 'Ömsesidig önskan',
+    desc: 'Du vill dit de bor — de vill dit du bor. Matchningen kräver att båda parter pekar på varandra. Inga halvdana byten.',
+  },
+  {
+    icon: BedDouble,
+    title: 'Rumspassning',
+    desc: 'Ditt antal rum matchar mot vad motparten söker, och vice versa. En 3 rok möter en som faktiskt vill ha 3 rok.',
+  },
+  {
+    icon: Scale,
+    title: 'Hyresbalans',
+    desc: 'Motorn väger hyrornas nivåer mot varandra. Byten med rimliga skillnader lyfts — extrema obalanser sållas bort.',
+  },
+  {
+    icon: ListChecks,
+    title: 'Extrakrav matchas',
+    desc: 'Balkong, hiss, husdjur tillåtet. Dina måsten vägs mot motpartens bostad, och tvärtom — så du aldrig behöver kompromissa i onödan.',
   },
 ]
 
@@ -44,127 +70,169 @@ const TRUST_POINTS = [
   'Du väljer alltid vem du kontaktar',
 ]
 
+const TRUST_FEATURES = [
+  { icon: Fingerprint, title: 'Logga in med BankID', desc: 'Verifierad legitimation för dig som vill.' },
+  { icon: MessageSquare, title: 'Chatt i appen', desc: 'Dela aldrig kontaktuppgifter innan du är redo.' },
+  { icon: Flag, title: 'Rapportera annonser', desc: 'Vi går igenom varje rapport manuellt.' },
+]
+
 /* ─── Shared atoms ───────────────────────────────────────────────────── */
 
-function Eyebrow({ children }: { children: React.ReactNode }) {
+function SectionIntro({
+  eyebrow,
+  title,
+  lead,
+  action,
+}: {
+  eyebrow: string
+  title: string
+  lead?: string
+  action?: React.ReactNode
+}) {
   return (
-    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] mb-3" style={{ color: '#A8B9A4' }}>
-      {children}
-    </p>
-  )
-}
-
-function SectionHeading({ children, light }: { children: React.ReactNode; light?: boolean }) {
-  return (
-    <h2
-      className="font-display leading-[1.05] tracking-[-0.025em]"
-      style={{
-        fontSize: 'clamp(32px, 3.5vw, 46px)',
-        fontStyle: 'italic',
-        color: light ? 'white' : '#15211E',
-      }}
-    >
-      {children}
-    </h2>
+    <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between lg:mb-12">
+      <div className="max-w-xl">
+        <p className="eyebrow">{eyebrow}</p>
+        <h2 className="display-md">{title}</h2>
+        {lead && <p className="mt-3 text-[15.5px] leading-relaxed text-gray-600">{lead}</p>}
+      </div>
+      {action}
+    </div>
   )
 }
 
 function CheckIcon() {
   return (
-    <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#153F32' }}>
-      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-        <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    </div>
+    <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-emerald-600">
+      <Check size={12} strokeWidth={3} className="text-white" />
+    </span>
   )
 }
 
-/* ─── Hero property card (static) ────────────────────────────────────── */
+/* ─── Hero illustration: two abstract homes and a swap ───────────────── */
 
-interface HeroCardProps {
-  listing: Listing
-  matchPct: number
-  style?: React.CSSProperties
-  imageStyle?: React.CSSProperties
-  compact?: boolean
-}
-
-function HeroCard({ listing, matchPct, style, imageStyle, compact }: HeroCardProps) {
+function Facade({ variant }: { variant: 'a' | 'b' }) {
+  // Simple, clearly illustrated building — not a photo, not a real listing.
+  const body = variant === 'a' ? '#153F32' : '#D9C2A3'
+  const win = variant === 'a' ? '#F5F0E8' : '#FBFAF7'
+  const accent = variant === 'a' ? '#D9C2A3' : '#153F32'
+  const cols = variant === 'a' ? 3 : 4
+  const rows = variant === 'a' ? 4 : 3
   return (
-    <div
-      style={{
-        backgroundColor: '#fff',
-        borderRadius: 24,
-        overflow: 'hidden',
-        boxShadow: '0 20px 60px rgba(13,45,38,0.16)',
-        ...style,
-      }}
-    >
-      <div style={{ aspectRatio: '4/3', overflow: 'hidden', backgroundColor: '#E3EBE2', ...imageStyle }}>
-        {listing.images[0] && (
-          <img src={listing.images[0]} alt={listing.title} className="w-full h-full object-cover" />
+    <svg viewBox="0 0 200 150" className="h-full w-full" aria-hidden>
+      <rect width="200" height="150" fill={variant === 'a' ? '#E3EBE2' : '#F5F0E8'} />
+      <circle cx={variant === 'a' ? 160 : 40} cy="34" r="16" fill={variant === 'a' ? '#F5F0E8' : '#E3EBE2'} />
+      <rect x="0" y="136" width="200" height="14" fill={variant === 'a' ? '#C9D8C6' : '#E7DCCB'} />
+      <g transform={variant === 'a' ? 'translate(52 26)' : 'translate(40 44)'}>
+        <rect
+          width={variant === 'a' ? 96 : 120}
+          height={variant === 'a' ? 112 : 94}
+          rx="3"
+          fill={body}
+        />
+        {variant === 'a' && <path d="M-4 0 L48 -16 L100 0 Z" fill={accent} />}
+        {Array.from({ length: rows }).map((_, r) =>
+          Array.from({ length: cols }).map((_, c) => (
+            <rect
+              key={`${r}-${c}`}
+              x={12 + c * (variant === 'a' ? 26 : 26)}
+              y={12 + r * (variant === 'a' ? 24 : 26)}
+              width="14"
+              height={variant === 'a' ? 14 : 16}
+              rx="1.5"
+              fill={win}
+              opacity={(r + c) % 3 === 0 ? 0.55 : 0.95}
+            />
+          ))
         )}
+        <rect
+          x={variant === 'a' ? 38 : 50}
+          y={variant === 'a' ? 92 : 74}
+          width="20"
+          height="20"
+          rx="2"
+          fill={accent}
+        />
+      </g>
+    </svg>
+  )
+}
+
+function SwapCard({
+  variant,
+  label,
+  title,
+  meta,
+  className,
+}: {
+  variant: 'a' | 'b'
+  label: string
+  title: string
+  meta: string
+  className?: string
+}) {
+  return (
+    <div className={`card overflow-hidden ${className ?? ''}`} style={{ boxShadow: 'var(--shadow-hero)' }}>
+      <div className="aspect-[4/3] overflow-hidden">
+        <Facade variant={variant} />
       </div>
-      <div className={compact ? 'p-4' : 'p-5'}>
-        <p
-          className="text-[10px] font-semibold uppercase tracking-[0.10em] mb-1"
-          style={{ color: '#A8B9A4' }}
-        >
-          {listing.district}, Stockholm
-        </p>
-        <p
-          className={compact ? 'text-[14px] font-semibold mb-0.5' : 'text-[16px] font-semibold mb-1'}
-          style={{ color: '#15211E' }}
-        >
-          {listing.rooms} rok, {listing.area} m²
-        </p>
-        <p className={compact ? 'text-[13px] font-bold' : 'text-[15px] font-bold'} style={{ color: '#153F32' }}>
-          {new Intl.NumberFormat('sv-SE').format(listing.rent)} kr/mån
-        </p>
-      </div>
-      {/* Match badge */}
-      <div
-        className="absolute top-4 left-4 flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-semibold text-white"
-        style={{ backgroundColor: '#153F32' }}
-      >
-        ♥ {matchPct}% match
+      <div className="p-4 sm:p-5">
+        <p className="eyebrow mb-1">{label}</p>
+        <p className="text-[15px] font-semibold text-gray-900 sm:text-[16px]">{title}</p>
+        <p className="mt-0.5 text-[13px] text-gray-500">{meta}</p>
       </div>
     </div>
   )
 }
 
-/* ─── Matching user card ─────────────────────────────────────────────── */
-
-interface MatchUserProps {
-  avatar: string
-  name: string
-  age: number
-  district: string
-  from: string
-  to: string
-}
-
-function MatchUser({ avatar, name, age, district, from, to }: MatchUserProps) {
+function HeroIllustration() {
   return (
-    <div
-      className="flex-1 max-w-[260px] p-6 rounded-[20px]"
-      style={{ backgroundColor: 'rgba(168,185,164,0.15)', border: '1px solid rgba(21,63,50,0.10)' }}
-    >
-      <div className="flex items-center gap-3 mb-4">
-        <img src={avatar} className="w-10 h-10 rounded-full object-cover ring-2 ring-white" alt={name} />
-        <div>
-          <p className="text-[14px] font-semibold" style={{ color: '#15211E' }}>{name}, {age}</p>
-          <p className="text-[12px]" style={{ color: '#9EA69D' }}>{district}</p>
+    <figure className="relative mx-auto w-full max-w-[560px]" aria-label="Illustration av ett bostadsbyte">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -inset-[12%] rounded-full"
+        style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(163,200,187,0.30) 0%, transparent 65%)' }}
+      />
+      <div className="relative grid grid-cols-2 items-start gap-4 sm:gap-6">
+        <SwapCard variant="a" label="Din bostad" title="2 rok · 54 m²" meta="Södermalm" />
+        <SwapCard variant="b" label="Ditt nästa hem" title="3 rok · 72 m²" meta="Vasastan" className="mt-12 sm:mt-16" />
+      </div>
+      <div className="absolute left-1/2 top-[42%] z-10 -translate-x-1/2 -translate-y-1/2">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-lg ring-1 ring-[rgba(21,63,50,0.08)] sm:h-16 sm:w-16">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white sm:h-12 sm:w-12">
+            <ArrowLeftRight size={20} strokeWidth={2} />
+          </div>
         </div>
       </div>
-      <div className="space-y-1.5">
-        <p className="text-[13px]" style={{ color: '#6D716C' }}>
-          Har: <span className="font-semibold" style={{ color: '#15211E' }}>{from}</span>
-        </p>
-        <p className="text-[13px]" style={{ color: '#6D716C' }}>
-          Söker: <span className="font-semibold" style={{ color: '#15211E' }}>{to}</span>
-        </p>
+      <figcaption className="relative mt-4 text-center text-[11.5px] text-gray-400">Illustration</figcaption>
+    </figure>
+  )
+}
+
+/* ─── Matching example: abstract parties, no real people ─────────────── */
+
+function Party({ letter, has, wants }: { letter: string; has: string; wants: string }) {
+  return (
+    <div className="card flex-1 p-5 sm:p-6">
+      <div className="mb-4 flex items-center gap-3">
+        <span
+          aria-hidden
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E3EBE2] font-display text-[20px] italic text-emerald-600"
+        >
+          {letter}
+        </span>
+        <p className="text-[14px] font-semibold text-gray-900">Bytare {letter}</p>
       </div>
+      <dl className="space-y-1.5 text-[13.5px]">
+        <div className="flex gap-1.5">
+          <dt className="text-gray-500">Har:</dt>
+          <dd className="font-semibold text-gray-900">{has}</dd>
+        </div>
+        <div className="flex gap-1.5">
+          <dt className="text-gray-500">Söker:</dt>
+          <dd className="font-semibold text-gray-900">{wants}</dd>
+        </div>
+      </dl>
     </div>
   )
 }
@@ -173,618 +241,307 @@ function MatchUser({ avatar, name, age, district, from, to }: MatchUserProps) {
 
 export default function HomePage() {
   const [listings, setListings] = useState<Listing[]>([])
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    fetchListings().then(setListings)
+    fetchListings()
+      .then(setListings)
+      .catch(() => {})
+      .finally(() => setLoaded(true))
   }, [])
 
   const featured = useMemo(() => listings.filter((l) => l.status === 'aktiv').slice(0, 6), [listings])
-  const card1 = featured[0]
-  const card2 = featured[1]
-  const card3 = featured[2]
 
   return (
-    <div style={{ overflowX: 'hidden' }}>
+    <div>
 
-      {/* ═══════════════════════════════════════════════════════
-          HERO
-      ════════════════════════════════════════════════════════ */}
-      <section style={{ backgroundColor: '#FBFAF7', position: 'relative' }}>
-        {/* Soft radial blob top-right */}
+      {/* ═══════════════ HERO ═══════════════ */}
+      <section className="relative overflow-hidden">
         <div
           aria-hidden
+          className="pointer-events-none absolute inset-0"
           style={{
-            position: 'absolute',
-            top: '-10%',
-            right: '-8%',
-            width: '65vw',
-            height: '90vh',
-            background: 'radial-gradient(ellipse, rgba(168,185,164,0.22) 0%, transparent 68%)',
-            pointerEvents: 'none',
+            background:
+              'radial-gradient(60% 70% at 85% 10%, rgba(168,185,164,0.22) 0%, transparent 70%), radial-gradient(50% 50% at 0% 100%, rgba(217,194,163,0.16) 0%, transparent 70%)',
           }}
         />
 
-        <div
-          className="max-w-[1360px] mx-auto px-6 sm:px-10 grid lg:grid-cols-[1fr_1.1fr] gap-10 lg:gap-20 items-center"
-          style={{ paddingTop: 72, paddingBottom: 88, minHeight: 800 }}
-        >
-          {/* ── Left column ── */}
-          <div style={{ position: 'relative', zIndex: 1 }}>
+        <div className="container-page relative grid items-center gap-14 pb-16 pt-10 sm:pt-14 lg:min-h-[calc(100vh-var(--nav-h)-40px)] lg:grid-cols-[1.05fr_1fr] lg:gap-16 lg:pb-24 lg:pt-16">
+          {/* Left column */}
+          <div className="animate-fade-up min-w-0">
+            <p className="mb-7 inline-flex items-center gap-2 rounded-full bg-[rgba(168,185,164,0.22)] px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-600">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+              100% gratis · Inga mellanhänder
+            </p>
 
-            {/* Eyebrow pill */}
-            <div
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-[11px] font-semibold uppercase tracking-[0.12em] mb-8"
-              style={{ backgroundColor: 'rgba(168,185,164,0.22)', color: '#153F32' }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#153F32' }} />
-              100% GRATIS · INGA MELLANHÄNDER
-            </div>
-
-            {/* Headline */}
-            <h1
-              className="font-display mb-7"
-              style={{
-                fontSize: 'clamp(52px, 6vw, 96px)',
-                fontStyle: 'italic',
-                lineHeight: 0.95,
-                letterSpacing: '-0.03em',
-                color: '#15211E',
-              }}
-            >
+            <h1 className="display-xl mb-6">
               Byt bostad —<br />
-              <span style={{ color: '#153F32' }}>på dina villkor.</span>
+              <span className="text-emerald-600">på dina villkor.</span>
             </h1>
 
-            {/* Ingress */}
-            <p
-              className="mb-8 leading-[1.65] max-w-[520px]"
-              style={{ fontSize: 'clamp(16px, 1.4vw, 19px)', color: '#6D716C' }}
-            >
+            <p className="lead mb-8 max-w-[520px]">
               Hitta någon med omvända behov och byt bostad utan mäklare, utan kö och utan mellanhänder.
               Ett enklare sätt att hitta ditt nästa hem.
             </p>
 
-            {/* Search */}
-            <div className="mb-6">
+            <div className="mb-8 max-w-[600px]">
               <HeroSearch />
             </div>
 
-            {/* CTAs */}
-            <div className="flex flex-col gap-3 mb-12">
-              <div className="flex items-center gap-3 flex-wrap">
-                <Link
-                  href="/registrera"
-                  className="btn-arrow flex items-center gap-2 px-7 py-4 rounded-[14px] text-[15px] font-semibold text-white transition-all hover:-translate-y-[1px] hover:shadow-lg active:translate-y-0"
-                  style={{ backgroundColor: '#153F32' }}
-                >
-                  Skapa konto — gratis
-                  <ArrowRight size={15} className="arrow-icon" />
-                </Link>
-                <Link
-                  href="/annonser"
-                  className="flex items-center gap-2 px-7 py-4 rounded-[14px] text-[15px] font-semibold transition-all hover:-translate-y-[1px]"
-                  style={{
-                    color: '#153F32',
-                    border: '1.5px solid rgba(21,63,50,0.22)',
-                    backgroundColor: 'transparent',
-                  }}
-                >
-                  Hitta byte
-                </Link>
-              </div>
-              <p className="text-[13px]" style={{ color: '#9EA69D' }}>
-                Gratis att söka, annonsera och kontakta — alltid.
-              </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link href="/registrera" className="btn btn-primary btn-lg btn-arrow">
+                Skapa konto — gratis
+                <ArrowRight size={16} className="arrow-icon" />
+              </Link>
+              <Link href="/annonser/ny" className="btn btn-secondary btn-lg">
+                <Plus size={16} strokeWidth={2.25} />
+                Lägg upp annons
+              </Link>
             </div>
-
+            <p className="mt-4 text-[13px] text-gray-500">
+              Gratis att söka, annonsera och kontakta — alltid.
+            </p>
           </div>
 
-          {/* ── Right column: property cards ── */}
-          <div className="relative hidden lg:block" style={{ height: 600 }}>
-            {/* Extra soft blob behind cards */}
-            <div
-              aria-hidden
-              style={{
-                position: 'absolute',
-                inset: '-20%',
-                background: 'radial-gradient(ellipse 80% 80% at 55% 50%, rgba(163,200,187,0.18) 0%, transparent 70%)',
-                pointerEvents: 'none',
-              }}
-            />
-
-            {/* Main card */}
-            {card1 && (
-              <div style={{ position: 'absolute', top: 0, left: 0, right: '18%' }}>
-                <div style={{ position: 'relative' }}>
-                  <HeroCard listing={card1} matchPct={98} />
-                </div>
-              </div>
-            )}
-
-            {/* Secondary card */}
-            {card2 && (
-              <div style={{ position: 'absolute', bottom: 0, right: 0, width: '52%' }}>
-                <div style={{ position: 'relative' }}>
-                  <HeroCard listing={card2} matchPct={94} compact />
-                </div>
-              </div>
-            )}
+          {/* Right column */}
+          <div className="min-w-0 lg:pl-4">
+            <HeroIllustration />
           </div>
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════
-          BENEFITS
-      ════════════════════════════════════════════════════════ */}
-      <section style={{ backgroundColor: '#FBFAF7', paddingTop: 96, paddingBottom: 96 }}>
-        <div className="max-w-[1360px] mx-auto px-6 sm:px-10">
-          <div className="mb-14 max-w-lg">
-            <Eyebrow>Varför Bytaren?</Eyebrow>
-            <SectionHeading>Ett enklare sätt att byta bostad.</SectionHeading>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
-            {BENEFITS.map((b) => (
-              <div key={b.title}>
-                <div
-                  className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl mb-5"
-                  style={{ backgroundColor: 'rgba(168,185,164,0.22)', color: '#153F32' }}
-                >
-                  {b.icon}
-                </div>
-                <h3 className="text-[16px] font-semibold mb-2" style={{ color: '#15211E' }}>
-                  {b.title}
-                </h3>
-                <p className="text-[14px] leading-[1.65]" style={{ color: '#6D716C' }}>
-                  {b.desc}
-                </p>
+      {/* ═══════════════ BENEFITS ═══════════════ */}
+      <section className="section border-t border-[rgba(21,63,50,0.06)]">
+        <div className="container-page">
+          <SectionIntro eyebrow="Varför Bytaren?" title="Ett enklare sätt att byta bostad." />
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {BENEFITS.map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="card-muted p-6">
+                <span className="mb-5 flex h-11 w-11 items-center justify-center rounded-[14px] bg-white text-emerald-600 shadow-xs">
+                  <Icon size={20} strokeWidth={1.75} />
+                </span>
+                <h3 className="mb-2 text-[16px] font-semibold text-gray-900">{title}</h3>
+                <p className="text-[14px] leading-[1.65] text-gray-600">{desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════
-          FEATURED LISTINGS
-      ════════════════════════════════════════════════════════ */}
-      <section style={{ backgroundColor: '#F5F0E8', paddingTop: 96, paddingBottom: 96 }}>
-        <div className="max-w-[1360px] mx-auto px-6 sm:px-10">
-          <div className="flex items-end justify-between mb-10">
-            <div>
-              <Eyebrow>Aktuella annonser</Eyebrow>
-              <SectionHeading>Utforska bostadsbyten.</SectionHeading>
-              <p className="mt-3 text-[15px]" style={{ color: '#6D716C' }}>
-                Hitta ditt nästa hem bland aktuella annonser.
-              </p>
+      {/* ═══════════════ FEATURED LISTINGS ═══════════════ */}
+      <section className="section bg-[#F5F0E8]">
+        <div className="container-page">
+          <SectionIntro
+            eyebrow="Aktuella annonser"
+            title="Utforska bostadsbyten."
+            lead="Hitta ditt nästa hem bland aktuella annonser."
+            action={
+              <Link href="/annonser" className="btn btn-ghost btn-arrow hidden self-end sm:inline-flex">
+                Visa alla <ArrowRight size={15} className="arrow-icon" />
+              </Link>
+            }
+          />
+
+          {featured.length > 0 ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {featured.map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))}
             </div>
-            <Link
-              href="/annonser"
-              className="hidden sm:flex items-center gap-1.5 text-[14px] font-semibold btn-arrow flex-shrink-0 mb-1"
-              style={{ color: '#153F32' }}
-            >
-              Visa alla <ArrowRight size={14} className="arrow-icon" />
-            </Link>
-          </div>
+          ) : loaded ? (
+            <div className="card flex flex-col items-center px-6 py-14 text-center">
+              <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#E3EBE2] text-emerald-600">
+                <Home size={24} strokeWidth={1.75} />
+              </span>
+              <h3 className="text-[17px] font-semibold text-gray-900">Inga annonser att visa just nu</h3>
+              <p className="mt-1.5 max-w-sm text-[14px] text-gray-600">
+                Bli en av de första — lägg upp din bostad så att andra kan hitta dig.
+              </p>
+              <Link href="/annonser/ny" className="btn btn-primary mt-6">
+                <Plus size={16} strokeWidth={2.25} />
+                Lägg upp annons
+              </Link>
+            </div>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" aria-hidden>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="card overflow-hidden">
+                  <div className="aspect-[4/3] animate-pulse bg-[#E9EEE7]" />
+                  <div className="space-y-3 p-5">
+                    <div className="h-3 w-1/3 animate-pulse rounded bg-[#E9EEE7]" />
+                    <div className="h-4 w-4/5 animate-pulse rounded bg-[#E9EEE7]" />
+                    <div className="h-3 w-1/2 animate-pulse rounded bg-[#E9EEE7]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
-          {/* Filter chips */}
-          <div className="flex items-center gap-2 mb-8 flex-wrap">
-            {['Alla', 'Lägenhet'].map((chip, i) => (
-              <button
-                key={chip}
-                className="px-4 py-2 rounded-full text-[13px] font-medium transition-all"
-                style={
-                  i === 0
-                    ? { backgroundColor: '#153F32', color: 'white' }
-                    : {
-                        backgroundColor: 'rgba(255,255,255,0.7)',
-                        color: '#6D716C',
-                        border: '1px solid rgba(21,63,50,0.12)',
-                      }
-                }
-              >
-                {chip}
-              </button>
-            ))}
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featured.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
-            ))}
-          </div>
-
-          <div className="mt-10 text-center sm:hidden">
-            <Link
-              href="/annonser"
-              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-[14px] text-[15px] font-semibold text-white"
-              style={{ backgroundColor: '#153F32' }}
-            >
+          <div className="mt-8 sm:hidden">
+            <Link href="/annonser" className="btn btn-primary btn-block">
               Visa alla annonser <ArrowRight size={15} />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════
-          MAP
-      ════════════════════════════════════════════════════════ */}
-      <section style={{ backgroundColor: '#FBFAF7', paddingTop: 96, paddingBottom: 96 }}>
-        <div className="max-w-[1360px] mx-auto px-6 sm:px-10">
-          <div className="flex items-end justify-between mb-10">
-            <div>
-              <Eyebrow>Kartvyn</Eyebrow>
-              <SectionHeading>Se var bytena finns.</SectionHeading>
-              <p className="mt-3 text-[15px]" style={{ color: '#6D716C' }}>
-                Klicka på en markering för att se annonsens detaljer.
-              </p>
-            </div>
-            <Link
-              href="/annonser"
-              className="hidden sm:flex items-center gap-1.5 text-[14px] font-semibold btn-arrow flex-shrink-0 mb-1"
-              style={{ color: '#153F32' }}
-            >
-              Visa alla annonser <ArrowRight size={14} className="arrow-icon" />
-            </Link>
-          </div>
-          <div
-            style={{
-              borderRadius: 24,
-              overflow: 'hidden',
-              height: 480,
-              boxShadow: '0 4px 24px rgba(15,30,24,0.10)',
-              border: '1px solid rgba(21,63,50,0.08)',
-            }}
-          >
+      {/* ═══════════════ MAP ═══════════════ */}
+      <section className="section">
+        <div className="container-page">
+          <SectionIntro
+            eyebrow="Kartvyn"
+            title="Se var bytena finns."
+            lead="Klicka på en markering för att se annonsens detaljer."
+            action={
+              <Link href="/annonser" className="btn btn-ghost btn-arrow hidden self-end sm:inline-flex">
+                Öppna kartan <ArrowRight size={15} className="arrow-icon" />
+              </Link>
+            }
+          />
+          <div className="card h-[360px] overflow-hidden sm:h-[480px]">
             <ListingMap listings={featured} />
           </div>
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════
-          MATCHING EXPLANATION
-      ════════════════════════════════════════════════════════ */}
-      <section style={{ backgroundColor: '#FBFAF7', paddingTop: 96, paddingBottom: 96 }}>
-        <div className="max-w-[1360px] mx-auto px-6 sm:px-10">
-
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-
-            {/* Left — copy */}
+      {/* ═══════════════ MATCHING ═══════════════ */}
+      <section className="section border-t border-[rgba(21,63,50,0.06)]">
+        <div className="container-page">
+          <div className="grid items-center gap-14 lg:grid-cols-2 lg:gap-20">
+            {/* Copy */}
             <div>
-              <Eyebrow>Smart matchning — kommer snart</Eyebrow>
-              <SectionHeading>Algoritmen som hittar ditt perfekta byte.</SectionHeading>
-              <p className="mt-5 text-[15px] leading-[1.75] mb-10" style={{ color: '#6D716C' }}>
+              <p className="eyebrow">Smart matchning — kommer snart</p>
+              <h2 className="display-md">Algoritmen som hittar ditt perfekta byte.</h2>
+              <p className="mb-10 mt-5 text-[15.5px] leading-[1.75] text-gray-600">
                 Vi bygger en matchningsmotor som ska göra det tunga jobbet åt dig. Istället för att bläddra igenom
                 hundratals annonser ska den analysera era respektive önskemål och presentera bara de byten som
                 faktiskt kan fungera för båda parter. Så här är tanken:
               </p>
 
               <div className="space-y-6">
-                {[
-                  {
-                    icon: '⇄',
-                    title: 'Ömsesidig önskan',
-                    desc: 'Du vill dit de bor — de vill dit du bor. Matchningen kräver att båda parter pekar på varandra. Inga halvdana byten.',
-                  },
-                  {
-                    icon: '◫',
-                    title: 'Rumspassning',
-                    desc: 'Ditt antal rum matchar mot vad motparten söker, och vice versa. En 3 rok möter en som faktiskt vill ha 3 rok.',
-                  },
-                  {
-                    icon: '≈',
-                    title: 'Hyresbalans',
-                    desc: 'Motorn väger hyrornas nivåer mot varandra. Byten med rimliga skillnader lyfts — extrema obalanser sållas bort.',
-                  },
-                  {
-                    icon: '✦',
-                    title: 'Extrakrav matchas',
-                    desc: 'Balkong, hiss, husdjur tillåtet. Dina måsten vägs mot motpartens bostad, och tvärtom — så du aldrig behöver kompromissa i onödan.',
-                  },
-                ].map((item) => (
-                  <div key={item.title} className="flex gap-4">
-                    <div
-                      className="w-10 h-10 rounded-2xl flex items-center justify-center text-base flex-shrink-0 font-semibold"
-                      style={{ backgroundColor: 'rgba(21,63,50,0.08)', color: '#153F32' }}
-                    >
-                      {item.icon}
-                    </div>
+                {MATCH_CRITERIA.map(({ icon: Icon, title, desc }) => (
+                  <div key={title} className="flex gap-4">
+                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[12px] bg-[rgba(21,63,50,0.07)] text-emerald-600">
+                      <Icon size={18} strokeWidth={1.75} />
+                    </span>
                     <div>
-                      <p className="text-[15px] font-semibold mb-1" style={{ color: '#15211E' }}>{item.title}</p>
-                      <p className="text-[14px] leading-[1.65]" style={{ color: '#6D716C' }}>{item.desc}</p>
+                      <p className="mb-1 text-[15px] font-semibold text-gray-900">{title}</p>
+                      <p className="text-[14px] leading-[1.65] text-gray-600">{desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-10">
-                <Link
-                  href="/hur-det-fungerar"
-                  className="btn-arrow inline-flex items-center gap-2 px-6 py-3.5 rounded-[14px] text-[15px] font-semibold transition-all hover:-translate-y-[1px]"
-                  style={{ color: '#153F32', border: '1.5px solid rgba(21,63,50,0.22)' }}
-                >
-                  Se hur matchningen fungerar <ArrowRight size={15} className="arrow-icon" />
-                </Link>
-              </div>
-            </div>
-
-            {/* Right — match visual */}
-            <div className="flex flex-col items-center gap-6">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: '#A8B9A4' }}>
-                Illustrativt exempel
-              </p>
-              <div className="flex items-center justify-center gap-4 sm:gap-8 w-full flex-wrap sm:flex-nowrap">
-                <MatchUser
-                  avatar="https://i.pravatar.cc/80?img=9"
-                  name="Sara"
-                  age={29}
-                  district="Södermalm"
-                  from="2 rok, Södermalm"
-                  to="Vasastan eller Kungsholmen"
-                />
-
-                <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg font-semibold"
-                    style={{ backgroundColor: '#153F32' }}
-                  >
-                    ⇄
-                  </div>
-                  <div
-                    className="px-3 py-1 rounded-full text-[11px] font-bold"
-                    style={{ backgroundColor: 'rgba(21,63,50,0.10)', color: '#153F32' }}
-                  >
-                    98% match
-                  </div>
-                </div>
-
-                <MatchUser
-                  avatar="https://i.pravatar.cc/80?img=22"
-                  name="Erik"
-                  age={34}
-                  district="Vasastan"
-                  from="2 rok, Vasastan"
-                  to="Södermalm"
-                />
-              </div>
-
-              {/* Score breakdown */}
-              <div
-                className="w-full max-w-sm p-5 rounded-2xl"
-                style={{ backgroundColor: 'rgba(21,63,50,0.05)', border: '1px solid rgba(21,63,50,0.09)' }}
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.10em] mb-4" style={{ color: '#A8B9A4' }}>Matchningsanalys</p>
-                <div className="space-y-3">
-                  {[
-                    { label: 'Ömsesidig stadsdel', score: 100 },
-                    { label: 'Rumspassning', score: 100 },
-                    { label: 'Hyresbalans', score: 92 },
-                    { label: 'Extrakrav', score: 85 },
-                  ].map((row) => (
-                    <div key={row.label}>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-[13px]" style={{ color: '#6D716C' }}>{row.label}</span>
-                        <span className="text-[13px] font-semibold" style={{ color: '#153F32' }}>{row.score}%</span>
-                      </div>
-                      <div className="h-1.5 rounded-full" style={{ backgroundColor: 'rgba(21,63,50,0.10)' }}>
-                        <div
-                          className="h-full rounded-full"
-                          style={{ width: `${row.score}%`, backgroundColor: '#153F32' }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════
-          TRUST / SAFETY
-      ════════════════════════════════════════════════════════ */}
-      <section style={{ backgroundColor: '#E3EBE2', paddingTop: 96, paddingBottom: 96 }}>
-        <div className="max-w-[1360px] mx-auto px-6 sm:px-10">
-          <div className="grid lg:grid-cols-2 gap-14 items-center">
-            {/* Text side */}
-            <div>
-              <Eyebrow>Trygghet</Eyebrow>
-              <SectionHeading>Ett tryggare sätt att hitta ditt nästa hem.</SectionHeading>
-              <p className="mt-5 text-[15px] leading-[1.65] mb-8" style={{ color: '#6D716C' }}>
-                Bytaren är byggt för ett av livets viktigaste beslut. Därför har vi lagt stor vikt vid att
-                göra plattformen så trygg och transparent som möjligt.
-              </p>
-              <div className="space-y-4">
-                {TRUST_POINTS.map((point) => (
-                  <div key={point} className="flex items-center gap-3">
-                    <CheckIcon />
-                    <span className="text-[15px]" style={{ color: '#15211E' }}>{point}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-8">
-                <Link
-                  href="/trygghet"
-                  className="btn-arrow inline-flex items-center gap-2 px-6 py-3.5 rounded-[14px] text-[15px] font-semibold text-white transition-all hover:-translate-y-[1px] hover:shadow-lg"
-                  style={{ backgroundColor: '#153F32' }}
-                >
-                  Läs om vår trygghet <ArrowRight size={15} className="arrow-icon" />
-                </Link>
-              </div>
-            </div>
-
-            {/* Card side */}
-            {card3 && (
-              <div className="relative">
-                <div
-                  style={{
-                    backgroundColor: 'white',
-                    borderRadius: 28,
-                    overflow: 'hidden',
-                    boxShadow: '0 20px 60px rgba(13,45,38,0.10)',
-                  }}
-                >
-                  <div style={{ aspectRatio: '4/3', overflow: 'hidden' }}>
-                    <img src={card3.images[0]} alt="Trygg bostad" className="w-full h-full object-cover" />
-                  </div>
-                  <div className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: 'rgba(21,63,50,0.10)' }}
-                      >
-                        <Shield size={18} style={{ color: '#153F32' }} />
-                      </div>
-                      <div>
-                        <p className="text-[14px] font-semibold" style={{ color: '#15211E' }}>
-                          Verifierad profil
-                        </p>
-                        <p className="text-[12px]" style={{ color: '#9EA69D' }}>Identitet bekräftad</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════
-          CTA
-      ════════════════════════════════════════════════════════ */}
-      <section style={{ backgroundColor: '#0D2F26', paddingTop: 96, paddingBottom: 96 }}>
-        <div className="max-w-[1360px] mx-auto px-6 sm:px-10 text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] mb-4" style={{ color: '#A8B9A4' }}>
-            Kom igång idag
-          </p>
-          <h2
-            className="font-display mb-5"
-            style={{
-              fontSize: 'clamp(36px, 4.5vw, 64px)',
-              fontStyle: 'italic',
-              lineHeight: 1.0,
-              letterSpacing: '-0.03em',
-              color: 'white',
-            }}
-          >
-            Nytt hem.<br />Utan omvägar.
-          </h2>
-          <p
-            className="leading-[1.65] mb-10 max-w-md mx-auto"
-            style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)' }}
-          >
-            Tusentals stockholmare har redan hittat sitt nästa hem via Bytaren. Nu är det din tur.
-          </p>
-          <div className="flex flex-col items-center gap-4">
-            <div className="flex items-center justify-center gap-4 flex-wrap">
-              <Link
-                href="/registrera"
-                className="btn-arrow flex items-center gap-2 px-8 py-4 rounded-[14px] text-[15px] font-semibold transition-all hover:-translate-y-[1px] hover:shadow-xl active:translate-y-0"
-                style={{ backgroundColor: 'white', color: '#153F32' }}
-              >
-                Skapa konto — helt gratis <ArrowRight size={15} className="arrow-icon" />
-              </Link>
-              <Link
-                href="/annonser"
-                className="flex items-center gap-2 px-8 py-4 rounded-[14px] text-[15px] font-semibold text-white transition-all hover:-translate-y-[1px]"
-                style={{ border: '1.5px solid rgba(255,255,255,0.18)' }}
-              >
-                Utforska byten
+              <Link href="/hur-det-fungerar" className="btn btn-secondary btn-arrow mt-10">
+                Se hur matchningen fungerar <ArrowRight size={15} className="arrow-icon" />
               </Link>
             </div>
-            <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
-              Ingen mäklarprovision · Inga dolda avgifter · Gratis för alla
-            </p>
-          </div>
-        </div>
-      </section>
 
-      {/* ═══════════════════════════════════════════════════════
-          FOOTER
-      ════════════════════════════════════════════════════════ */}
-      <footer style={{ backgroundColor: '#111A16' }}>
-        <div className="max-w-[1360px] mx-auto px-6 sm:px-10 py-16">
-          <div className="grid sm:grid-cols-4 lg:grid-cols-5 gap-10 mb-12">
-
-            {/* Brand */}
-            <div className="sm:col-span-2">
-              <div className="flex items-center gap-2.5 mb-4">
-                <div
-                  className="w-8 h-8 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: '#153F32' }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 28 27" fill="none">
-                    <path d="M14 3L22 11V22H6V11L14 3Z" stroke="white" strokeWidth="1.8" strokeLinejoin="round"/>
-                    <path d="M22 11V3" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
-                    <path d="M19.5 5.5L22 3L24.5 5.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M6 22V25" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
-                    <path d="M3.5 23L6 25L8.5 23" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+            {/* Illustrative example */}
+            <figure className="card-muted p-5 sm:p-8">
+              <figcaption className="eyebrow mb-5 block text-center">Illustrativt exempel</figcaption>
+              <div className="relative flex flex-col items-stretch gap-4 sm:flex-row sm:items-center">
+                <Party letter="A" has="2 rok, Södermalm" wants="Vasastan eller Kungsholmen" />
+                <div className="flex flex-shrink-0 justify-center">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-600 text-white shadow-md ring-4 ring-[#F5F0E8]">
+                    <ArrowLeftRight size={18} strokeWidth={2} className="rotate-90 sm:rotate-0" />
+                  </span>
                 </div>
-                <span className="text-[13px] font-bold tracking-[0.13em] uppercase text-white">
-                  BYTAREN
-                </span>
+                <Party letter="B" has="2 rok, Vasastan" wants="Södermalm" />
               </div>
-              <p className="text-[14px] leading-relaxed max-w-[230px] mb-5" style={{ color: 'rgba(255,255,255,0.38)' }}>
-                Stockholms enklaste sätt att byta bostad — utan kö och utan mäklare.
-              </p>
-            </div>
 
-            {/* Link columns — only pages that actually exist */}
-            {[
-              { title: 'Plattform', links: [
-                { label: 'Hitta byte', href: '/annonser' },
-                { label: 'Lägg upp annons', href: '/annonser/ny' },
-                { label: 'Hur det fungerar', href: '/hur-det-fungerar' },
-              ] },
-              { title: 'Konto', links: [
-                { label: 'Logga in', href: '/logga-in' },
-                { label: 'Registrera dig', href: '/registrera' },
-                { label: 'Mina sidor', href: '/mina-sidor' },
-                { label: 'Meddelanden', href: '/meddelanden' },
-              ] },
-              { title: 'Bytaren', links: [
-                { label: 'Om oss', href: '/om-oss' },
-                { label: 'Trygghet', href: '/trygghet' },
-                { label: 'Integritetspolicy', href: '/integritetspolicy' },
-                { label: 'Villkor', href: '/villkor' },
-                { label: 'Kontakt', href: '/kontakt' },
-              ] },
-            ].map((col) => (
-              <div key={col.title}>
-                <p
-                  className="text-[10px] font-semibold uppercase tracking-[0.12em] mb-4"
-                  style={{ color: 'rgba(255,255,255,0.38)' }}
-                >
-                  {col.title}
-                </p>
+              <div className="card mt-5 p-5">
+                <p className="eyebrow">Så skulle bytet bedömas</p>
                 <ul className="space-y-3">
-                  {col.links.map((link) => (
-                    <li key={link.label}>
-                      <Link
-                        href={link.href}
-                        className="text-[13px] transition-colors hover:text-white"
-                        style={{ color: 'rgba(255,255,255,0.45)' }}
-                      >
-                        {link.label}
-                      </Link>
+                  {[
+                    'Båda vill bo där den andra bor',
+                    'Samma antal rum som efterfrågas',
+                    'Hyrorna ligger på en rimlig nivå',
+                    'Extrakraven jämförs åt båda håll',
+                  ].map((row) => (
+                    <li key={row} className="flex items-center gap-3 text-[14px] text-gray-800">
+                      <CheckIcon />
+                      {row}
                     </li>
                   ))}
                 </ul>
               </div>
-            ))}
-          </div>
-
-          <div
-            className="border-t flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 text-[12px]"
-            style={{ borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.28)' }}
-          >
-            <span>© 2026 Bytaren — Alla rättigheter förbehållna</span>
+            </figure>
           </div>
         </div>
-      </footer>
+      </section>
 
+      {/* ═══════════════ TRUST ═══════════════ */}
+      <section className="section bg-[#E3EBE2]">
+        <div className="container-page">
+          <div className="grid items-center gap-14 lg:grid-cols-2 lg:gap-20">
+            <div>
+              <p className="eyebrow">Trygghet</p>
+              <h2 className="display-md">Ett tryggare sätt att hitta ditt nästa hem.</h2>
+              <p className="mb-8 mt-5 text-[15.5px] leading-[1.7] text-gray-600">
+                Bytaren är byggt för ett av livets viktigaste beslut. Därför har vi lagt stor vikt vid att
+                göra plattformen så trygg och transparent som möjligt.
+              </p>
+              <ul className="space-y-4">
+                {TRUST_POINTS.map((point) => (
+                  <li key={point} className="flex items-center gap-3 text-[15px] text-gray-900">
+                    <CheckIcon />
+                    {point}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/trygghet" className="btn btn-primary btn-arrow mt-9">
+                Läs om vår trygghet <ArrowRight size={15} className="arrow-icon" />
+              </Link>
+            </div>
+
+            <div className="card p-3 sm:p-4" style={{ boxShadow: 'var(--shadow-hero)' }}>
+              <ul className="divide-y divide-[rgba(21,63,50,0.07)]">
+                {TRUST_FEATURES.map(({ icon: Icon, title, desc }) => (
+                  <li key={title} className="flex items-center gap-4 p-4 sm:p-5">
+                    <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-[#E3EBE2] text-emerald-600">
+                      <Icon size={20} strokeWidth={1.75} />
+                    </span>
+                    <div>
+                      <p className="text-[15px] font-semibold text-gray-900">{title}</p>
+                      <p className="text-[13.5px] text-gray-600">{desc}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════ CTA ═══════════════ */}
+      <section className="section relative overflow-hidden bg-[#0D2F26]">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{ background: 'radial-gradient(50% 80% at 50% 0%, rgba(94,160,138,0.22) 0%, transparent 70%)' }}
+        />
+        <div className="container-page relative text-center">
+          <p className="eyebrow text-[#A8B9A4]">Kom igång idag</p>
+          <h2 className="display-lg mb-5 text-white">
+            Nytt hem.<br />Utan omvägar.
+          </h2>
+          <p className="mx-auto mb-10 max-w-md text-[16px] leading-[1.65] text-white/60">
+            Lägg upp din bostad på några minuter och hitta någon som vill byta med dig. Nu är det din tur.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link href="/registrera" className="btn btn-inverse btn-lg btn-arrow">
+              Skapa konto — helt gratis <ArrowRight size={15} className="arrow-icon" />
+            </Link>
+            <Link href="/annonser" className="btn btn-outline-inverse btn-lg">
+              Utforska byten
+            </Link>
+          </div>
+          <p className="mt-6 text-[13px] text-white/40">
+            Ingen mäklarprovision · Inga dolda avgifter · Gratis för alla
+          </p>
+        </div>
+      </section>
     </div>
   )
 }

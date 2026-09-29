@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, ArrowLeftRight, BedDouble, Scale, ListChecks, ChevronDown } from 'lucide-react'
+import PageHeader from '@/components/ui/PageHeader'
 
 const STEPS = [
   {
@@ -26,22 +27,22 @@ const STEPS = [
 
 const MATCH_CRITERIA = [
   {
-    icon: '⇄',
+    icon: ArrowLeftRight,
     title: 'Ömsesidig önskan',
     desc: 'Du vill dit de bor — de vill dit du bor. Matchningen kräver att båda parter pekar på varandra. Inga halvdana byten.',
   },
   {
-    icon: '◫',
+    icon: BedDouble,
     title: 'Rumspassning',
     desc: 'Ditt antal rum matchar mot vad motparten söker, och vice versa. En 3 rok möter en som faktiskt vill ha 3 rok.',
   },
   {
-    icon: '≈',
+    icon: Scale,
     title: 'Hyresbalans',
     desc: 'Motorn väger hyrornas nivåer mot varandra. Byten med rimliga skillnader lyfts — extrema obalanser sållas bort.',
   },
   {
-    icon: '✦',
+    icon: ListChecks,
     title: 'Extrakrav matchas',
     desc: 'Balkong, hiss, husdjur tillåtet. Dina måsten vägs mot motpartens bostad — så du aldrig behöver kompromissa i onödan.',
   },
@@ -68,117 +69,57 @@ const FAQS = [
 
 export default function HurDetFungerar() {
   return (
-    <div style={{ backgroundColor: '#FBFAF7' }}>
-
+    <div>
       {/* Hero */}
-      <section style={{ paddingTop: 80, paddingBottom: 80, backgroundColor: '#FBFAF7' }}>
-        <div className="max-w-[1360px] mx-auto px-6 sm:px-10">
-          <div className="max-w-2xl">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] mb-3" style={{ color: '#A8B9A4' }}>
-              Så fungerar det
-            </p>
-            <h1
-              className="font-display mb-6"
-              style={{
-                fontSize: 'clamp(40px, 5vw, 72px)',
-                fontStyle: 'italic',
-                lineHeight: 1.0,
-                letterSpacing: '-0.025em',
-                color: '#15211E',
-              }}
-            >
-              Byt bostad —<br />
-              <span style={{ color: '#153F32' }}>i fyra steg.</span>
-            </h1>
-            <p className="text-[17px] leading-[1.65]" style={{ color: '#6D716C', maxWidth: 500 }}>
-              Bytaren gör det enkelt att hitta rätt byte. Inget krångel, inga mellanhänder.
-            </p>
-          </div>
+      <section>
+        <div className="container-page py-14 sm:py-20">
+          <PageHeader
+            eyebrow="Så fungerar det"
+            title="Byt bostad —"
+            accent="i fyra steg."
+            lead="Bytaren gör det enkelt att hitta rätt byte. Inget krångel, inga mellanhänder."
+          />
         </div>
       </section>
 
       {/* Steps */}
-      <section style={{ backgroundColor: '#F5F0E8', paddingTop: 80, paddingBottom: 96 }}>
-        <div className="max-w-[1360px] mx-auto px-6 sm:px-10">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {STEPS.map((s, i) => (
-              <div key={s.step} className="relative">
-                {/* Connector line */}
-                {i < STEPS.length - 1 && (
-                  <div
-                    className="hidden lg:block absolute top-6 left-[calc(100%+8px)] right-[-8px] h-px"
-                    style={{ backgroundColor: 'rgba(21,63,50,0.12)' }}
-                  />
-                )}
-                <div
-                  className="text-[12px] font-bold mb-5"
-                  style={{ color: '#A8B9A4', letterSpacing: '0.06em' }}
-                >
-                  {s.step}
-                </div>
-                <div
-                  className="w-px h-10 mb-5"
-                  style={{ backgroundColor: '#153F32' }}
-                />
-                <h3 className="text-[18px] font-semibold mb-3" style={{ color: '#15211E' }}>
-                  {s.title}
-                </h3>
-                <p className="text-[14px] leading-[1.65]" style={{ color: '#6D716C' }}>
-                  {s.desc}
-                </p>
-              </div>
+      <section className="section bg-[#F5F0E8]">
+        <div className="container-page">
+          <ol className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+            {STEPS.map((s) => (
+              <li key={s.step} className="card relative p-6 sm:p-7">
+                <span className="font-display text-[44px] italic leading-none text-[#C9B08C]">{s.step}</span>
+                <h3 className="mb-2 mt-5 text-[17px] font-semibold text-gray-900">{s.title}</h3>
+                <p className="text-[14px] leading-[1.65] text-gray-600">{s.desc}</p>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
       </section>
 
       {/* Matching deep-dive */}
-      <section style={{ paddingTop: 80, paddingBottom: 80, backgroundColor: '#FBFAF7' }}>
-        <div className="max-w-[1360px] mx-auto px-6 sm:px-10">
-          <div className="max-w-xl mb-12">
-            <div className="flex items-center gap-2 mb-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: '#A8B9A4' }}>
-                Matchningsmotorn
-              </p>
-              <span
-                className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full"
-                style={{ backgroundColor: 'rgba(21,63,50,0.08)', color: '#153F32' }}
-              >
-                Kommer snart
-              </span>
+      <section className="section">
+        <div className="container-page">
+          <div className="mb-12 max-w-xl">
+            <div className="mb-3 flex items-center gap-2">
+              <p className="eyebrow mb-0">Matchningsmotorn</p>
+              <span className="badge badge-green">Kommer snart</span>
             </div>
-            <h2
-              className="font-display mb-4"
-              style={{
-                fontSize: 'clamp(28px, 3vw, 42px)',
-                fontStyle: 'italic',
-                lineHeight: 1.05,
-                color: '#15211E',
-              }}
-            >
-              Vad kommer avgöra om det är ett bra byte?
-            </h2>
-            <p className="text-[15px] leading-[1.65]" style={{ color: '#6D716C' }}>
+            <h2 className="display-md mb-4">Vad kommer avgöra om det är ett bra byte?</h2>
+            <p className="text-[15.5px] leading-[1.7] text-gray-600">
               Idag söker och filtrerar du själv bland annonserna. Vi bygger en algoritm som istället
               ska väga fyra faktorer mot varandra och bara visa dig byten som faktiskt kan fungera — för båda.
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {MATCH_CRITERIA.map((c) => (
-              <div
-                key={c.title}
-                className="p-6 rounded-2xl"
-                style={{ backgroundColor: 'rgba(21,63,50,0.04)', border: '1px solid rgba(21,63,50,0.08)' }}
-              >
-                <div
-                  className="w-10 h-10 rounded-2xl flex items-center justify-center text-base font-semibold mb-5"
-                  style={{ backgroundColor: 'rgba(21,63,50,0.09)', color: '#153F32' }}
-                >
-                  {c.icon}
-                </div>
-                <h3 className="text-[16px] font-semibold mb-2" style={{ color: '#15211E' }}>{c.title}</h3>
-                <p className="text-[14px] leading-[1.65]" style={{ color: '#6D716C' }}>{c.desc}</p>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+            {MATCH_CRITERIA.map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="card-muted p-6">
+                <span className="mb-5 flex h-11 w-11 items-center justify-center rounded-[14px] bg-white text-emerald-600 shadow-xs">
+                  <Icon size={20} strokeWidth={1.75} />
+                </span>
+                <h3 className="mb-2 text-[16px] font-semibold text-gray-900">{title}</h3>
+                <p className="text-[14px] leading-[1.65] text-gray-600">{desc}</p>
               </div>
             ))}
           </div>
@@ -186,33 +127,25 @@ export default function HurDetFungerar() {
       </section>
 
       {/* FAQ */}
-      <section style={{ paddingTop: 80, paddingBottom: 80, backgroundColor: '#FBFAF7' }}>
-        <div className="max-w-[1360px] mx-auto px-6 sm:px-10">
-          <div className="max-w-2xl">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] mb-3" style={{ color: '#A8B9A4' }}>
-              Vanliga frågor
-            </p>
-            <h2
-              className="font-display mb-10"
-              style={{
-                fontSize: 'clamp(28px, 3vw, 40px)',
-                fontStyle: 'italic',
-                lineHeight: 1.1,
-                color: '#15211E',
-              }}
-            >
-              Har du frågor?
-            </h2>
-            <div className="space-y-0 divide-y" style={{ borderColor: 'rgba(21,63,50,0.10)' }}>
+      <section className="section border-t border-[rgba(21,63,50,0.06)]">
+        <div className="container-page">
+          <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
+            <div>
+              <p className="eyebrow">Vanliga frågor</p>
+              <h2 className="display-md">Har du frågor?</h2>
+              <p className="mt-4 text-[15px] text-gray-600">
+                Hittar du inte svaret? <Link href="/kontakt" className="font-medium text-emerald-600 underline decoration-[rgba(21,63,50,0.25)] underline-offset-[3px] hover:decoration-current">Kontakta oss</Link>.
+              </p>
+            </div>
+            <div className="card divide-y divide-[rgba(21,63,50,0.08)] px-2 sm:px-4">
               {FAQS.map((faq) => (
-                <div key={faq.q} className="py-6">
-                  <p className="text-[16px] font-semibold mb-2" style={{ color: '#15211E' }}>
+                <details key={faq.q} className="group px-3 py-1 sm:px-4">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-lg py-4 text-[16px] font-semibold text-gray-900 [&::-webkit-details-marker]:hidden">
                     {faq.q}
-                  </p>
-                  <p className="text-[14px] leading-[1.65]" style={{ color: '#6D716C' }}>
-                    {faq.a}
-                  </p>
-                </div>
+                    <ChevronDown size={18} className="flex-shrink-0 text-gray-400 transition-transform group-open:rotate-180" />
+                  </summary>
+                  <p className="pb-5 text-[14.5px] leading-[1.65] text-gray-600">{faq.a}</p>
+                </details>
               ))}
             </div>
           </div>
@@ -220,38 +153,19 @@ export default function HurDetFungerar() {
       </section>
 
       {/* CTA */}
-      <section style={{ backgroundColor: '#0D2F26', paddingTop: 72, paddingBottom: 72 }}>
-        <div className="max-w-[1360px] mx-auto px-6 sm:px-10 text-center">
-          <h2
-            className="font-display mb-5"
-            style={{
-              fontSize: 'clamp(28px, 3.5vw, 48px)',
-              fontStyle: 'italic',
-              color: 'white',
-              lineHeight: 1.05,
-            }}
-          >
-            Redo att hitta ditt nästa hem?
-          </h2>
-          <div className="flex items-center justify-center gap-4 flex-wrap">
-            <Link
-              href="/annonser/ny"
-              className="flex items-center gap-2 px-7 py-3.5 rounded-[14px] text-[15px] font-semibold transition-all hover:-translate-y-[1px] hover:shadow-xl"
-              style={{ backgroundColor: 'white', color: '#153F32' }}
-            >
-              Skapa annons <ArrowRight size={15} />
+      <section className="section bg-[#0D2F26]">
+        <div className="container-page text-center">
+          <h2 className="display-md mb-8 text-white">Redo att hitta ditt nästa hem?</h2>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link href="/annonser/ny" className="btn btn-inverse btn-lg btn-arrow">
+              Skapa annons <ArrowRight size={15} className="arrow-icon" />
             </Link>
-            <Link
-              href="/annonser"
-              className="flex items-center gap-2 px-7 py-3.5 rounded-[14px] text-[15px] font-semibold text-white transition-all hover:-translate-y-[1px]"
-              style={{ border: '1.5px solid rgba(255,255,255,0.18)' }}
-            >
+            <Link href="/annonser" className="btn btn-outline-inverse btn-lg">
               Utforska byten
             </Link>
           </div>
         </div>
       </section>
-
     </div>
   )
 }
