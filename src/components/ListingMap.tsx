@@ -1,261 +1,488 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import type { Listing } from '@/types'
-import { formatRent, formatDate, haversineKm, formatDistance } from '@/lib/utils'
-import { CURRENT_USER_HOME } from '@/lib/mock-data'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { Map as LeafletMap, Marker, MarkerClusterGroup, TileLayer, LayerGroup, LatLngBoundsExpression } from 'leaflet'
+import { Plus, Minus, LocateFixed, Maximize2, Layers, Loader2, MapPin } from 'lucide-react'
+import { DISTRICT_CENTERS, type Listing } from '@/types'
+import { useHomeLocation, type HomeLocation } from '@/lib/useHomeLocation'
+import {
+  BASEMAPS,
+  type BasemapKey,
+  type LeafletNS,
+  type MarkerState,
+  buildClusterIcon,
+  buildHomeIcon,
+  buildHomePopupHtml,
+  buildListingPopupHtml,
+  buildPriceIcon,
+  ensureMapStyles,
+} from '@/components/map/markers'
+
+import type { MapBounds } from '@/components/map/bounds'
 
 interface ListingMapProps {
   listings: Listing[]
   selectedId?: string | null
   onSelect?: (id: string | null) => void
+  /** Listing hovered in a list next to the map (highlighted, panned to if off-screen). */
+  hoveredId?: string | null
+  /** Called when a marker is hovered, so the list can highlight the card. */
+  onHover?: (id: string | null) => void
+  /** Called (debounced) with the visible area after the map moves. */
+  onBoundsChange?: (bounds: MapBounds) => void
+  /** Shows the "Sök när kartan flyttas" toggle when both are given. */
+  searchInBounds?: boolean
+  onSearchInBoundsChange?: (value: boolean) => void
+  /** Districts filtered on — used to centre the map when no listings match. */
+  focusDistricts?: string[]
+  /** Suppresses the empty-state hint while listings are still loading. */
+  loading?: boolean
   zoom?: number
+  /** A fixed centre disables automatic fit-to-listings (e.g. the detail page). */
   center?: [number, number]
 }
 
-const BRAND = '#153F32'
-const STYLE_ID = 'bytaren-map-popup-style'
+const STOCKHOLM: [number, number] = [59.334591, 18.06324]
+const FIT_OPTIONS = { padding: [48, 48] as [number, number], maxZoom: 15 }
 
-// Injected once — restyles Leaflet's default popup chrome (close button, box,
-// tip) to match the card look below, since those parts aren't part of the
-// per-marker HTML string.
-function ensurePopupStyles() {
-  if (document.getElementById(STYLE_ID)) return
-  const style = document.createElement('style')
-  style.id = STYLE_ID
-  style.textContent = `
-    .leaflet-popup-content-wrapper { padding: 0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 16px rgba(15,30,24,0.12), 0 16px 40px rgba(15,30,24,0.16); }
-    .leaflet-popup-content { margin: 0; width: 240px !important; }
-    .leaflet-popup-tip { box-shadow: 0 2px 6px rgba(15,30,24,0.1); }
-    .leaflet-popup-close-button {
-      top: 10px !important; right: 10px !important; width: 26px !important; height: 26px !important;
-      background: white !important; border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-      display: flex; align-items: center; justify-content: center; font-size: 15px !important;
-      color: #15211E !important; line-height: 1 !important;
-    }
-    .leaflet-popup-close-button:hover { background: #f3f4f6 !important; }
-    /* Leaflet's divIcon defaults the marker container to 12x12px regardless of
-       the iconSize option passed to L.marker (only iconCreateFunction icons,
-       used for clusters, pick it up) — force the real sizes here so the
-       clickable hit-area matches what's actually drawn. */
-    .bt-pin-30 { width: 30px !important; height: 30px !important; }
-    .bt-pin-36 { width: 36px !important; height: 36px !important; }
-    .bt-home-pin { width: 32px !important; height: 32px !important; }
-  `
-  document.head.appendChild(style)
-}
+export default function ListingMap({
+  listings,
+  selectedId = null,
+  onSelect,
+  hoveredId = null,
+  onHover,
+  onBoundsChange,
+  searchInBounds,
+  onSearchInBoundsChange,
+  focusDistricts,
+  loading = false,
+  zoom = 12,
+  center,
+}: ListingMapProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<LeafletMap | null>(null)
+  const leafletRef = useRef<LeafletNS | null>(null)
+  const clusterRef = useRef<MarkerClusterGroup | null>(null)
+  const tileRef = useRef<TileLayer | null>(null)
+  const homeLayerRef = useRef<Marker | null>(null)
+  const locateLayerRef = useRef<LayerGroup | null>(null)
+  const markersRef = useRef(new Map<string, { marker: Marker; listing: Listing; state: MarkerState }>())
+  const listingByMarkerRef = useRef(new WeakMap<Marker, Listing>())
+  const activeClusterElRef = useRef<HTMLElement | null>(null)
+  const lastFitKeyRef = useRef<string | null>(null)
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-const buildingSvg = (size: number) => `
-  <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="4" y="3" width="16" height="18" rx="1"/>
-    <path d="M9 21v-4h6v4"/>
-    <path d="M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1"/>
-  </svg>
-`
-
-function buildPinIcon(L: any, isSelected: boolean) {
-  const size = isSelected ? 36 : 30
-  return L.divIcon({
-    html: `
-      <div style="
-        width: ${size}px; height: ${size}px; border-radius: 50%;
-        background: ${isSelected ? '#0D2F26' : BRAND};
-        border: 2.5px solid white;
-        box-shadow: 0 1px 4px rgba(15,30,24,0.2), 0 3px 10px rgba(15,30,24,0.18);
-        display:flex; align-items:center; justify-content:center;
-      ">
-        ${buildingSvg(isSelected ? 17 : 14)}
-      </div>
-    `,
-    className: isSelected ? 'bt-pin-36' : 'bt-pin-30',
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-  })
-}
-
-export default function ListingMap({ listings, selectedId, onSelect, zoom = 12, center }: ListingMapProps) {
-  const mapRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<any>(null)
-  const clusterRef = useRef<any>(null)
-  const leafletRef = useRef<any>(null)
-  const markersByIdRef = useRef<Map<string, any>>(new Map())
-
-  // Creates the map and all markers. Intentionally does NOT depend on
-  // selectedId — a marker click used to call onSelect(), which changed
-  // selectedId, which was in this effect's dependency array, which tore
-  // down and rebuilt the entire map (and closed the just-opened popup)
-  // on every single click. Selection is now handled by the effect below,
-  // which just swaps icons on the existing markers.
+  // Leaflet listeners are registered once, so they read the latest props
+  // through refs instead of capturing stale closures (re-registering them
+  // on every render would mean rebuilding markers on every hover).
+  const home = useHomeLocation()
+  const homeRef = useRef<HomeLocation | null>(home)
+  const onSelectRef = useRef(onSelect)
+  const onHoverRef = useRef(onHover)
+  const onBoundsChangeRef = useRef(onBoundsChange)
+  const selectedIdRef = useRef(selectedId)
+  const hoveredIdRef = useRef(hoveredId)
   useEffect(() => {
-    if (typeof window === 'undefined' || !mapRef.current) return
-    let cancelled = false
+    homeRef.current = home
+    onSelectRef.current = onSelect
+    onHoverRef.current = onHover
+    onBoundsChangeRef.current = onBoundsChange
+    selectedIdRef.current = selectedId
+    hoveredIdRef.current = hoveredId
+  })
 
-    async function initMap() {
-      const L = (await import('leaflet')).default
+  const [ready, setReady] = useState(false)
+  const [basemap, setBasemap] = useState<BasemapKey>('voyager')
+  const [locating, setLocating] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
+
+  const showNotice = useCallback((text: string) => {
+    setNotice(text)
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current)
+    noticeTimerRef.current = setTimeout(() => setNotice(null), 4000)
+  }, [])
+
+  // ── 1. Create the map exactly once ──────────────────────────────────────
+  // Intentionally has no reactive deps: an earlier version re-created the
+  // whole map whenever selection changed (marker click → onSelect →
+  // selectedId → teardown), which also closed the popup that was just
+  // opened. Everything after creation happens in the targeted effects below.
+  useEffect(() => {
+    let cancelled = false
+    let map: LeafletMap | null = null
+    let resizeObserver: ResizeObserver | null = null
+    let boundsTimer: ReturnType<typeof setTimeout> | null = null
+    const markerEntries = markersRef.current
+
+    async function init() {
+      const mod = await import('leaflet')
+      // leaflet ships as CommonJS; depending on bundler interop the namespace
+      // is either the module itself or its `default`.
+      const L = ((mod as unknown as { default?: LeafletNS }).default ?? mod) as LeafletNS
       await import('leaflet/dist/leaflet.css')
       await import('leaflet.markercluster')
       await import('leaflet.markercluster/dist/MarkerCluster.css')
-      await import('leaflet.markercluster/dist/MarkerCluster.Default.css')
-      if (cancelled || !mapRef.current) return
-      ensurePopupStyles()
+      if (cancelled || !containerRef.current) return
+      ensureMapStyles()
       leafletRef.current = L
 
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove()
-        mapInstanceRef.current = null
-      }
-      markersByIdRef.current.clear()
-
-      const defaultCenter: [number, number] = center ?? [59.334591, 18.063240]
-      const map = L.map(mapRef.current, {
-        center: defaultCenter,
+      map = L.map(containerRef.current, {
+        center: center ?? STOCKHOLM,
         zoom,
-        zoomControl: true,
+        zoomControl: false, // replaced by our own control stack
       })
+      mapRef.current = map
 
       // Clean, low-saturation basemap — closer to Booli/Bostadsförmedlingen than a busy street map.
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '©OpenStreetMap ©CartoDB',
+      tileRef.current = L.tileLayer(BASEMAPS.voyager.url, {
+        attribution: '© OpenStreetMap © CARTO',
         maxZoom: 19,
       }).addTo(map)
 
-      mapInstanceRef.current = map
-      setTimeout(() => map.invalidateSize(), 0)
-
-      // Home marker — a plain circular pin, no emoji.
-      const homeIcon = L.divIcon({
-        html: `
-          <div style="
-            width: 32px; height: 32px; border-radius: 50%;
-            background: ${BRAND}; border: 3px solid white;
-            box-shadow: 0 2px 6px rgba(21,63,50,0.35);
-            display:flex; align-items:center; justify-content:center;
-          ">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 11.5 12 4l9 7.5"/>
-              <path d="M5.5 10v9.5a1 1 0 0 0 1 1H17.5a1 1 0 0 0 1-1V10"/>
-            </svg>
-          </div>
-        `,
-        className: 'bt-home-pin',
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-      })
-      L.marker([CURRENT_USER_HOME.lat, CURRENT_USER_HOME.lng], { icon: homeIcon, zIndexOffset: 1000 })
-        .addTo(map)
-        .bindPopup(
-          `<div style="padding:12px;font-size:13px;font-weight:600;color:${BRAND};">Din bostad<br/><span style="font-weight:400;color:#6b7280;font-size:12px;">${CURRENT_USER_HOME.address}, ${CURRENT_USER_HOME.district}</span></div>`,
-          { maxWidth: 200, minWidth: 160 }
-        )
-
-      // Clustered listing markers — round building-icon pins with a count
-      // bubble when zoomed out, the same visual language as Booli/
-      // Bostadsförmedlingen's map (rather than the old rectangular price tags).
-      const cluster = (L as any).markerClusterGroup({
-        maxClusterRadius: 48,
+      const cluster = L.markerClusterGroup({
+        maxClusterRadius: 52,
         showCoverageOnHover: false,
         spiderfyOnMaxZoom: true,
-        iconCreateFunction: (c: any) =>
-          L.divIcon({
-            html: `<div style="
-              width: 38px; height: 38px; border-radius: 50%;
-              background: ${BRAND}; color: white; font-weight: 700; font-size: 14px;
-              display:flex; align-items:center; justify-content:center;
-              border: 3px solid white; box-shadow: 0 2px 8px rgba(21,63,50,0.3);
-            ">${c.getChildCount()}</div>`,
-            className: '',
-            iconSize: [38, 38],
-          }),
+        iconCreateFunction: (c) => {
+          const rents = c
+            .getAllChildMarkers()
+            .map((m) => findListingByMarker(m)?.rent)
+            .filter((r): r is number => typeof r === 'number')
+          return buildClusterIcon(L, c.getChildCount(), rents.length ? Math.min(...rents) : null)
+        },
       })
-
-      listings.forEach((listing) => {
-        const isSelected = listing.id === selectedId
-        const distKm = haversineKm(CURRENT_USER_HOME.lat, CURRENT_USER_HOME.lng, listing.lat, listing.lng)
-        const distLabel = formatDistance(distKm)
-
-        const amenityTags = [
-          listing.balcony && 'Balkong',
-          listing.elevator && 'Hiss',
-          listing.furnished && 'Möblerad',
-          listing.petsAllowed && 'Husdjur OK',
-        ].filter(Boolean) as string[]
-
-        const marker = L.marker([listing.lat, listing.lng], { icon: buildPinIcon(L, isSelected) })
-          .bindPopup(
-            `
-            <div style="width: 240px; overflow: hidden; font-family: inherit;">
-              <div style="position: relative;">
-                ${
-                  listing.images[0]
-                    ? `<img src="${listing.images[0]}" style="width:100%; height:140px; object-fit:cover; display:block;" />`
-                    : `<div style="width:100%; height:100px; background:#E3EBE2;"></div>`
-                }
-              </div>
-              <div style="padding: 14px;">
-                <p style="font-weight:700; font-size:14px; margin:0 0 2px; line-height:1.3; color:#15211E;">${listing.address}</p>
-                <p style="color:#6D716C; font-size:12px; margin:0 0 8px;">${listing.district} · Stockholm · ${distLabel} från din bostad</p>
-                <p style="color:#15211E; font-size:12.5px; margin:0 0 8px; font-weight:500;">
-                  ${listing.area} m² · ${listing.rooms} rum${listing.floor !== undefined ? ` · vån ${listing.floor}` : ''}
-                </p>
-                <p style="font-weight:700; color:${BRAND}; font-size:14.5px; margin:0 0 10px;">${formatRent(listing.rent)}</p>
-                ${
-                  amenityTags.length > 0
-                    ? `<div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px;">
-                        ${amenityTags
-                          .map(
-                            (t) =>
-                              `<span style="background:rgba(21,63,50,0.08); color:${BRAND}; font-size:11px; font-weight:600; padding:3px 8px; border-radius:999px;">${t}</span>`
-                          )
-                          .join('')}
-                      </div>`
-                    : ''
-                }
-                <div style="display:flex; align-items:center; justify-content:space-between; padding-top:8px; border-top:1px solid rgba(21,63,50,0.08); margin-bottom:10px;">
-                  <span style="color:#9EA69D; font-size:11px;">${formatDate(listing.createdAt)}</span>
-                  <span style="color:#A8B9A4; font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase;">Bytaren</span>
-                </div>
-                <a href="/annonser/${listing.id}" style="display:block; background:${BRAND}; color:white; text-align:center; padding:9px; border-radius:10px; font-size:12.5px; font-weight:600; text-decoration:none;">
-                  Visa annons
-                </a>
-              </div>
-            </div>
-          `,
-            { maxWidth: 260, minWidth: 240 }
-          )
-
-        marker.on('click', () => onSelect?.(listing.id))
-        markersByIdRef.current.set(listing.id, marker)
-        cluster.addLayer(marker)
-      })
-
       map.addLayer(cluster)
       clusterRef.current = cluster
+
+      const emitBounds = () => {
+        if (!map) return
+        const b = map.getBounds()
+        onBoundsChangeRef.current?.({ north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() })
+      }
+      // Light debounce: flyTo/fitBounds fire several moveends in a row and
+      // the list shouldn't re-render for each of them.
+      map.on('moveend', () => {
+        if (boundsTimer) clearTimeout(boundsTimer)
+        boundsTimer = setTimeout(emitBounds, 200)
+      })
+      // Clusters are re-rendered on zoom, which drops our highlight class.
+      map.on('zoomend', () => highlightCluster())
+
+      // Parent layout changes (sidebar toggles, mobile list overlay, window
+      // resizes) otherwise leave grey untiled strips.
+      resizeObserver = new ResizeObserver(() => map?.invalidateSize())
+      resizeObserver.observe(containerRef.current)
+
+      emitBounds()
+      setReady(true)
     }
 
-    initMap()
+    init()
 
     return () => {
       cancelled = true
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove()
-        mapInstanceRef.current = null
-      }
+      if (boundsTimer) clearTimeout(boundsTimer)
+      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current)
+      resizeObserver?.disconnect()
+      map?.remove()
+      mapRef.current = null
+      clusterRef.current = null
+      tileRef.current = null
+      homeLayerRef.current = null
+      locateLayerRef.current = null
+      activeClusterElRef.current = null
+      markerEntries.clear()
+      lastFitKeyRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listings])
+  }, [])
 
-  // Highlights the selected marker without touching the map/markers otherwise.
+  // Cluster icons are rebuilt on every zoom, so the marker → listing lookup
+  // must be O(1) rather than a scan of all markers.
+  function findListingByMarker(m: Marker): Listing | undefined {
+    return listingByMarkerRef.current.get(m)
+  }
+
+  function stateFor(id: string): MarkerState {
+    if (id === selectedIdRef.current) return 'selected'
+    if (id === hoveredIdRef.current) return 'hover'
+    return 'default'
+  }
+
+  // When the active marker is hidden inside a cluster, highlight that
+  // cluster bubble instead so hovering a card still shows *where* it is.
+  function highlightCluster() {
+    activeClusterElRef.current?.classList.remove('bt-cluster-active')
+    activeClusterElRef.current = null
+    const cluster = clusterRef.current
+    const activeId = hoveredIdRef.current ?? selectedIdRef.current
+    const entry = activeId ? markersRef.current.get(activeId) : undefined
+    if (!cluster || !entry) return
+    const parent = cluster.getVisibleParent(entry.marker)
+    if (parent && parent !== entry.marker) {
+      const el = parent.getElement()
+      el?.classList.add('bt-cluster-active')
+      activeClusterElRef.current = el ?? null
+    }
+  }
+
+  function fitToListings(list: Listing[], animate: boolean) {
+    const map = mapRef.current
+    const L = leafletRef.current
+    if (!map || !L) return
+    if (list.length > 0) {
+      map.fitBounds(L.latLngBounds(list.map((l) => [l.lat, l.lng] as [number, number])), { ...FIT_OPTIONS, animate })
+      return
+    }
+    // Nothing to show: centre on the districts being filtered on, if known,
+    // so the user at least sees the area they asked about.
+    const centers = (focusDistricts ?? []).map((d) => DISTRICT_CENTERS[d]).filter(Boolean)
+    if (centers.length === 1) map.setView(centers[0], 14, { animate })
+    else if (centers.length > 1) map.fitBounds(centers as LatLngBoundsExpression, { ...FIT_OPTIONS, animate })
+    else map.setView(center ?? STOCKHOLM, zoom, { animate })
+  }
+
+  // ── 2. Sync markers with `listings` ─────────────────────────────────────
+  // Rebuilds only the marker layer; the map, tiles and viewport survive.
   useEffect(() => {
     const L = leafletRef.current
-    if (!L) return
-    markersByIdRef.current.forEach((marker, id) => {
-      marker.setIcon(buildPinIcon(L, id === selectedId))
+    const cluster = clusterRef.current
+    if (!ready || !L || !cluster) return
+
+    cluster.clearLayers()
+    markersRef.current.clear()
+    activeClusterElRef.current = null
+
+    const markers = listings.map((listing) => {
+      const state = stateFor(listing.id)
+      const marker = L.marker([listing.lat, listing.lng], {
+        icon: buildPriceIcon(L, listing, state),
+        zIndexOffset: state === 'default' ? 0 : 1000,
+        title: listing.address,
+        riseOnHover: true,
+      })
+      // Popup content is built lazily on open so it always reflects the
+      // current home location (which loads after the listings).
+      marker.bindPopup(() => buildListingPopupHtml(listing, homeRef.current), { maxWidth: 260, minWidth: 240 })
+      marker.on('click', () => onSelectRef.current?.(listing.id))
+      marker.on('popupclose', () => {
+        if (selectedIdRef.current === listing.id) onSelectRef.current?.(null)
+      })
+      marker.on('mouseover', () => onHoverRef.current?.(listing.id))
+      marker.on('mouseout', () => onHoverRef.current?.(null))
+      markersRef.current.set(listing.id, { marker, listing, state })
+      listingByMarkerRef.current.set(marker, listing)
+      return marker
     })
-  }, [selectedId])
+    cluster.addLayers(markers)
+
+    // Fit only when the *set* of listings changes (first load, filter
+    // change) — not on re-sorts or unrelated re-renders, which would yank
+    // the viewport away from wherever the user panned to.
+    const fitKey = listings.map((l) => l.id).sort().join(',')
+    // Skipped while loading so the first real fit is instant rather than a
+    // fly-over from the empty default view.
+    if (!center && !loading && fitKey !== lastFitKeyRef.current) {
+      const isFirst = lastFitKeyRef.current === null
+      lastFitKeyRef.current = fitKey
+      fitToListings(listings, !isFirst)
+    }
+    highlightCluster()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listings, ready, loading])
+
+  // ── 3. Selection / hover → swap icons, raise, pan if off-screen ─────────
+  useEffect(() => {
+    const L = leafletRef.current
+    const map = mapRef.current
+    if (!ready || !L || !map) return
+
+    markersRef.current.forEach((entry, id) => {
+      const next = stateFor(id)
+      if (next === entry.state) return
+      entry.state = next
+      entry.marker.setIcon(buildPriceIcon(L, entry.listing, next))
+      entry.marker.setZIndexOffset(next === 'selected' ? 2000 : next === 'hover' ? 1000 : 0)
+    })
+    highlightCluster()
+
+    const activeId = hoveredId ?? selectedId
+    const entry = activeId ? markersRef.current.get(activeId) : undefined
+    if (entry && !map.getBounds().contains(entry.marker.getLatLng())) {
+      map.flyTo(entry.marker.getLatLng(), Math.max(map.getZoom(), 13), { duration: 0.6 })
+    }
+  }, [selectedId, hoveredId, ready])
+
+  // ── 4. Home marker ──────────────────────────────────────────────────────
+  // Depends on primitives: useHomeLocation returns a fresh object each render.
+  const homeLat = home?.lat
+  const homeLng = home?.lng
+  const homeAddress = home?.address
+  const homeDistrict = home?.district
+  useEffect(() => {
+    const L = leafletRef.current
+    const map = mapRef.current
+    if (!ready || !L || !map) return
+    homeLayerRef.current?.remove()
+    homeLayerRef.current = null
+    if (homeLat == null || homeLng == null) return
+    homeLayerRef.current = L.marker([homeLat, homeLng], {
+      icon: buildHomeIcon(L),
+      zIndexOffset: 3000,
+      title: 'Din bostad',
+    })
+      .bindPopup(
+        buildHomePopupHtml({ lat: homeLat, lng: homeLng, address: homeAddress ?? '', district: homeDistrict ?? '' }),
+        { maxWidth: 220, minWidth: 160 }
+      )
+      .addTo(map)
+  }, [ready, homeLat, homeLng, homeAddress, homeDistrict])
+
+  // ── 5. Basemap ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    tileRef.current?.setUrl(BASEMAPS[basemap].url)
+  }, [basemap, ready])
+
+  function locateMe() {
+    const L = leafletRef.current
+    const map = mapRef.current
+    if (!L || !map) return
+    if (!('geolocation' in navigator)) {
+      showNotice('Din webbläsare stöder inte platstjänster.')
+      return
+    }
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false)
+        if (!mapRef.current) return
+        const latlng: [number, number] = [pos.coords.latitude, pos.coords.longitude]
+        locateLayerRef.current?.remove()
+        locateLayerRef.current = L.layerGroup([
+          L.circle(latlng, {
+            radius: Math.min(pos.coords.accuracy, 1500),
+            color: '#2563EB',
+            weight: 1,
+            opacity: 0.35,
+            fillOpacity: 0.1,
+            interactive: false,
+          }),
+          L.circleMarker(latlng, {
+            radius: 7,
+            color: 'white',
+            weight: 3,
+            fillColor: '#2563EB',
+            fillOpacity: 1,
+          }).bindTooltip('Du är här', { direction: 'top', offset: [0, -8] }),
+        ]).addTo(mapRef.current)
+        mapRef.current.flyTo(latlng, Math.max(mapRef.current.getZoom(), 14), { duration: 0.8 })
+      },
+      (err) => {
+        setLocating(false)
+        showNotice(
+          err.code === err.PERMISSION_DENIED
+            ? 'Platsåtkomst nekad. Tillåt plats i webbläsarens inställningar.'
+            : 'Kunde inte hämta din position just nu.'
+        )
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    )
+  }
+
+  const showBoundsToggle = searchInBounds !== undefined && !!onSearchInBoundsChange
+  const controlBtn =
+    'w-10 h-10 flex items-center justify-center text-gray-700 hover:bg-gray-50 hover:text-emerald-700 transition-colors disabled:opacity-50'
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={mapRef} className="w-full h-full" />
+    <div className="relative w-full h-full isolate">
+      <div ref={containerRef} className="w-full h-full" />
+
+      {/* Leaflet panes go up to z-index ~700, so overlays sit at z-[1000]. */}
+      {showBoundsToggle && (
+        <label
+          className="absolute top-3 left-3 z-[1000] flex items-center gap-2 rounded-full bg-white/95 backdrop-blur px-3.5 py-2 text-xs font-semibold text-gray-800 shadow-[0_2px_10px_rgba(15,30,24,0.14)] cursor-pointer select-none"
+        >
+          <input
+            type="checkbox"
+            checked={searchInBounds}
+            onChange={(e) => onSearchInBoundsChange?.(e.target.checked)}
+            className="w-4 h-4 accent-emerald-600 cursor-pointer"
+          />
+          Sök när kartan flyttas
+        </label>
+      )}
+
+      <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-2">
+        <div className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-[0_2px_10px_rgba(15,30,24,0.14)] divide-y divide-gray-100">
+          <button type="button" className={controlBtn} onClick={() => mapRef.current?.zoomIn()} aria-label="Zooma in" title="Zooma in">
+            <Plus size={18} />
+          </button>
+          <button type="button" className={controlBtn} onClick={() => mapRef.current?.zoomOut()} aria-label="Zooma ut" title="Zooma ut">
+            <Minus size={18} />
+          </button>
+        </div>
+        <div className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-[0_2px_10px_rgba(15,30,24,0.14)] divide-y divide-gray-100">
+          <button
+            type="button"
+            className={controlBtn}
+            onClick={locateMe}
+            disabled={locating}
+            aria-label="Min position"
+            title="Min position"
+          >
+            {locating ? <Loader2 size={17} className="animate-spin" /> : <LocateFixed size={17} />}
+          </button>
+          {!center && (
+            <button
+              type="button"
+              className={controlBtn}
+              onClick={() => fitToListings(listings, true)}
+              aria-label="Visa alla annonser"
+              title="Visa alla"
+            >
+              <Maximize2 size={16} />
+            </button>
+          )}
+          {home && (
+            <button
+              type="button"
+              className={controlBtn}
+              onClick={() => mapRef.current?.flyTo([home.lat, home.lng], 15, { duration: 0.8 })}
+              aria-label="Visa din bostad"
+              title="Din bostad"
+            >
+              <MapPin size={17} />
+            </button>
+          )}
+          <button
+            type="button"
+            className={controlBtn}
+            onClick={() => setBasemap((b) => (b === 'voyager' ? 'light' : 'voyager'))}
+            aria-label={`Byt kartstil (nu: ${BASEMAPS[basemap].label})`}
+            title={`Kartstil: ${BASEMAPS[basemap].label}`}
+          >
+            <Layers size={17} />
+          </button>
+        </div>
+      </div>
+
+      {ready && !loading && listings.length === 0 && (
+        <div className="pointer-events-none absolute inset-x-0 top-16 z-[1000] flex justify-center px-4">
+          <div className="rounded-2xl bg-white/95 px-4 py-3 text-center text-sm shadow-[0_4px_16px_rgba(15,30,24,0.14)]">
+            <p className="font-semibold text-gray-900">Inga annonser att visa här</p>
+            <p className="text-xs text-gray-500 mt-0.5">Prova att ändra dina filter.</p>
+          </div>
+        </div>
+      )}
+
+      {notice && (
+        <div
+          role="status"
+          className="absolute bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-[1000] max-w-[90%] rounded-xl bg-gray-900/90 px-4 py-2.5 text-xs font-medium text-white shadow-lg"
+        >
+          {notice}
+        </div>
+      )}
     </div>
   )
 }

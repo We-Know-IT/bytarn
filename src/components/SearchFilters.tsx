@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, SlidersHorizontal, X, Map, List, Bookmark } from 'lucide-react'
+import { Search, SlidersHorizontal, X, Map, List, Bookmark, Info } from 'lucide-react'
 import { STOCKHOLM_DISTRICTS } from '@/types'
 import { cn } from '@/lib/utils'
 import type { SearchFilters, SavedSearch } from '@/types'
@@ -10,6 +10,8 @@ interface SearchFiltersProps {
   filters: SearchFilters
   onFiltersChange: (filters: SearchFilters) => void
   resultCount: number
+  /** False when the user has no home location — "Närmast" can't be computed then. */
+  nearestAvailable?: boolean
 }
 
 const ROOM_OPTIONS = [1, 2, 3, 4, 5]
@@ -22,7 +24,12 @@ const SORT_OPTIONS: { value: SearchFilters['sort']; label: string }[] = [
   { value: 'nearest', label: 'Närmast' },
 ]
 
-export default function SearchFiltersComponent({ filters, onFiltersChange, resultCount }: SearchFiltersProps) {
+export default function SearchFiltersComponent({
+  filters,
+  onFiltersChange,
+  resultCount,
+  nearestAvailable = true,
+}: SearchFiltersProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [districtSearch, setDistrictSearch] = useState('')
   const [searchSaved, setSearchSaved] = useState(false)
@@ -61,6 +68,30 @@ export default function SearchFiltersComponent({ filters, onFiltersChange, resul
   const activeCount =
     filters.districts.length + filters.rooms.length + (filters.maxRent ? 1 : 0)
   const hasFilters = activeCount > 0
+
+  const nearestUnavailable = filters.sort === 'nearest' && !nearestAvailable
+
+  // Shared between the desktop bar and the mobile panel. "Närmast" stays
+  // selectable-looking but disabled without a home, with the reason inline.
+  const sortSelect = (className: string) => (
+    <select
+      value={filters.sort}
+      onChange={(e) => onFiltersChange({ ...filters, sort: e.target.value as SearchFilters['sort'] })}
+      aria-label="Sortera"
+      className={cn('text-sm rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 cursor-pointer', className)}
+      style={{ borderColor: '#DDD9D2', backgroundColor: '#F7F5F1', color: '#374151' }}
+    >
+      {SORT_OPTIONS.map((opt) => {
+        const disabled = opt.value === 'nearest' && !nearestAvailable
+        return (
+          <option key={opt.value} value={opt.value} disabled={disabled && filters.sort !== 'nearest'}>
+            {opt.label}
+            {disabled ? ' (kräver din bostad)' : ''}
+          </option>
+        )
+      })}
+    </select>
+  )
 
   const filteredDistricts = STOCKHOLM_DISTRICTS.filter((d) =>
     d.toLowerCase().includes(districtSearch.toLowerCase())
@@ -131,16 +162,7 @@ export default function SearchFiltersComponent({ filters, onFiltersChange, resul
           <div className="flex-1" />
 
           {/* Sort dropdown */}
-          <select
-            value={filters.sort}
-            onChange={(e) => onFiltersChange({ ...filters, sort: e.target.value as SearchFilters['sort'] })}
-            className="hidden sm:block text-sm rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 cursor-pointer"
-            style={{ borderColor: '#DDD9D2', backgroundColor: '#F7F5F1', color: '#374151' }}
-          >
-            {SORT_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+          {sortSelect('hidden sm:block')}
 
           {/* Result count */}
           <span className="text-sm text-gray-400 hidden sm:block flex-shrink-0">
@@ -178,9 +200,51 @@ export default function SearchFiltersComponent({ filters, onFiltersChange, resul
           </div>
         </div>
 
+        {nearestUnavailable && (
+          <p className="flex items-start gap-1.5 pb-3 text-xs text-gray-500">
+            <Info size={13} className="mt-px flex-shrink-0 text-emerald-700" />
+            <span>
+              Sortering efter avstånd kräver att din bostad är angiven. Logga in och lägg upp din bostad —
+              tills dess visas de nyaste först.
+            </span>
+          </p>
+        )}
+
         {/* Advanced panel */}
         {showAdvanced && (
           <div className="border-t pb-4 pt-4 space-y-4" style={{ borderColor: '#EDEBE6' }}>
+            {/* Rooms + sort live in the top bar on larger screens; on phones
+                there's no room there, so they're repeated here. */}
+            <div className="grid grid-cols-1 gap-4 sm:hidden">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-2">Antal rum</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {ROOM_OPTIONS.map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => toggleRoom(r)}
+                      className={cn(
+                        'px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all',
+                        filters.rooms.includes(r)
+                          ? 'bg-emerald-600 border-emerald-600 text-white'
+                          : 'bg-white text-gray-600 hover:border-emerald-300'
+                      )}
+                      style={!filters.rooms.includes(r) ? { borderColor: '#DDD9D2' } : {}}
+                    >
+                      {r === 5 ? '5+' : r} rok
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-2">Sortera</p>
+                  {sortSelect('w-full')}
+                </div>
+                <span className="self-end pb-2 text-sm text-gray-400 flex-shrink-0">{resultCount} annonser</span>
+              </div>
+            </div>
+
             <div className="grid sm:grid-cols-2 gap-4">
               {/* Max rent */}
               <div>
