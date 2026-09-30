@@ -50,17 +50,25 @@ export default function AdminAdsPage() {
   const [uploading, setUploading] = useState(false)
   const isAdmin = profile?.isAdmin ?? false
 
+  const loadFailed = (err: unknown) => {
+    setError(`Kunde inte hämta annonsörer: ${describeListingError(err)}. Har migreringen 20260930_v3.sql körts?`)
+    setAds([])
+  }
+
   async function reload() {
-    try {
-      setAds(await fetchAllAds())
-    } catch (err) {
-      setError(`Kunde inte hämta annonsörer: ${describeListingError(err)}. Har migreringen 20260930_v3.sql körts?`)
-      setAds([])
-    }
+    await fetchAllAds().then(setAds, loadFailed)
   }
 
   useEffect(() => {
-    if (supabaseConfigured && isAdmin) reload()
+    if (!supabaseConfigured || !isAdmin) return
+    let cancelled = false
+    fetchAllAds().then(
+      (a) => !cancelled && setAds(a),
+      (err) => !cancelled && loadFailed(err)
+    )
+    return () => {
+      cancelled = true
+    }
   }, [isAdmin])
 
   async function handleSave(e: React.FormEvent) {

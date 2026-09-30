@@ -66,7 +66,7 @@ function AnnonserView() {
     rooms: roomsFromQuery(searchParams.get('rum')),
     maxRent: maxRentFromQuery(searchParams.get('maxhyra')),
     amenities: amenitiesFromQuery(searchParams.get('tillganglighet')),
-    view: 'list',
+    view: searchParams.get('vy') === 'karta' ? 'map' : 'list',
     sort: 'newest',
   }))
   const [selectedId, setSelectedId] = useState<string | null>(null)
