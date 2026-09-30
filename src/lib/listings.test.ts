@@ -12,7 +12,7 @@ describe('rowToListing', () => {
   const base = {
     id: 'l1', title: 'T', description: '', rooms: 2, rent: 8000, area: 50, district: 'Södermalm',
     address: 'Hornsgatan 1', lat: 59.3, lng: 18.0, images: [], status: 'aktiv', floor: null,
-    elevator: null, balcony: null, furnished: null, pets_allowed: null, video_url: null, view_count: null,
+    elevator: null, balcony: null, furnished: null, pets_allowed: null, stroller_friendly: null, wheelchair_accessible: null, video_url: null, view_count: null,
     created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z', user_id: 'u1', profiles: null,
   }
 

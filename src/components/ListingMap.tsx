@@ -92,7 +92,7 @@ export default function ListingMap({
   })
 
   const [ready, setReady] = useState(false)
-  const [basemap, setBasemap] = useState<BasemapKey>('voyager')
+  const [basemap, setBasemap] = useState<BasemapKey>('standard')
   const [locating, setLocating] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -133,10 +133,9 @@ export default function ListingMap({
       })
       mapRef.current = map
 
-      // Clean, low-saturation basemap — closer to Booli/Bostadsförmedlingen than a busy street map.
-      tileRef.current = L.tileLayer(BASEMAPS.voyager.url, {
-        attribution: '© OpenStreetMap © CARTO',
-        maxZoom: 19,
+      tileRef.current = L.tileLayer(BASEMAPS.standard.url, {
+        attribution: BASEMAPS.standard.attribution,
+        maxZoom: BASEMAPS.standard.maxZoom,
       }).addTo(map)
 
       const cluster = L.markerClusterGroup({
@@ -340,7 +339,16 @@ export default function ListingMap({
 
   // ── 5. Basemap ──────────────────────────────────────────────────────────
   useEffect(() => {
-    tileRef.current?.setUrl(BASEMAPS[basemap].url)
+    const map = mapRef.current
+    const tile = tileRef.current
+    if (!map || !tile) return
+    const prev = tile.getAttribution?.()
+    const next = BASEMAPS[basemap]
+    if (prev) map.attributionControl.removeAttribution(prev)
+    tile.options.attribution = next.attribution
+    tile.options.maxZoom = next.maxZoom
+    map.attributionControl.addAttribution(next.attribution)
+    tile.setUrl(next.url)
   }, [basemap, ready])
 
   function locateMe() {
@@ -457,7 +465,7 @@ export default function ListingMap({
           <button
             type="button"
             className={controlBtn}
-            onClick={() => setBasemap((b) => (b === 'voyager' ? 'light' : 'voyager'))}
+            onClick={() => setBasemap((b) => (b === 'standard' ? 'transit' : 'standard'))}
             aria-label={`Byt kartstil (nu: ${BASEMAPS[basemap].label})`}
             title={`Kartstil: ${BASEMAPS[basemap].label}`}
           >

@@ -28,7 +28,17 @@ export interface Listing {
   balcony?: boolean
   furnished?: boolean
   petsAllowed?: boolean
+  strollerFriendly?: boolean
+  wheelchairAccessible?: boolean
 }
+
+export type AmenityKey = 'elevator' | 'strollerFriendly' | 'wheelchairAccessible'
+
+export const AMENITIES: { key: AmenityKey; label: string; query: string }[] = [
+  { key: 'elevator', label: 'Hiss', query: 'hiss' },
+  { key: 'strollerFriendly', label: 'Barnvagnsanpassat', query: 'barnvagn' },
+  { key: 'wheelchairAccessible', label: 'Rullstolsanpassat', query: 'rullstol' },
+]
 
 export interface User {
   id: string
@@ -71,6 +81,7 @@ export interface SearchFilters {
   districts: string[]
   rooms: number[]
   maxRent: number | null
+  amenities?: AmenityKey[]
   view: 'list' | 'map'
   sort: 'newest' | 'rent_asc' | 'rent_desc' | 'best_match' | 'nearest'
 }

@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { Heart, Home, MapPin, Handshake, Video, BedDouble, Ruler, Images } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
-import type { Listing } from '@/types'
+import { AMENITIES, type Listing } from '@/types'
+import AmenityIcon from './AmenityIcon'
 import { cn, haversineKm, formatDistance } from '@/lib/utils'
 import { useHomeLocation } from '@/lib/useHomeLocation'
 import { useAuth } from '@/context/AuthContext'
@@ -233,7 +234,13 @@ export default function ListingCard({ listing, compact = false, favorited: initi
               <Ruler size={14} strokeWidth={1.75} className="text-gray-400" />
               {listing.area} m²
             </li>
-            {listing.balcony && !compact && <li>Balkong</li>}
+            {!compact &&
+              AMENITIES.filter((a) => listing[a.key]).map((a) => (
+                <li key={a.key} className="inline-flex items-center gap-1">
+                  <AmenityIcon amenity={a.key} size={14} className="text-gray-400" />
+                  {a.label}
+                </li>
+              ))}
           </ul>
 
           {/* Price */}

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
-  Users, Home, MessageSquare, Flag, Mail, Loader2, Sparkles, Trash2, Archive, Search, ImageOff, CheckSquare, Square,
+  Users, Home, MessageSquare, Flag, Mail, Megaphone, Loader2, Sparkles, Trash2, Archive, Search, ImageOff, CheckSquare, Square,
 } from 'lucide-react'
 import { createClient, supabaseConfigured } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
@@ -185,12 +185,20 @@ export default function AdminPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Admin</h1>
           <p className="text-gray-500 text-sm mt-1">Översikt, moderering och städning av annonser.</p>
         </div>
-        <Link
-          href="/admin/installningar"
-          className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          <Mail size={15} /> SMTP-inställningar
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/admin/annonsorer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <Megaphone size={15} /> Annonsörer
+          </Link>
+          <Link
+            href="/admin/installningar"
+            className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <Mail size={15} /> SMTP-inställningar
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">

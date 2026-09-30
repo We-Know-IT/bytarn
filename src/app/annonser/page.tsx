@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, Suspense, Fragment } from 'react'
 import { useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { fetchListings, describeListingError } from '@/lib/listings'
@@ -10,10 +10,14 @@ import { useAuth } from '@/context/AuthContext'
 import { useHomeLocation } from '@/lib/useHomeLocation'
 import SearchFiltersComponent from '@/components/SearchFilters'
 import ListingCard from '@/components/ListingCard'
+import AdSlot from '@/components/AdSlot'
 import { isInBounds, type MapBounds } from '@/components/map/bounds'
-import { STOCKHOLM_DISTRICTS, type Listing, type SearchFilters } from '@/types'
+import { STOCKHOLM_DISTRICTS, AMENITIES, type AmenityKey, type Listing, type SearchFilters } from '@/types'
 import { cn, haversineKm } from '@/lib/utils'
 import { Home, List, Map as MapIcon } from 'lucide-react'
+
+const AD_FIRST = 4
+const AD_EVERY = 8
 
 const ListingMap = dynamic(() => import('@/components/ListingMap'), {
   ssr: false,
@@ -40,13 +44,29 @@ function districtsFromQuery(q: string | null): string[] {
   return STOCKHOLM_DISTRICTS.filter((d) => d.toLowerCase().includes(needle))
 }
 
+// Quick filters from the home page: ?rum=1,2  ?maxhyra=10000  ?tillganglighet=hiss,barnvagn
+function roomsFromQuery(q: string | null): number[] {
+  return (q ?? '').split(',').map(Number).filter((n) => Number.isInteger(n) && n > 0)
+}
+
+function maxRentFromQuery(q: string | null): number | null {
+  const n = Number(q)
+  return q && Number.isFinite(n) && n > 0 ? n : null
+}
+
+function amenitiesFromQuery(q: string | null): AmenityKey[] {
+  const wanted = (q ?? '').split(',')
+  return AMENITIES.filter((a) => wanted.includes(a.query)).map((a) => a.key)
+}
+
 function AnnonserView() {
   const searchParams = useSearchParams()
   const [filters, setFilters] = useState<SearchFilters>(() => ({
     districts: districtsFromQuery(searchParams.get('omrade')),
-    rooms: [],
-    maxRent: null,
-    view: 'list',
+    rooms: roomsFromQuery(searchParams.get('rum')),
+    maxRent: maxRentFromQuery(searchParams.get('maxhyra')),
+    amenities: amenitiesFromQuery(searchParams.get('tillganglighet')),
+    view: searchParams.get('vy') === 'karta' ? 'map' : 'list',
     sort: 'newest',
   }))
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -86,6 +106,7 @@ function AnnonserView() {
       if (filters.districts.length > 0 && !filters.districts.includes(l.district)) return false
       if (filters.rooms.length > 0 && !filters.rooms.includes(l.rooms)) return false
       if (filters.maxRent !== null && l.rent > filters.maxRent) return false
+      if (filters.amenities?.some((a) => !l[a])) return false
       return true
     })
 
@@ -149,13 +170,18 @@ function AnnonserView() {
               <EmptyState />
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {filtered.map((listing) => (
-                  <ListingCard
-                    key={listing.id}
-                    listing={listing}
-                    favorited={favoriteIds.has(listing.id)}
-                    mutualMatch={matchedOwnerIds.has(listing.userId)}
-                  />
+                {filtered.map((listing, i) => (
+                  <Fragment key={listing.id}>
+                    <ListingCard
+                      listing={listing}
+                      favorited={favoriteIds.has(listing.id)}
+                      mutualMatch={matchedOwnerIds.has(listing.userId)}
+                    />
+                    {/* A sponsored card after the 4th listing, then every 8th. */}
+                    {(i + 1) % AD_EVERY === AD_FIRST % AD_EVERY && i + 1 >= AD_FIRST && (
+                      <AdSlot placement="listing_grid" variant="card" index={Math.floor((i + 1) / AD_EVERY)} />
+                    )}
+                  </Fragment>
                 ))}
               </div>
             )}

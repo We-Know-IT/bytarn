@@ -15,10 +15,6 @@ import {
   Share2,
   Flag,
   X,
-  MoveVertical,
-  Trees,
-  Sofa,
-  PawPrint,
   Handshake,
   Pencil,
   Eye,
@@ -28,7 +24,9 @@ import { fetchListingById, fetchListings, fetchMyListings, reportListing, record
 import { addFavorite, removeFavorite, fetchFavoriteListingIds } from '@/lib/favorites'
 import { expressInterest, removeInterest, fetchMyInterestListingIds, fetchInterestCount, fetchMutualMatchUserIds } from '@/lib/interests'
 import { getOrCreateConversation } from '@/lib/messages'
-import type { Listing } from '@/types'
+import { AMENITIES, type Listing } from '@/types'
+import AmenityIcon from '@/components/AmenityIcon'
+import AdSlot from '@/components/AdSlot'
 import { formatRent, formatDate, cn } from '@/lib/utils'
 import ListingCard from '@/components/ListingCard'
 import { useAuth } from '@/context/AuthContext'
@@ -437,23 +435,18 @@ export default function ListingDetailPage() {
           </div>
 
           {/* Amenities */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            {[
-              { label: 'Hiss', value: listing.elevator, Icon: MoveVertical },
-              { label: 'Balkong', value: listing.balcony, Icon: Trees },
-              { label: 'Möblerad', value: listing.furnished, Icon: Sofa },
-              { label: 'Husdjur OK', value: listing.petsAllowed, Icon: PawPrint },
-            ].map((item) => (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+            {AMENITIES.map((item) => (
               <div
-                key={item.label}
+                key={item.key}
                 className={cn(
                   'flex items-center gap-2 p-3 rounded-xl text-sm',
-                  item.value ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-400'
+                  listing[item.key] ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-400'
                 )}
               >
-                <item.Icon size={16} strokeWidth={1.75} />
+                <AmenityIcon amenity={item.key} size={16} />
                 <span className="font-medium">{item.label}</span>
-                {item.value ? (
+                {listing[item.key] ? (
                   <CheckCircle size={14} className="ml-auto text-emerald-500" />
                 ) : (
                   <span className="ml-auto text-xs">Nej</span>
@@ -591,6 +584,8 @@ export default function ListingDetailPage() {
                 ))}
               </div>
             </div>
+
+            <AdSlot placement="listing_detail" />
 
             <button
               onClick={handleReport}
