@@ -217,6 +217,18 @@ function toRow(input: CreateListingInput) {
   }
 }
 
+// Columns added by migration 20260930_v3. If the code deploys before that
+// migration has run, retry without them rather than failing every publish.
+const V3_COLUMNS = ['stroller_friendly', 'wheelchair_accessible'] as const
+
+function isMissingV3Column(error: { code?: string; message?: string } | null): boolean {
+  return !!error && error.code === 'PGRST204' && V3_COLUMNS.some((c) => error.message?.includes(c))
+}
+
+function withoutV3Columns(row: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(row).filter(([k]) => !(V3_COLUMNS as readonly string[]).includes(k)))
+}
+
 function freshExpiry(): string {
   return addDays(new Date().toISOString(), LISTING_LIFETIME_DAYS)
 }
@@ -235,11 +247,10 @@ async function ensureProfile(userId: string, fallbackName: string): Promise<void
 export async function createListing(input: CreateListingInput, userId: string, userName = 'Användare'): Promise<string> {
   const supabase = createClient()
   await ensureProfile(userId, userName)
-  const { data, error } = await supabase
-    .from('listings')
-    .insert({ ...toRow(input), user_id: userId, status: 'aktiv', expires_at: freshExpiry() })
-    .select('id')
-    .single()
+  const row = { ...toRow(input), user_id: userId, status: 'aktiv', expires_at: freshExpiry() }
+  const insert = (r: Record<string, unknown>) => supabase.from('listings').insert(r).select('id').single()
+  let { data, error } = await insert(row)
+  if (isMissingV3Column(error)) ({ data, error } = await insert(withoutV3Columns(row)))
 
   if (error || !data) throw error ?? new Error('Kunde inte skapa annonsen.')
   return data.id
@@ -247,10 +258,10 @@ export async function createListing(input: CreateListingInput, userId: string, u
 
 export async function updateListing(id: string, input: CreateListingInput): Promise<void> {
   const supabase = createClient()
-  const { error } = await supabase
-    .from('listings')
-    .update({ ...toRow(input), updated_at: new Date().toISOString() })
-    .eq('id', id)
+  const row = { ...toRow(input), updated_at: new Date().toISOString() }
+  const update = (r: Record<string, unknown>) => supabase.from('listings').update(r).eq('id', id)
+  let { error } = await update(row)
+  if (isMissingV3Column(error)) ({ error } = await update(withoutV3Columns(row)))
 
   if (error) throw error
 }
