@@ -4,9 +4,10 @@ import Link from 'next/link'
 import { LogoMark } from '@/components/ui/Logo'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Eye, EyeOff, CheckCircle, Fingerprint, Mail } from 'lucide-react'
+import { Eye, EyeOff, CheckCircle, Fingerprint, Mail, User, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient, supabaseConfigured } from '@/lib/supabase/client'
+import { pendingHouseholdMetadata, savePendingHousehold, type PendingHousehold } from '@/lib/pendingHousehold'
 
 export default function RegistreraPage() {
   const router = useRouter()
@@ -16,6 +17,26 @@ export default function RegistreraPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [confirmSent, setConfirmSent] = useState(false)
+  const [accountType, setAccountType] = useState<'single' | 'family'>('single')
+  const [household, setHousehold] = useState({ name: '', inviteEmail: '' })
+
+  const inviteEmailInvalid =
+    accountType === 'family' && household.inviteEmail.trim() !== '' && !/^\S+@\S+\.\S+$/.test(household.inviteEmail.trim())
+
+  // Remembered until the user is signed in; PendingHouseholdSetup then
+  // creates the family account (and sends the invite).
+  function pendingHousehold(): PendingHousehold | null {
+    if (accountType !== 'family') return null
+    return {
+      name: household.name.trim() || 'Vårt hushåll',
+      inviteEmail: household.inviteEmail.trim() || undefined,
+    }
+  }
+
+  function rememberHousehold() {
+    const p = pendingHousehold()
+    if (p) savePendingHousehold(p)
+  }
 
   async function handleSignUp() {
     setError(null)
@@ -25,10 +46,15 @@ export default function RegistreraPage() {
     }
     setLoading(true)
     const supabase = createClient()
+    const pending = pendingHousehold()
+    if (pending) savePendingHousehold(pending)
     const { data, error: authError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
-      options: { data: { name: form.name } },
+      options: {
+        data: { name: form.name, ...(pending ? pendingHouseholdMetadata(pending) : {}) },
+        emailRedirectTo: `${window.location.origin}/onboarding`,
+      },
     })
     setLoading(false)
     if (authError) {
@@ -50,6 +76,7 @@ export default function RegistreraPage() {
       setError('Backend är inte konfigurerad i den här miljön ännu (saknar Supabase-uppgifter).')
       return
     }
+    rememberHousehold()
     const supabase = createClient()
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -71,6 +98,7 @@ export default function RegistreraPage() {
             <p className="text-gray-500 text-sm mb-6">
               Vi har skickat ett bekräftelsemail till <strong className="text-gray-700">{form.email}</strong>.
               Klicka på länken i mejlet för att aktivera kontot och logga in.
+              {accountType === 'family' && ' Familjekontot skapas när du loggar in första gången.'}
             </p>
             <Link href="/logga-in" className="text-emerald-600 font-medium hover:underline text-sm">
               Till inloggning
@@ -100,9 +128,67 @@ export default function RegistreraPage() {
             <p className="text-gray-600 text-[14.5px] mt-2">Gratis, alltid</p>
           </div>
 
+          {/* Account type */}
+          <fieldset className="mb-6">
+            <legend className="label mb-2">Vem gäller kontot?</legend>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { value: 'single', label: 'Bara mig', Icon: User },
+                { value: 'family', label: 'Hela hushållet', Icon: Users },
+              ] as const).map(({ value, label, Icon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={accountType === value}
+                  onClick={() => setAccountType(value)}
+                  className={cn(
+                    'flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-3 text-[14px] font-semibold transition-colors',
+                    accountType === value
+                      ? 'border-[#153F32] bg-[#153F32] text-white'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-[#153F32]'
+                  )}
+                >
+                  <Icon size={16} /> {label}
+                </button>
+              ))}
+            </div>
+            {accountType === 'family' && (
+              <div className="mt-4 space-y-3 rounded-xl bg-[#F5F0E8] p-4">
+                <p className="text-[13px] text-gray-600">
+                  Med ett familjekonto kan alla i hushållet se, redigera och pausa varandras annonser. Var och en
+                  loggar in med sitt eget konto.
+                </p>
+                <div>
+                  <label className="label">Hushållets namn</label>
+                  <input
+                    type="text"
+                    value={household.name}
+                    onChange={(e) => setHousehold({ ...household, name: e.target.value })}
+                    placeholder="Familjen Svensson"
+                    maxLength={60}
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label className="label">Bjud in sambo/partner (valfritt)</label>
+                  <input
+                    type="email"
+                    value={household.inviteEmail}
+                    onChange={(e) => setHousehold({ ...household, inviteEmail: e.target.value })}
+                    placeholder="partner@email.se"
+                    className="input"
+                  />
+                  {inviteEmailInvalid && <p className="mt-1 text-xs text-red-600">Kontrollera e-postadressen.</p>}
+                  <p className="mt-1 text-xs text-gray-500">Fler kan bjudas in senare från familjesidan.</p>
+                </div>
+              </div>
+            )}
+          </fieldset>
+
           {/* BankID */}
           <a
             href="/api/auth/bankid/start"
+            onClick={rememberHousehold}
             className="btn btn-block mb-3 bg-[#0e5c9e] text-white hover:bg-[#0a4a80]"
           >
             <Fingerprint size={18} strokeWidth={2} />
@@ -214,7 +300,7 @@ export default function RegistreraPage() {
             </label>
 
             <button
-              disabled={loading || !agreed || !form.name || !form.email || form.password.length < 8}
+              disabled={loading || !agreed || !form.name || !form.email || form.password.length < 8 || inviteEmailInvalid}
               onClick={handleSignUp}
               className="btn btn-primary btn-lg btn-block"
             >
