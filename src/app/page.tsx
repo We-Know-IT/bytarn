@@ -45,6 +45,80 @@ const SAFETY = [
   },
 ]
 
+function formatRentShort(rent: number) {
+  return `${new Intl.NumberFormat('sv-SE').format(rent)} kr/mån`
+}
+
+function HeroListingCard({ listing, size }: { listing: Listing; size: 'lg' | 'sm' }) {
+  const image = listing.images.find(Boolean)
+  return (
+    <Link
+      href={`/annonser/${listing.id}`}
+      className="group block overflow-hidden rounded-[24px] bg-white shadow-[0_20px_60px_rgba(13,45,38,0.16)] transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-offset-4"
+    >
+      <div className="aspect-[4/3] overflow-hidden bg-[#E3EBE2]">
+        {image ? (
+          <img src={image} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-[#A8B9A4]">
+            <Home size={size === 'lg' ? 40 : 28} strokeWidth={1.5} />
+          </div>
+        )}
+      </div>
+      <div className={size === 'lg' ? 'p-5' : 'p-4'}>
+        <p className="mb-1 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[#8FA38B]">{listing.district}, Stockholm</p>
+        <p className={size === 'lg' ? 'text-[17px] font-semibold text-gray-900' : 'text-[14.5px] font-semibold text-gray-900'}>
+          {listing.rooms} rok · {listing.area} m²
+        </p>
+        <p className={size === 'lg' ? 'mt-0.5 text-[15px] font-bold text-[#153F32]' : 'mt-0.5 text-[13.5px] font-bold text-[#153F32]'}>
+          {formatRentShort(listing.rent)}
+        </p>
+      </div>
+    </Link>
+  )
+}
+
+// The two newest real listings, overlapping. No placeholders or invented
+// listings: with none published yet it invites the visitor to be first.
+function HeroListings({ listings, loaded, total }: { listings: Listing[]; loaded: boolean; total: number }) {
+  if (!loaded) {
+    return <div className="mx-auto aspect-[4/3] w-full max-w-[520px] animate-pulse rounded-[24px] bg-[#E9EEE7]" aria-hidden />
+  }
+  if (listings.length === 0) {
+    return (
+      <div className="card-muted mx-auto flex max-w-[520px] flex-col items-start gap-4 p-8">
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#153F32]">
+          <Home size={22} strokeWidth={1.75} />
+        </span>
+        <p className="text-[18px] font-semibold text-gray-900">Bli först ut</p>
+        <p className="text-[14.5px] text-gray-600">Inga lägenheter är upplagda ännu. Lägg upp din så syns den här.</p>
+        <Link href="/annonser/ny" className="btn btn-primary">
+          <Plus size={16} strokeWidth={2.25} /> Lägg upp annons
+        </Link>
+      </div>
+    )
+  }
+  const [first, second] = listings
+  return (
+    <div className="relative mx-auto w-full max-w-[560px]">
+      <div className={second ? 'w-[82%]' : 'w-full'}>
+        <HeroListingCard listing={first} size="lg" />
+      </div>
+      {second && (
+        <div className="relative -mt-24 ml-auto w-[52%] sm:-mt-32">
+          <HeroListingCard listing={second} size="sm" />
+        </div>
+      )}
+      <Link
+        href="/annonser"
+        className="mt-5 inline-flex items-center gap-1 text-[14px] font-semibold text-[#153F32] hover:underline"
+      >
+        {total === 1 ? 'Se annonsen' : `Se alla ${total} annonser`} <ArrowRight size={15} />
+      </Link>
+    </div>
+  )
+}
+
 export default function HomePage() {
   const [listings, setListings] = useState<Listing[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -87,25 +161,7 @@ export default function HomePage() {
           </div>
 
           <div className="min-w-0">
-            <div className="card overflow-hidden">
-              <div className="flex items-center justify-between gap-3 border-b border-[rgba(21,63,50,0.07)] px-4 py-3">
-                <p className="text-[14px] font-semibold text-gray-900">
-                  {!loaded
-                    ? 'Laddar annonser…'
-                    : active.length === 0
-                      ? 'Inga annonser ute ännu'
-                      : `${active.length} ${active.length === 1 ? 'lägenhet' : 'lägenheter'} ute för byte`}
-                </p>
-                <Link href="/annonser?vy=karta" className="inline-flex items-center gap-1 text-[13.5px] font-semibold text-[#153F32] hover:underline">
-                  Öppna kartan <ArrowRight size={14} />
-                </Link>
-              </div>
-              <div className="h-[320px] sm:h-[420px] lg:h-[460px]">
-                {/* The header above already says when there are none; the map's own
-                    empty hint talks about filters, which don't exist here. */}
-                <ListingMap listings={active} loading={!loaded || active.length === 0} />
-              </div>
-            </div>
+            <HeroListings listings={active.slice(0, 2)} loaded={loaded} total={active.length} />
           </div>
         </div>
       </section>
@@ -158,6 +214,22 @@ export default function HomePage() {
           )}
 
           <AdSlot placement="home" className="mt-10" />
+        </div>
+      </section>
+
+      {/* ── Map ─────────────────────────────────────────────────────── */}
+      <section className="section pt-0">
+        <div className="container-page">
+          <div className="mb-8 flex items-end justify-between gap-4">
+            <h2 className="text-[26px] font-semibold tracking-[-0.015em] text-gray-900 sm:text-[30px]">Se var bytena finns</h2>
+            <Link href="/annonser?vy=karta" className="inline-flex items-center gap-1 text-[14px] font-semibold text-[#153F32] hover:underline">
+              Öppna kartan <ArrowRight size={15} />
+            </Link>
+          </div>
+          <div className="card h-[360px] overflow-hidden sm:h-[460px]">
+            {/* An empty map's own hint talks about filters, which don't exist here. */}
+            <ListingMap listings={active} loading={!loaded || active.length === 0} />
+          </div>
         </div>
       </section>
 
