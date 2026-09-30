@@ -218,14 +218,20 @@ export function buildListingPopupHtml(listing: Listing, home: HomeLocation | nul
   `
 }
 
+// Keyless tile servers only — Carto's basemaps now require an API key and
+// render "API KEY REQUIRED" watermarks without one.
 export const BASEMAPS = {
-  voyager: {
-    label: 'Färg',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  standard: {
+    label: 'Karta',
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '© OpenStreetMap',
+    maxZoom: 19,
   },
-  light: {
-    label: 'Ljus',
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  transit: {
+    label: 'Kollektivtrafik',
+    url: 'https://tileserver.memomaps.de/tilegen/{z}/{x}/{y}.png',
+    attribution: '© OpenStreetMap · ÖPNVKarte',
+    maxZoom: 18,
   },
 } as const
 export type BasemapKey = keyof typeof BASEMAPS
