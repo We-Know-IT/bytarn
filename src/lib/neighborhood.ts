@@ -18,7 +18,7 @@ export interface Neighborhood {
   groceries: NearbyPlace[]
 }
 
-interface OverpassElement {
+export interface OverpassElement {
   lat?: number
   lon?: number
   center?: { lat: number; lon: number }

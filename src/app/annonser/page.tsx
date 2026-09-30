@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, Suspense, Fragment } from 'react'
 import { useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { fetchListings, describeListingError } from '@/lib/listings'
@@ -10,10 +10,14 @@ import { useAuth } from '@/context/AuthContext'
 import { useHomeLocation } from '@/lib/useHomeLocation'
 import SearchFiltersComponent from '@/components/SearchFilters'
 import ListingCard from '@/components/ListingCard'
+import AdSlot from '@/components/AdSlot'
 import { isInBounds, type MapBounds } from '@/components/map/bounds'
 import { STOCKHOLM_DISTRICTS, AMENITIES, type AmenityKey, type Listing, type SearchFilters } from '@/types'
 import { cn, haversineKm } from '@/lib/utils'
 import { Home, List, Map as MapIcon } from 'lucide-react'
+
+const AD_FIRST = 4
+const AD_EVERY = 8
 
 const ListingMap = dynamic(() => import('@/components/ListingMap'), {
   ssr: false,
@@ -166,13 +170,18 @@ function AnnonserView() {
               <EmptyState />
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {filtered.map((listing) => (
-                  <ListingCard
-                    key={listing.id}
-                    listing={listing}
-                    favorited={favoriteIds.has(listing.id)}
-                    mutualMatch={matchedOwnerIds.has(listing.userId)}
-                  />
+                {filtered.map((listing, i) => (
+                  <Fragment key={listing.id}>
+                    <ListingCard
+                      listing={listing}
+                      favorited={favoriteIds.has(listing.id)}
+                      mutualMatch={matchedOwnerIds.has(listing.userId)}
+                    />
+                    {/* A sponsored card after the 4th listing, then every 8th. */}
+                    {(i + 1) % AD_EVERY === AD_FIRST % AD_EVERY && i + 1 >= AD_FIRST && (
+                      <AdSlot placement="listing_grid" variant="card" index={Math.floor((i + 1) / AD_EVERY)} />
+                    )}
+                  </Fragment>
                 ))}
               </div>
             )}

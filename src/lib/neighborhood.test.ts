@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { buildOverpassQuery, describeNeighborhood, parseOverpass, titlePhrase, walkMinutes } from './neighborhood'
+import { buildOverpassQuery, describeNeighborhood, parseOverpass, titlePhrase, walkMinutes, type OverpassElement } from './neighborhood'
 
 // Götgatan ~ Medborgarplatsen
 const LAT = 59.3143
 const LNG = 18.0735
 
-const elements = [
+const elements: OverpassElement[] = [
   { lat: 59.3146, lon: 18.0736, tags: { railway: 'station', station: 'subway', name: 'Medborgarplatsen' } },
   { lat: 59.3147, lon: 18.0737, tags: { railway: 'station', station: 'subway', name: 'Medborgarplatsen' } },
   { lat: 59.3079, lon: 18.0762, tags: { railway: 'station', station: 'subway', name: 'Skanstull' } },
@@ -50,7 +50,7 @@ describe('describeNeighborhood', () => {
   })
 
   it('drops stations beyond a 15 minute walk', () => {
-    const far = [{ lat: LAT + 0.012, lon: LNG, tags: { railway: 'station', station: 'subway', name: 'Långt bort' } }]
+    const far: OverpassElement[] = [{ lat: LAT + 0.012, lon: LNG, tags: { railway: 'station', station: 'subway', name: 'Långt bort' } }]
     expect(describeNeighborhood(parseOverpass(far, LAT, LNG))).toEqual([])
   })
 })

@@ -26,6 +26,7 @@ import { expressInterest, removeInterest, fetchMyInterestListingIds, fetchIntere
 import { getOrCreateConversation } from '@/lib/messages'
 import { AMENITIES, type Listing } from '@/types'
 import AmenityIcon from '@/components/AmenityIcon'
+import AdSlot from '@/components/AdSlot'
 import { formatRent, formatDate, cn } from '@/lib/utils'
 import ListingCard from '@/components/ListingCard'
 import { useAuth } from '@/context/AuthContext'
@@ -583,6 +584,8 @@ export default function ListingDetailPage() {
                 ))}
               </div>
             </div>
+
+            <AdSlot placement="listing_detail" />
 
             <button
               onClick={handleReport}
