@@ -53,7 +53,7 @@ export default function RegistreraPage() {
       password: form.password,
       options: {
         data: { name: form.name, ...(pending ? pendingHouseholdMetadata(pending) : {}) },
-        emailRedirectTo: `${window.location.origin}/onboarding`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding&typ=bekraftelse`,
       },
     })
     setLoading(false)
@@ -80,7 +80,7 @@ export default function RegistreraPage() {
     const supabase = createClient()
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/onboarding` },
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=/onboarding` },
     })
     if (authError) setError(authError.message)
   }

@@ -8,9 +8,23 @@ import { Eye, EyeOff, Fingerprint, Loader2 } from 'lucide-react'
 import { createClient, supabaseConfigured } from '@/lib/supabase/client'
 
 const BANKID_ERRORS: Record<string, string> = {
+  google: 'Inloggningen med Google misslyckades. Försök igen.',
   bankid: 'BankID-inloggningen misslyckades. Försök igen.',
   bankid_state: 'Sessionen tog för lång tid. Försök igen.',
   bankid_avbruten: 'BankID-inloggningen avbröts. Försök igen.',
+}
+
+// Supabase/Google error text, with the setup mistakes spelled out.
+function describeOAuthDetail(detail: string | null): string | null {
+  if (!detail) return null
+  if (/provider is not enabled|unsupported provider/i.test(detail)) {
+    return 'Google-inloggning är inte aktiverad i Supabase (Authentication → Sign In / Providers → Google).'
+  }
+  if (/access_denied|cancel/i.test(detail)) return 'Inloggningen avbröts.'
+  if (/code verifier|flow state/i.test(detail)) {
+    return 'Inloggningen startades i en annan webbläsare eller tog för lång tid. Försök igen.'
+  }
+  return detail
 }
 
 export default function LoggaInPage() {
@@ -25,6 +39,8 @@ function LoggaInForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const bankIdError = searchParams.get('fel')
+  const errorDetail = describeOAuthDetail(searchParams.get('detalj'))
+  const confirmed = searchParams.get('info') === 'bekraftad'
   // Where to go after signing in, e.g. back to /annonser/ny or a family
   // invite. Only same-site paths are accepted (no "//evil.com").
   const nastaParam = searchParams.get('nasta')
@@ -64,7 +80,7 @@ function LoggaInForm() {
     const supabase = createClient()
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}${nasta}` },
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nasta)}` },
     })
     if (authError) setError(authError.message)
   }
@@ -80,9 +96,16 @@ function LoggaInForm() {
             <p className="text-gray-600 text-[14.5px] mt-2">Logga in på ditt konto</p>
           </div>
 
+          {confirmed && (
+            <div role="status" className="mb-4 rounded-[12px] border border-emerald-100 bg-emerald-50 px-3.5 py-3 text-[14px] text-emerald-800">
+              Din e-post är bekräftad. Logga in för att fortsätta.
+            </div>
+          )}
+
           {bankIdError && (
             <div role="alert" className="mb-4 rounded-[12px] border border-red-100 bg-red-50 px-3.5 py-3 text-[14px] text-red-700">
               {BANKID_ERRORS[bankIdError] ?? 'Något gick fel. Försök igen.'}
+              {errorDetail && <p className="mt-1 text-[12.5px] text-red-600/80">{errorDetail}</p>}
             </div>
           )}
 
