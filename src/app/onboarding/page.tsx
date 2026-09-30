@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, CheckCircle, MapPin, Home, Users, Bell, Map, Handshake, MessageSquare } from 'lucide-react'
-import { STOCKHOLM_DISTRICTS } from '@/types'
+import { STOCKHOLM_DISTRICTS, AMENITIES, type AmenityKey } from '@/types'
 import { cn } from '@/lib/utils'
 import AddressInput from '@/components/AddressInput'
 
@@ -28,8 +28,11 @@ export default function OnboardingPage() {
   const [area, setArea] = useState('')
   const [floor, setFloor] = useState('')
   const [rent, setRent] = useState('')
-  const [balcony, setBalcony] = useState(false)
-  const [elevator, setElevator] = useState(false)
+  const [amenities, setAmenities] = useState<Record<AmenityKey, boolean>>({
+    elevator: false,
+    strollerFriendly: false,
+    wheelchairAccessible: false,
+  })
 
   // Step 2 — desired
   const [wantDistricts, setWantDistricts] = useState<string[]>([])
@@ -45,7 +48,7 @@ export default function OnboardingPage() {
 
   function saveDraftAndContinue() {
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ district, address, rooms, area, floor, rent, balcony, elevator }))
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ district, address, rooms, area, floor, rent, ...amenities }))
     } catch {}
     setStep(2)
   }
@@ -191,19 +194,17 @@ export default function OnboardingPage() {
 
                 {/* Faciliteter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Faciliteter</label>
-                  <div className="flex gap-3">
-                    {[
-                      { label: 'Balkong', value: balcony, set: setBalcony },
-                      { label: 'Hiss', value: elevator, set: setElevator },
-                    ].map((item) => (
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tillgänglighet</label>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {AMENITIES.map((item) => (
                       <button
-                        key={item.label}
+                        key={item.key}
                         type="button"
-                        onClick={() => item.set(!item.value)}
+                        aria-pressed={amenities[item.key]}
+                        onClick={() => setAmenities((a) => ({ ...a, [item.key]: !a[item.key] }))}
                         className={cn(
-                          'flex-1 min-h-[44px] rounded-xl text-sm font-medium border transition-colors',
-                          item.value ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:border-emerald-600 hover:text-emerald-600'
+                          'flex-1 min-h-[44px] px-3 rounded-xl text-sm font-medium border transition-colors',
+                          amenities[item.key] ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:border-emerald-600 hover:text-emerald-600'
                         )}
                       >
                         {item.label}

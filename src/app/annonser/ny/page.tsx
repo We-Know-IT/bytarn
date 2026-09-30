@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Upload, X, Plus, MapPin, Info, MoveVertical, Trees, Sofa, PawPrint, Wand2, Loader2, Users, Mail, Video, AlertTriangle, LogIn } from 'lucide-react'
-import { STOCKHOLM_DISTRICTS } from '@/types'
+import { Upload, X, Plus, MapPin, Info, Wand2, Loader2, Users, Mail, Video, AlertTriangle, LogIn } from 'lucide-react'
+import { STOCKHOLM_DISTRICTS, AMENITIES } from '@/types'
+import AmenityIcon from '@/components/AmenityIcon'
+import { fetchNeighborhood, describeNeighborhood, titlePhrase, type Neighborhood } from '@/lib/neighborhood'
 import { cn } from '@/lib/utils'
 import AddressInput from '@/components/AddressInput'
 import { createListing, updateListing, fetchListingById, geocodeAddress, describeListingError, LISTING_LIFETIME_DAYS } from '@/lib/listings'
@@ -29,26 +31,41 @@ interface ListingFormData {
   balcony: boolean
   furnished: boolean
   petsAllowed: boolean
+  strollerFriendly: boolean
+  wheelchairAccessible: boolean
 }
 
-// Builds a title/description straight from the fields already filled in —
-// no external calls, just a factual summary of real data instead of a blank page.
-function suggestTitle(f: ListingFormData): string {
-  const amenities = [f.elevator && 'hiss', f.balcony && 'balkong', f.furnished && 'möblerad'].filter(Boolean) as string[]
+// Builds a title/description from the fields already filled in plus, when
+// the address is known, real nearby places from OpenStreetMap — never
+// invented details.
+function amenityWords(f: ListingFormData): string[] {
+  return AMENITIES.filter((a) => f[a.key]).map((a) => a.label.toLowerCase())
+}
+
+function suggestTitle(f: ListingFormData, area: Neighborhood | null): string {
+  const base = `${f.rooms || '?'} rok på ${f.district || 'okänd stadsdel'}`
+  const place = area && titlePhrase(area)
+  if (place) return `${base} ${place}`
+  const amenities = amenityWords(f)
   const suffix = amenities.length > 0 ? ` — ${amenities.join(', ')}` : f.area ? ` — ${f.area} m²` : ''
-  return `${f.rooms || '?'} rok på ${f.district || 'okänd stadsdel'}${suffix}`
+  return `${base}${suffix}`
 }
 
-function suggestDescription(f: ListingFormData): string {
-  const amenities = [f.elevator && 'hiss', f.balcony && 'balkong', f.furnished && 'möblerad', f.petsAllowed && 'husdjur tillåtet'].filter(Boolean) as string[]
-  const sentences = [
+function suggestDescription(f: ListingFormData, area: Neighborhood | null): string {
+  const home = [
     `${f.rooms || '?'}-rumslägenhet på ${f.area || '?'} m² i ${f.district || 'Stockholm'}${f.address ? `, ${f.address}` : ''}.`,
   ]
-  if (f.floor) sentences.push(`Ligger på våning ${f.floor}.`)
-  if (amenities.length > 0) sentences.push(`Har ${amenities.join(', ')}.`)
-  if (f.rent) sentences.push(`Hyra ${new Intl.NumberFormat('sv-SE').format(Number(f.rent))} kr/mån.`)
-  sentences.push('Söker byte i Stockholmsområdet.')
-  return sentences.join(' ')
+  if (f.floor) home.push(`Ligger på våning ${f.floor}${f.elevator ? ' med hiss' : ''}.`)
+  else if (f.elevator) home.push('Det finns hiss.')
+  const adapted = [f.strollerFriendly && 'barnvagnsanpassad', f.wheelchairAccessible && 'rullstolsanpassad'].filter(Boolean)
+  if (adapted.length > 0) home.push(`Bostaden är ${adapted.join(' och ')}.`)
+  if (f.rent) home.push(`Hyra ${new Intl.NumberFormat('sv-SE').format(Number(f.rent))} kr/mån.`)
+
+  const paragraphs = [home.join(' ')]
+  const areaSentences = area ? describeNeighborhood(area) : []
+  if (areaSentences.length > 0) paragraphs.push(`Området: ${areaSentences.join(' ')}`)
+  paragraphs.push('Söker byte i Stockholmsområdet.')
+  return paragraphs.join('\n\n')
 }
 
 export default function NyAnnonsPage() {
@@ -81,6 +98,9 @@ function NyAnnonsForm() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviting, setInviting] = useState(false)
   const [inviteError, setInviteError] = useState<string | null>(null)
+  const [suggesting, setSuggesting] = useState<'title' | 'description' | null>(null)
+  const [suggestNote, setSuggestNote] = useState<string | null>(null)
+  const areaCache = useRef<{ key: string; area: Neighborhood } | null>(null)
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -96,6 +116,8 @@ function NyAnnonsForm() {
     balcony: false,
     furnished: false,
     petsAllowed: false,
+    strollerFriendly: false,
+    wheelchairAccessible: false,
   })
 
   // If editing, pre-fill from the existing listing
@@ -122,6 +144,8 @@ function NyAnnonsForm() {
           balcony: listing.balcony ?? false,
           furnished: listing.furnished ?? false,
           petsAllowed: listing.petsAllowed ?? false,
+          strollerFriendly: listing.strollerFriendly ?? false,
+          wheelchairAccessible: listing.wheelchairAccessible ?? false,
         }))
         setImages(listing.images)
         setVideoUrl(listing.videoUrl ?? null)
@@ -142,8 +166,9 @@ function NyAnnonsForm() {
         area: draft.area ?? f.area,
         floor: draft.floor ?? f.floor,
         rent: draft.rent ?? f.rent,
-        balcony: draft.balcony ?? f.balcony,
         elevator: draft.elevator ?? f.elevator,
+        strollerFriendly: draft.strollerFriendly ?? f.strollerFriendly,
+        wheelchairAccessible: draft.wheelchairAccessible ?? f.wheelchairAccessible,
       }))
     } catch {}
   }, [editId])
@@ -209,8 +234,8 @@ function NyAnnonsForm() {
   // Places the listing on the map when the address was typed rather than
   // picked from the suggestions (previously this only surfaced as an error
   // on the very last step, after images had been uploaded).
-  async function resolveLocation(): Promise<{ lat: number; lng: number } | null> {
-    if (form.lat && form.lng) return { lat: form.lat, lng: form.lng }
+  async function resolveLocation(): Promise<{ lat: number; lng: number; exact: boolean } | null> {
+    if (form.lat && form.lng) return { lat: form.lat, lng: form.lng, exact: !approximateLocation }
     setLocating(true)
     const result = await geocodeAddress(form.address, form.district)
     setLocating(false)
@@ -218,6 +243,30 @@ function NyAnnonsForm() {
     setForm((f) => ({ ...f, lat: result.lat, lng: result.lng }))
     setApproximateLocation(!result.exact)
     return result
+  }
+
+  async function suggest(field: 'title' | 'description') {
+    setSuggesting(field)
+    setSuggestNote(null)
+    let area: Neighborhood | null = null
+    const loc = form.address.trim() ? await resolveLocation() : null
+    if (loc?.exact) {
+      const key = `${loc.lat},${loc.lng}`
+      try {
+        if (areaCache.current?.key !== key) areaCache.current = { key, area: await fetchNeighborhood(loc.lat, loc.lng) }
+        area = areaCache.current.area
+      } catch {
+        setSuggestNote('Kunde inte hämta information om området just nu. Förslaget bygger bara på det du fyllt i.')
+      }
+    } else {
+      setSuggestNote('Välj en adress från förslagslistan så tar förslaget med närområdet (tunnelbana, parker, skolor).')
+    }
+    setForm((f) =>
+      field === 'title'
+        ? { ...f, title: suggestTitle(f, area).slice(0, 80) }
+        : { ...f, description: suggestDescription(f, area) }
+    )
+    setSuggesting(null)
   }
 
   async function goToStep2() {
@@ -310,6 +359,8 @@ function NyAnnonsForm() {
         balcony: form.balcony,
         furnished: form.furnished,
         petsAllowed: form.petsAllowed,
+        strollerFriendly: form.strollerFriendly,
+        wheelchairAccessible: form.wheelchairAccessible,
       }
       if (isEditing && editId) {
         await updateListing(editId, input)
@@ -424,10 +475,11 @@ function NyAnnonsForm() {
               <label className="block text-sm font-medium text-gray-700">Rubrik *</label>
               <button
                 type="button"
-                onClick={() => setForm({ ...form, title: suggestTitle(form).slice(0, 80) })}
-                className="flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700"
+                onClick={() => suggest('title')}
+                disabled={suggesting !== null}
+                className="flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 disabled:opacity-60"
               >
-                <Wand2 size={12} />
+                {suggesting === 'title' ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />}
                 Föreslå
               </button>
             </div>
@@ -537,10 +589,11 @@ function NyAnnonsForm() {
               <label className="block text-sm font-medium text-gray-700">Beskrivning</label>
               <button
                 type="button"
-                onClick={() => setForm({ ...form, description: suggestDescription(form) })}
-                className="flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700"
+                onClick={() => suggest('description')}
+                disabled={suggesting !== null}
+                className="flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 disabled:opacity-60"
               >
-                <Wand2 size={12} />
+                {suggesting === 'description' ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />}
                 Föreslå
               </button>
             </div>
@@ -548,35 +601,30 @@ function NyAnnonsForm() {
               placeholder="Beskriv din bostad, vad du letar efter i ett byte, och eventuella villkor..."
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              rows={4}
+              rows={6}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
             />
+            {suggestNote && <p className="mt-1.5 text-xs text-gray-500">{suggestNote}</p>}
           </div>
 
           {/* Amenities */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Faciliteter</label>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { key: 'elevator', label: 'Hiss', Icon: MoveVertical },
-                { key: 'balcony', label: 'Balkong', Icon: Trees },
-                { key: 'furnished', label: 'Möblerad', Icon: Sofa },
-                { key: 'petsAllowed', label: 'Husdjur OK', Icon: PawPrint },
-              ].map((item) => (
+            <label className="block text-sm font-medium text-gray-700 mb-3">Tillgänglighet</label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {AMENITIES.map((item) => (
                 <button
                   key={item.key}
                   type="button"
-                  onClick={() =>
-                    setForm({ ...form, [item.key]: !form[item.key as keyof typeof form] })
-                  }
+                  aria-pressed={form[item.key]}
+                  onClick={() => setForm({ ...form, [item.key]: !form[item.key] })}
                   className={cn(
                     'flex items-center gap-2 p-3 rounded-xl border text-sm font-medium transition-all',
-                    form[item.key as keyof typeof form]
+                    form[item.key]
                       ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
                       : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
                   )}
                 >
-                  <item.Icon size={16} strokeWidth={1.75} />
+                  <AmenityIcon amenity={item.key} size={16} />
                   {item.label}
                 </button>
               ))}

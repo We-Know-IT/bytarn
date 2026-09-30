@@ -2,7 +2,7 @@
 // component itself only deals with lifecycle (create once, sync markers,
 // swap icons) rather than markup.
 import type * as Leaflet from 'leaflet'
-import type { Listing } from '@/types'
+import { AMENITIES, type Listing } from '@/types'
 import { formatRent, formatDate, haversineKm, formatDistance } from '@/lib/utils'
 import type { HomeLocation } from '@/lib/useHomeLocation'
 
@@ -169,12 +169,7 @@ export function buildListingPopupHtml(listing: Listing, home: HomeLocation | nul
   const distance = home
     ? ` · ${escapeHtml(formatDistance(haversineKm(home.lat, home.lng, listing.lat, listing.lng)))} från din bostad`
     : ''
-  const amenityTags = [
-    listing.balcony && 'Balkong',
-    listing.elevator && 'Hiss',
-    listing.furnished && 'Möblerad',
-    listing.petsAllowed && 'Husdjur OK',
-  ].filter(Boolean) as string[]
+  const amenityTags = AMENITIES.filter((a) => listing[a.key]).map((a) => a.label)
   const pill = (text: string) =>
     `<span style="background:rgba(21,63,50,0.08); color:${BRAND}; font-size:11px; font-weight:600; padding:3px 8px; border-radius:999px;">${escapeHtml(text)}</span>`
 

@@ -27,6 +27,8 @@ type ListingRow = {
   balcony: boolean | null
   furnished: boolean | null
   pets_allowed: boolean | null
+  stroller_friendly: boolean | null
+  wheelchair_accessible: boolean | null
   created_at: string
   updated_at: string
   user_id: string
@@ -62,6 +64,8 @@ export function rowToListing(row: ListingRow): Listing {
     balcony: row.balcony ?? undefined,
     furnished: row.furnished ?? undefined,
     petsAllowed: row.pets_allowed ?? undefined,
+    strollerFriendly: row.stroller_friendly ?? undefined,
+    wheelchairAccessible: row.wheelchair_accessible ?? undefined,
   }
 }
 
@@ -186,6 +190,8 @@ export interface CreateListingInput {
   balcony?: boolean
   furnished?: boolean
   petsAllowed?: boolean
+  strollerFriendly?: boolean
+  wheelchairAccessible?: boolean
 }
 
 function toRow(input: CreateListingInput) {
@@ -206,6 +212,8 @@ function toRow(input: CreateListingInput) {
     balcony: input.balcony ?? false,
     furnished: input.furnished ?? false,
     pets_allowed: input.petsAllowed ?? false,
+    stroller_friendly: input.strollerFriendly ?? false,
+    wheelchair_accessible: input.wheelchairAccessible ?? false,
   }
 }
 

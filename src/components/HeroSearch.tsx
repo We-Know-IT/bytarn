@@ -5,10 +5,10 @@ import { Search, MapPin, SlidersHorizontal } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 const QUICK_FILTERS = [
-  { label: '1–2 rum', query: 'rooms=1,2' },
-  { label: '3 rum', query: 'rooms=3' },
-  { label: 'Under 10 000 kr', query: 'maxRent=10000' },
-  { label: 'Balkong', query: 'balcony=true' },
+  { label: '1–2 rum', query: 'rum=1,2' },
+  { label: '3 rum', query: 'rum=3' },
+  { label: 'Under 10 000 kr', query: 'maxhyra=10000' },
+  { label: 'Hiss', query: 'tillganglighet=hiss' },
 ]
 
 export default function HeroSearch() {

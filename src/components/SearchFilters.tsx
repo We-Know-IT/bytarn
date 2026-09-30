@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Search, SlidersHorizontal, X, Map, List, Bookmark, Info } from 'lucide-react'
-import { STOCKHOLM_DISTRICTS } from '@/types'
+import { STOCKHOLM_DISTRICTS, AMENITIES, type AmenityKey } from '@/types'
 import { cn } from '@/lib/utils'
 import type { SearchFilters, SavedSearch } from '@/types'
 
@@ -48,15 +48,21 @@ export default function SearchFiltersComponent({
     onFiltersChange({ ...filters, rooms: next })
   }
 
+  function toggleAmenity(a: AmenityKey) {
+    const current = filters.amenities ?? []
+    const next = current.includes(a) ? current.filter((x) => x !== a) : [...current, a]
+    onFiltersChange({ ...filters, amenities: next })
+  }
+
   function clearAll() {
-    onFiltersChange({ districts: [], rooms: [], maxRent: null, view: filters.view, sort: filters.sort })
+    onFiltersChange({ districts: [], rooms: [], maxRent: null, amenities: [], view: filters.view, sort: filters.sort })
   }
 
   function saveSearch() {
     const saved: SavedSearch = {
       id: Date.now().toString(),
       name: `Sökning ${new Date().toLocaleDateString('sv-SE')}`,
-      filters: { districts: filters.districts, rooms: filters.rooms, maxRent: filters.maxRent },
+      filters: { districts: filters.districts, rooms: filters.rooms, maxRent: filters.maxRent, amenities: filters.amenities ?? [] },
       createdAt: new Date().toISOString(),
     }
     const existing: SavedSearch[] = JSON.parse(localStorage.getItem('bytaren_saved_searches') || '[]')
@@ -66,7 +72,7 @@ export default function SearchFiltersComponent({
   }
 
   const activeCount =
-    filters.districts.length + filters.rooms.length + (filters.maxRent ? 1 : 0)
+    filters.districts.length + filters.rooms.length + (filters.maxRent ? 1 : 0) + (filters.amenities?.length ?? 0)
   const hasFilters = activeCount > 0
 
   const nearestUnavailable = filters.sort === 'nearest' && !nearestAvailable
@@ -291,6 +297,30 @@ export default function SearchFiltersComponent({
                   ))}
                 </div>
               </div>
+
+              {/* Accessibility */}
+              <div className="sm:col-span-2">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-2">Tillgänglighet</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {AMENITIES.map((a) => {
+                    const on = filters.amenities?.includes(a.key) ?? false
+                    return (
+                      <button
+                        key={a.key}
+                        aria-pressed={on}
+                        onClick={() => toggleAmenity(a.key)}
+                        className={cn(
+                          'px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all',
+                          on ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white text-gray-600 hover:border-emerald-300'
+                        )}
+                        style={!on ? { borderColor: '#DDD9D2' } : {}}
+                      >
+                        {a.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -310,6 +340,14 @@ export default function SearchFiltersComponent({
               <span key={r} className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full border border-emerald-200">
                 {r} rum
                 <button onClick={() => toggleRoom(r)} className="hover:text-emerald-900">
+                  <X size={10} />
+                </button>
+              </span>
+            ))}
+            {AMENITIES.filter((a) => filters.amenities?.includes(a.key)).map((a) => (
+              <span key={a.key} className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full border border-emerald-200">
+                {a.label}
+                <button onClick={() => toggleAmenity(a.key)} className="hover:text-emerald-900" aria-label={`Ta bort ${a.label}`}>
                   <X size={10} />
                 </button>
               </span>
