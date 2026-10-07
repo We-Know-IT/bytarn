@@ -22,7 +22,7 @@ export async function fetchCollaborators(listingId: string): Promise<Collaborato
   }))
 }
 
-// Only works if the invitee already has a Bytaren account — there's no
+// Only works if the invitee already has a Hyresvägen account — there's no
 // email-sending infrastructure to invite someone who doesn't.
 export async function inviteCollaboratorByEmail(listingId: string, email: string): Promise<void> {
   const supabase = createClient()

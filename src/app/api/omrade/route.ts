@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
   for (const endpoint of OVERPASS_ENDPOINTS) {
     try {
       const res = await fetch(`${endpoint}?data=${query}`, {
-        headers: { 'User-Agent': 'Bytaren/1.0 (bostadsbyte i Stockholm)' },
+        headers: { 'User-Agent': 'Hyresvagen/1.0 (bostadsbyte i Stockholm; https://xn--hyresvgen-02a.se)' },
         signal: AbortSignal.timeout(20_000),
         next: { revalidate: 60 * 60 * 24 },
       })

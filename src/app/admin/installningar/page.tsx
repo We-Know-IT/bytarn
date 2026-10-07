@@ -316,7 +316,7 @@ export default function AdminInstallningarPage() {
                     className={inputClass}
                     value={form.fromName}
                     onChange={(e) => update('fromName', e.target.value)}
-                    placeholder="Bytaren"
+                    placeholder="Hyresvägen"
                     maxLength={100}
                   />
                 </label>
@@ -417,7 +417,7 @@ export default function AdminInstallningarPage() {
                 .
               </li>
               <li>
-                Skapa ett nytt applösenord, t.ex. med namnet ”Bytaren”. Google visar en kod på 16 bokstäver.
+                Skapa ett nytt applösenord, t.ex. med namnet ”Hyresvägen”. Google visar en kod på 16 bokstäver.
               </li>
               <li>
                 Klicka <em>Använd Gmail-förinställning</em> ovan, fyll i hela Gmail-adressen som användarnamn och
@@ -437,7 +437,7 @@ export default function AdminInstallningarPage() {
               <p className="font-semibold mb-1">Supabase Auths egna mejl ställs in separat</p>
               <p>
                 Bekräftelse av registrering, återställning av lösenord och inloggningslänkar skickas av Supabase, inte
-                av Bytaren. För att även de ska gå via Gmail: öppna{' '}
+                av Hyresvägen. För att även de ska gå via Gmail: öppna{' '}
                 <strong>Supabase Dashboard → Authentication → SMTP Settings</strong>, aktivera Custom SMTP och fyll i
                 samma värden (värd smtp.gmail.com, port 465, användarnamn = Gmail-adressen, lösenord = applösenordet,
                 avsändare = Gmail-adressen).

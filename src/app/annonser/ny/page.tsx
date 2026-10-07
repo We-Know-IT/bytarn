@@ -17,7 +17,7 @@ import { useAuth } from '@/context/AuthContext'
 import { supabaseConfigured } from '@/lib/supabase/client'
 
 const MAX_IMAGES = 10
-const DRAFT_KEY = 'bytaren_my_listing_draft'
+const DRAFT_KEY = 'hyresvagen_my_listing_draft'
 
 interface ListingFormData {
   title: string
@@ -784,7 +784,7 @@ function NyAnnonsForm() {
                 <h3 className="font-semibold text-gray-900 text-sm">Dela annonsen</h3>
               </div>
               <p className="text-xs text-gray-500 mb-4">
-                Bjud in någon att hantera just den här annonsen. Personen måste redan ha ett konto på Bytaren.
+                Bjud in någon att hantera just den här annonsen. Personen måste redan ha ett konto på Hyresvägen.
                 Vill ni dela alla era annonser? Skapa ett <Link href="/familj" className="text-emerald-700 underline">familjekonto</Link>.
               </p>
 
@@ -895,7 +895,7 @@ function NyAnnonsForm() {
             <Info size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-amber-700">
               {isEditing
-                ? 'Ändringarna syns direkt för alla på Bytaren.'
+                ? 'Ändringarna syns direkt för alla på Hyresvägen.'
                 : `Annonsen publiceras direkt och är synlig i ${LISTING_LIFETIME_DAYS} dagar. Du kan förlänga den i Annonshanteraren.`}
             </p>
           </div>

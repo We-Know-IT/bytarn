@@ -18,15 +18,15 @@ const ListingMap = dynamic(() => import('@/components/ListingMap'), {
 const STEPS = [
   {
     title: 'Lägg upp din lägenhet',
-    desc: 'Bilder, adress, hyra och vad du själv letar efter. Annonsen ligger ute i 60 dagar och kan förnyas.',
+    desc: 'Bilder, adress och hyra. Annonsen ligger ute i 60 dagar och kan förnyas. Berätta också vad du själv letar efter.',
   },
   {
     title: 'Hitta någon att byta med',
-    desc: 'Sök på kartan eller filtrera på rum, hyra, hiss och tillgänglighet. Visar ni båda intresse för varandras lägenheter blir det en match.',
+    desc: 'Sök på kartan eller filtrera på rum, hyra och tillgänglighet. Sortera på bäst match för att se vilka lägenheter som passar det du söker — och där din lägenhet passar det de söker.',
   },
   {
     title: 'Prata ihop er och ansök',
-    desc: 'Skriv till varandra här på Bytaren. Ett byte måste godkännas av era hyresvärdar innan ni flyttar.',
+    desc: 'Skriv till varandra här på Hyresvägen. Ett byte måste godkännas av era hyresvärdar innan ni flyttar.',
   },
 ]
 

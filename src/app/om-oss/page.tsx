@@ -7,7 +7,7 @@ export default function OmOssPage() {
     <div>
       <section className="border-b border-[rgba(21,63,50,0.06)]">
         <div className="container-page py-14 sm:py-20">
-          <PageHeader eyebrow="Om oss" title="Varför Bytaren finns" />
+          <PageHeader eyebrow="Om oss" title="Varför Hyresvägen finns" />
         </div>
       </section>
 
@@ -16,13 +16,13 @@ export default function OmOssPage() {
           <div className="prose-page text-[16px]">
             <p className="text-[18px] leading-[1.7] text-gray-800">
               Att byta hyresrätt direkt med någon annan är i teorin ett enkelt sätt att hitta ett nytt hem —
-              men i praktiken har det saknat en bra plats att göra det på. Bytaren är byggt för att lösa det:
+              men i praktiken har det saknat en bra plats att göra det på. Hyresvägen är byggd för att lösa det:
               en plats där du kan lägga upp din bostad, hitta andra som vill byta, och höra av dig direkt —
               utan mäklare och utan kö.
             </p>
             <p>
               Plattformen är gratis att använda. Vi tjänar inga pengar på att dölja information eller
-              sälja din data — Bytaren är en förmedlingsplats, inte en part i själva bytet. Det är alltid
+              sälja din data — Hyresvägen är en förmedlingsplats, inte en part i själva bytet. Det är alltid
               ni två som kommer överens om villkor och genomför bytet.
             </p>
             <p>

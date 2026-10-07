@@ -23,7 +23,7 @@ const COLUMNS = [
     ],
   },
   {
-    title: 'Bytaren',
+    title: 'Hyresvägen',
     links: [
       { label: 'Om oss', href: '/om-oss' },
       { label: 'Trygghet', href: '/trygghet' },
@@ -87,7 +87,7 @@ export default function Footer() {
 
         <div className="mt-12 flex flex-col-reverse gap-4 border-t border-white/10 pt-6 text-[12.5px] text-white/40 sm:flex-row sm:items-center sm:justify-between">
           <span>
-            © {new Date().getFullYear()} Bytaren · Bostadsbyte i Stockholm
+            © {new Date().getFullYear()} Hyresvägen · Bostadsbyte i Stockholm
             {/* Vercel exposes the deployed commit; shows which build you're on. */}
             {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA && (
               <> · version {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA.slice(0, 7)}</>

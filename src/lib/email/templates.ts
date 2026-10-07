@@ -61,7 +61,7 @@ function layout({ preheader, heading, bodyHtml, cta, footerHtml }: LayoutOptions
       <tr><td style="padding-bottom:16px">
         <table role="presentation" cellpadding="0" cellspacing="0"><tr>
           <td style="width:32px;height:32px;background:#059669;border-radius:9px;color:#ffffff;font-weight:700;text-align:center;font-size:16px">B</td>
-          <td style="padding-left:10px;font-weight:700;font-size:18px;color:#111827">Bytaren</td>
+          <td style="padding-left:10px;font-weight:700;font-size:18px;color:#111827">Hyresvägen</td>
         </tr></table>
       </td></tr>
       <tr><td style="background:#ffffff;border:1px solid #f3f4f6;border-radius:16px;padding:28px">
@@ -72,7 +72,7 @@ function layout({ preheader, heading, bodyHtml, cta, footerHtml }: LayoutOptions
         </table>
       </td></tr>
       <tr><td style="font-size:12px;color:#9ca3af;padding:16px 4px;line-height:1.5">
-        ${footerHtml ?? ''}${footerHtml ? '<br>' : ''}Bytaren – byt lägenhet enkelt och tryggt.
+        ${footerHtml ?? ''}${footerHtml ? '<br>' : ''}Hyresvägen – byt lägenhet enkelt och tryggt.
       </td></tr>
     </table>
   </td></tr>
@@ -88,16 +88,16 @@ export function householdInviteEmail(opts: {
 }): EmailContent {
   const household = opts.householdName || 'ett hushåll'
   const inviter = opts.inviterName || 'En användare'
-  const subject = headerSafe(`${inviter} har bjudit in dig till familjekontot ”${household}” på Bytaren`)
+  const subject = headerSafe(`${inviter} har bjudit in dig till familjekontot ”${household}” på Hyresvägen`)
   const html = layout({
     preheader: `Gå med i ${household} och hantera era bytesannonser tillsammans.`,
     heading: 'Du har blivit inbjuden till ett familjekonto',
-    bodyHtml: `<strong>${escapeHtml(inviter)}</strong> vill att du går med i familjekontot <strong>${escapeHtml(household)}</strong> på Bytaren.<br><br>
+    bodyHtml: `<strong>${escapeHtml(inviter)}</strong> vill att du går med i familjekontot <strong>${escapeHtml(household)}</strong> på Hyresvägen.<br><br>
       I ett familjekonto kan alla medlemmar hantera varandras annonser – redigera, pausa, förnya och ta bort – så att ni kan sköta ert lägenhetsbyte tillsammans.`,
     cta: { label: 'Visa inbjudan', url: opts.link },
     footerHtml: 'Väntade du dig inte den här inbjudan? Då kan du ignorera mejlet.',
   })
-  const text = `${inviter} har bjudit in dig till familjekontot "${household}" på Bytaren.
+  const text = `${inviter} har bjudit in dig till familjekontot "${household}" på Hyresvägen.
 
 I ett familjekonto kan alla medlemmar hantera varandras annonser – redigera, pausa, förnya och ta bort.
 
@@ -123,7 +123,7 @@ export function newMessageEmail(opts: {
     heading: `Nytt meddelande från ${sender}`,
     bodyHtml: `${escapeHtml(sender)} har skickat ett meddelande till dig${escapeHtml(about)}:
       <div style="margin-top:12px;padding:12px 14px;background:#f9fafb;border-left:3px solid #059669;border-radius:8px;color:#111827">${escapeHtml(preview)}</div>`,
-    cta: { label: 'Svara i Bytaren', url: opts.link },
+    cta: { label: 'Svara på Hyresvägen', url: opts.link },
     footerHtml:
       'Du får det här mejlet eftersom du har e-postaviseringar påslagna. Vi mejlar bara om det första olästa meddelandet i varje konversation.',
   })
@@ -137,14 +137,14 @@ Svara: ${opts.link}`
 
 export function testEmail(opts: { host: string; source: string }): EmailContent {
   const when = new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm' })
-  const subject = 'Testmejl från Bytaren'
+  const subject = 'Testmejl från Hyresvägen'
   const html = layout({
     preheader: 'SMTP-inställningarna fungerar.',
     heading: 'SMTP fungerar!',
-    bodyHtml: `Det här är ett testmejl från Bytaren. Om du läser det här är e-postinställningarna korrekta.<br><br>
+    bodyHtml: `Det här är ett testmejl från Hyresvägen. Om du läser det här är e-postinställningarna korrekta.<br><br>
       <span style="color:#6b7280;font-size:13px">Server: ${escapeHtml(opts.host)} · Källa: ${escapeHtml(opts.source)} · Skickat: ${escapeHtml(when)}</span>`,
   })
-  const text = `Det här är ett testmejl från Bytaren. Om du läser det här är e-postinställningarna korrekta.
+  const text = `Det här är ett testmejl från Hyresvägen. Om du läser det här är e-postinställningarna korrekta.
 
 Server: ${opts.host} · Källa: ${opts.source} · Skickat: ${when}`
   return { subject, html, text }

@@ -52,6 +52,9 @@ export async function GET(request: NextRequest) {
 
     // Personnumret används bara som stabil, hashad nyckel — det lagras aldrig i klartext.
     const idHash = createHash('sha256').update(personalIdNumber).digest('hex').slice(0, 32)
+    // Synthetic, never-mailed address that identifies the BankID account.
+    // Keep the domain as-is: existing BankID users are looked up by it, so
+    // changing it (e.g. with the rename to Hyresvägen) would orphan them.
     const email = `bankid-${idHash}@bytarn.internal`
 
     const admin = createAdminClient()

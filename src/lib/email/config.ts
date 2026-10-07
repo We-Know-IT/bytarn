@@ -27,7 +27,7 @@ export interface SmtpSettingsRow {
   updated_at?: string
 }
 
-export const DEFAULT_FROM_NAME = 'Bytaren'
+export const DEFAULT_FROM_NAME = 'Hyresvägen'
 
 export const GMAIL_PRESET = { host: 'smtp.gmail.com', port: 465, secure: true } as const
 

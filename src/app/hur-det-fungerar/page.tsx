@@ -11,7 +11,7 @@ const STEPS = [
   {
     step: '02',
     title: 'Sök och filtrera',
-    desc: 'Filtrera på stadsdel, antal rum och hyra, eller utforska annonser direkt på kartan. En smartare matchning som analyserar ömsesidig önskan och hyresbalans åt dig är på väg.',
+    desc: 'Filtrera på stadsdel, antal rum och hyra, eller utforska annonser direkt på kartan. Fyll i vad du söker så räknar vi ut hur väl varje annons passar dig — och hur väl din bostad passar dem — och kan sortera på bäst match.',
   },
   {
     step: '03',
@@ -21,41 +21,41 @@ const STEPS = [
   {
     step: '04',
     title: 'Byt bostad',
-    desc: 'Ni bestämmer villkor och datum er emellan. Bytaren är plattformen — ni är de som gör affären.',
+    desc: 'Ni bestämmer villkor och datum er emellan. Hyresvägen är plattformen — ni är de som gör affären.',
   },
 ]
 
 const MATCH_CRITERIA = [
   {
     icon: ArrowLeftRight,
-    title: 'Ömsesidig önskan',
-    desc: 'Du vill dit de bor — de vill dit du bor. Matchningen kräver att båda parter pekar på varandra. Inga halvdana byten.',
+    title: 'Åt båda hållen',
+    desc: 'Vi jämför deras bostad med det du söker, och din bostad med det de söker. Passar det åt båda hållen (minst 70 %) märks annonsen som en ömsesidig match.',
   },
   {
     icon: BedDouble,
-    title: 'Rumspassning',
-    desc: 'Ditt antal rum matchar mot vad motparten söker, och vice versa. En 3 rok möter en som faktiskt vill ha 3 rok.',
+    title: 'Stadsdel och rum',
+    desc: 'De viktigaste kraven. Ligger bostaden i fel stadsdel eller har fel antal rum hamnar matchningen lågt, oavsett resten.',
   },
   {
     icon: Scale,
-    title: 'Hyresbalans',
-    desc: 'Motorn väger hyrornas nivåer mot varandra. Byten med rimliga skillnader lyfts — extrema obalanser sållas bort.',
+    title: 'Hyra och yta',
+    desc: 'Hyran jämförs med din maxhyra och ytan med din minsta yta. Lite över eller under ger delpoäng i stället för att sållas bort direkt.',
   },
   {
     icon: ListChecks,
     title: 'Extrakrav matchas',
-    desc: 'Balkong, hiss, husdjur tillåtet. Dina måsten vägs mot motpartens bostad — så du aldrig behöver kompromissa i onödan.',
+    desc: 'Hiss, balkong, husdjur, rullstols- och barnvagnsvänligt. Det du markerat som måste vägs mot motpartens bostad.',
   },
 ]
 
 const FAQS = [
   {
-    q: 'Kostar det något att använda Bytaren?',
+    q: 'Kostar det något att använda Hyresvägen?',
     a: 'Nej, det är helt gratis att söka, annonsera och kontakta andra användare.',
   },
   {
     q: 'Behöver jag en mäklare?',
-    a: 'Nej. Bytaren är byggt för att ni ska kunna byta direkt med varandra, utan mellanhänder.',
+    a: 'Nej. Hyresvägen är byggd för att ni ska kunna byta direkt med varandra, utan mellanhänder.',
   },
   {
     q: 'Hur säkert är det?',
@@ -77,7 +77,7 @@ export default function HurDetFungerar() {
             eyebrow="Så fungerar det"
             title="Byt bostad —"
             accent="i fyra steg."
-            lead="Bytaren gör det enkelt att hitta rätt byte. Inget krångel, inga mellanhänder."
+            lead="Hyresvägen gör det enkelt att hitta rätt byte. Inget krångel, inga mellanhänder."
           />
         </div>
       </section>

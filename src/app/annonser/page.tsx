@@ -3,7 +3,9 @@
 import { useState, useMemo, useEffect, useRef, useCallback, Suspense, Fragment } from 'react'
 import { useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { fetchListings, describeListingError } from '@/lib/listings'
+import { fetchListings, fetchMyListings, describeListingError, isExpired } from '@/lib/listings'
+import { fetchMyPreferences, fetchPreferencesFor } from '@/lib/preferences'
+import { scoreMatch, compareMatch, hasAnyPreference, roomBucket, type MatchResult } from '@/lib/matching'
 import { fetchFavoriteListingIds } from '@/lib/favorites'
 import { fetchMutualMatchUserIds } from '@/lib/interests'
 import { useAuth } from '@/context/AuthContext'
@@ -12,7 +14,7 @@ import SearchFiltersComponent from '@/components/SearchFilters'
 import ListingCard from '@/components/ListingCard'
 import AdSlot from '@/components/AdSlot'
 import { isInBounds, type MapBounds } from '@/components/map/bounds'
-import { STOCKHOLM_DISTRICTS, AMENITIES, type AmenityKey, type Listing, type SearchFilters } from '@/types'
+import { STOCKHOLM_DISTRICTS, AMENITIES, type AmenityKey, type Listing, type SearchFilters, type SwapPreferences } from '@/types'
 import { cn, haversineKm } from '@/lib/utils'
 import { Home, List, Map as MapIcon } from 'lucide-react'
 
@@ -67,14 +69,21 @@ function AnnonserView() {
     maxRent: maxRentFromQuery(searchParams.get('maxhyra')),
     amenities: amenitiesFromQuery(searchParams.get('tillganglighet')),
     view: searchParams.get('vy') === 'karta' ? 'map' : 'list',
-    sort: 'newest',
+    sort: searchParams.get('sortera') === 'match' ? 'best_match' : 'newest',
   }))
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set())
-  const [matchedOwnerIds, setMatchedOwnerIds] = useState<Set<string>>(new Set())
+  // Owners who showed interest in one of my listings and vice versa
+  // (lib/interests) — not the same as the computed match score below.
+  const [interestMatchOwnerIds, setInterestMatchOwnerIds] = useState<Set<string>>(new Set())
+  // Matching (lib/matching): my wishes, my listings, and listing owners' wishes.
+  // undefined = not loaded yet.
+  const [myPrefs, setMyPrefs] = useState<SwapPreferences | null | undefined>(undefined)
+  const [myListings, setMyListings] = useState<Listing[]>([])
+  const [ownerPrefs, setOwnerPrefs] = useState<Map<string, SwapPreferences>>(new Map())
   const [searchInBounds, setSearchInBounds] = useState(true)
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null)
   // Phones only: the map is full-width and the list is an overlay toggled
@@ -97,14 +106,49 @@ function AnnonserView() {
   useEffect(() => {
     if (!user) return
     fetchFavoriteListingIds(user.id).then(setFavoriteIds)
-    fetchMutualMatchUserIds(user.id).then(setMatchedOwnerIds)
+    fetchMutualMatchUserIds(user.id).then(setInterestMatchOwnerIds)
+    fetchMyPreferences(user.id).then(setMyPrefs)
+    fetchMyListings(user.id).then(setMyListings)
   }, [user])
+
+  // One query for the wishes of every listing owner in the feed.
+  const userId = user?.id
+  const ownerIdsKey = useMemo(
+    () => [...new Set(listings.map((l) => l.userId))].filter((id) => id !== userId).sort().join(','),
+    [listings, userId]
+  )
+  useEffect(() => {
+    if (!userId || !ownerIdsKey) return
+    fetchPreferencesFor(ownerIdsKey.split(',')).then(setOwnerPrefs)
+  }, [userId, ownerIdsKey])
+
+  // Match score per listing id; empty when signed out. Your own listings
+  // (and ones you co-manage) aren't scored.
+  const matches = useMemo(() => {
+    const result = new Map<string, MatchResult>()
+    if (!userId) return result
+    const offered = myListings.filter((l) => l.status === 'aktiv' && !isExpired(l))
+    const managedIds = new Set(myListings.map((l) => l.id))
+    for (const l of listings) {
+      if (l.userId === userId || managedIds.has(l.id)) continue
+      const m = scoreMatch({ candidate: l, viewerPrefs: myPrefs, ownerPrefs: ownerPrefs.get(l.userId), viewerListings: offered })
+      if (m.score != null) result.set(l.id, m)
+    }
+    return result
+  }, [userId, listings, myListings, myPrefs, ownerPrefs])
+
+  const bestMatchHint: 'signed_out' | 'no_preferences' | null = !user
+    ? 'signed_out'
+    : myPrefs !== undefined && !hasAnyPreference(myPrefs)
+      ? 'no_preferences'
+      : null
 
   const filtered = useMemo(() => {
     const results = listings.filter((l) => {
       if (l.status !== 'aktiv') return false
       if (filters.districts.length > 0 && !filters.districts.includes(l.district)) return false
-      if (filters.rooms.length > 0 && !filters.rooms.includes(l.rooms)) return false
+      // 5 = "5 or more"; 2.5 rooms counts as 2.
+      if (filters.rooms.length > 0 && !filters.rooms.includes(roomBucket(l.rooms))) return false
       if (filters.maxRent !== null && l.rent > filters.maxRent) return false
       if (filters.amenities?.some((a) => !l[a])) return false
       return true
@@ -115,7 +159,7 @@ function AnnonserView() {
       switch (filters.sort) {
         case 'rent_asc': return a.rent - b.rent
         case 'rent_desc': return b.rent - a.rent
-        case 'best_match': return b.matchCount - a.matchCount
+        case 'best_match': return compareMatch(matches.get(a.id), matches.get(b.id)) || newest(a, b)
         case 'nearest': {
           // Without a home location there's nothing to measure from —
           // SearchFilters tells the user; we just fall back to newest.
@@ -125,7 +169,7 @@ function AnnonserView() {
         default: return newest(a, b)
       }
     })
-  }, [filters, listings, homeLat, homeLng])
+  }, [filters, listings, homeLat, homeLng, matches])
 
   // The map always gets every filtered listing; only the sidebar is narrowed
   // to what's currently visible when "Sök när kartan flyttas" is on.
@@ -154,6 +198,7 @@ function AnnonserView() {
         onFiltersChange={setFilters}
         resultCount={filtered.length}
         nearestAvailable={!!home}
+        bestMatchHint={bestMatchHint}
       />
 
       {!isMap ? (
@@ -175,7 +220,8 @@ function AnnonserView() {
                     <ListingCard
                       listing={listing}
                       favorited={favoriteIds.has(listing.id)}
-                      mutualMatch={matchedOwnerIds.has(listing.userId)}
+                      mutualMatch={interestMatchOwnerIds.has(listing.userId)}
+                      match={matches.get(listing.id)}
                     />
                     {/* A sponsored card after the 4th listing, then every 8th. */}
                     {(i + 1) % AD_EVERY === AD_FIRST % AD_EVERY && i + 1 >= AD_FIRST && (
@@ -266,7 +312,8 @@ function AnnonserView() {
                         listing={listing}
                         compact
                         favorited={favoriteIds.has(listing.id)}
-                        mutualMatch={matchedOwnerIds.has(listing.userId)}
+                        mutualMatch={interestMatchOwnerIds.has(listing.userId)}
+                        match={matches.get(listing.id)}
                       />
                     </div>
                   )

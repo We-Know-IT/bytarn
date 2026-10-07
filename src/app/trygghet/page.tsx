@@ -21,7 +21,7 @@ const FEATURES = [
   {
     icon: Wallet,
     title: 'Inga dolda avgifter',
-    desc: 'Bytaren är gratis och öppen. Vi tjänar inga pengar på att dölja information för dig.',
+    desc: 'Hyresvägen är gratis och öppen. Vi tjänar inga pengar på att dölja information för dig.',
   },
   {
     icon: UserCheck,
@@ -61,7 +61,7 @@ export default function Trygghet() {
             eyebrow="Trygghet"
             title="Din säkerhet"
             accent="är vår prioritet."
-            lead="Bostadsbyte är ett stort steg. Bytaren är byggt från grunden för att du ska kunna göra det tryggt, transparent och på dina egna villkor."
+            lead="Bostadsbyte är ett stort steg. Hyresvägen är byggd från grunden för att du ska kunna göra det tryggt, transparent och på dina egna villkor."
           />
         </div>
       </section>
@@ -106,7 +106,7 @@ export default function Trygghet() {
       {/* CTA */}
       <section className="section bg-[#0D2F26]">
         <div className="container-page text-center">
-          <h2 className="display-md mb-8 text-white">Tryggt att byta med Bytaren.</h2>
+          <h2 className="display-md mb-8 text-white">Tryggt att byta med Hyresvägen.</h2>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link href="/registrera" className="btn btn-inverse btn-lg btn-arrow">
               Skapa konto <ArrowRight size={15} className="arrow-icon" />

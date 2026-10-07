@@ -11,6 +11,7 @@ import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import Logo from '@/components/ui/Logo'
+import { useUnreadCount } from '@/hooks/useUnreadCount'
 
 const NAV_LINKS = [
   { href: '/annonser', label: 'Hitta byte', icon: Search },
@@ -31,6 +32,27 @@ const ACCOUNT_LINKS: MenuLink[] = [
   { href: '/familj', label: 'Familjekonto', icon: Users },
 ]
 
+function unreadLabel(count: number) {
+  return `${count} ${count === 1 ? 'oläst meddelande' : 'olästa meddelanden'}`
+}
+
+/** Unread-messages count bubble. Renders nothing for 0. */
+function UnreadBadge({ count, className }: { count: number; className?: string }) {
+  if (count <= 0) return null
+  return (
+    <span
+      role="img"
+      aria-label={unreadLabel(count)}
+      className={cn(
+        'flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold leading-none text-white',
+        className
+      )}
+    >
+      {count > 99 ? '99+' : count}
+    </span>
+  )
+}
+
 const ADMIN_LINKS: MenuLink[] = [
   { href: '/admin', label: 'Admin', icon: ShieldCheck },
   { href: '/admin/installningar', label: 'SMTP-inställningar', icon: Mail },
@@ -48,6 +70,8 @@ export default function Navbar() {
   const displayName = profile?.name?.split(' ')[0] || 'Konto'
   const initial = (profile?.name || user?.email || '?').charAt(0).toUpperCase()
   const isAdmin = !!profile?.isAdmin
+  const unread = useUnreadCount(user?.id)
+  const badges: Record<string, number> = { '/meddelanden': unread }
 
   // Close menus whenever the route changes (incl. back/forward).
   const [lastPath, setLastPath] = useState(pathname)
@@ -149,11 +173,12 @@ export default function Navbar() {
             <>
               <Link
                 href="/meddelanden"
-                className={cn('btn btn-ghost btn-icon btn-sm text-gray-600', isActive('/meddelanden') && 'text-emerald-600 bg-[rgba(21,63,50,0.06)]')}
-                aria-label="Meddelanden"
+                className={cn('btn btn-ghost btn-icon btn-sm relative text-gray-600', isActive('/meddelanden') && 'text-emerald-600 bg-[rgba(21,63,50,0.06)]')}
+                aria-label={unread > 0 ? `Meddelanden, ${unreadLabel(unread)}` : 'Meddelanden'}
                 title="Meddelanden"
               >
                 <MessageSquare size={18} strokeWidth={1.75} />
+                <UnreadBadge count={unread} className="pointer-events-none absolute -right-0.5 -top-0.5" />
               </Link>
               <Link
                 href="/mina-sidor"
@@ -201,6 +226,7 @@ export default function Navbar() {
                           <Link href={href} onClick={() => setMenuOpen(false)} className={menuItemClass}>
                             <Icon size={16} strokeWidth={1.75} className="text-gray-500" />
                             {label}
+                            <UnreadBadge count={badges[href] ?? 0} className="ml-auto" />
                           </Link>
                         </li>
                       ))}
@@ -262,12 +288,15 @@ export default function Navbar() {
           <button
             type="button"
             onClick={() => setMobileOpen((o) => !o)}
-            className="btn btn-ghost btn-icon text-gray-800"
-            aria-label={mobileOpen ? 'Stäng meny' : 'Öppna meny'}
+            className="btn btn-ghost btn-icon relative text-gray-800"
+            aria-label={
+              (mobileOpen ? 'Stäng meny' : 'Öppna meny') + (unread > 0 ? `, ${unreadLabel(unread)}` : '')
+            }
             aria-expanded={mobileOpen}
             aria-controls="mobilmeny"
           >
             {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+            {!mobileOpen && <UnreadBadge count={unread} className="pointer-events-none absolute right-0 top-0" />}
           </button>
         </div>
       </nav>
@@ -320,7 +349,7 @@ export default function Navbar() {
                       {user.email && <p className="truncate text-[13px] text-gray-500">{user.email}</p>}
                     </div>
                   </div>
-                  <MobileLinkList links={ACCOUNT_LINKS} isActive={isActive} onNavigate={() => setMobileOpen(false)} />
+                  <MobileLinkList links={ACCOUNT_LINKS} isActive={isActive} onNavigate={() => setMobileOpen(false)} badges={badges} />
                   {isAdmin && (
                     <>
                       <p className="px-3 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400">
@@ -360,10 +389,12 @@ function MobileLinkList({
   links,
   isActive,
   onNavigate,
+  badges,
 }: {
   links: MenuLink[]
   isActive: (href: string) => boolean
   onNavigate: () => void
+  badges?: Record<string, number>
 }) {
   return (
     <ul className="space-y-0.5">
@@ -380,6 +411,7 @@ function MobileLinkList({
           >
             <Icon size={18} strokeWidth={1.75} className="text-gray-500" />
             {label}
+            <UnreadBadge count={badges?.[href] ?? 0} className="ml-auto" />
           </Link>
         </li>
       ))}

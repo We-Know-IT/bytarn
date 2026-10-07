@@ -26,7 +26,7 @@ describe('smtpConfigFromEnv', () => {
       secure: true,
       user: 'anna@gmail.com',
       pass: 'abcdefghijklmnop',
-      fromName: 'Bytaren',
+      fromName: 'Hyresvägen',
       fromEmail: 'anna@gmail.com',
       source: 'env',
     })
@@ -49,7 +49,7 @@ describe('smtpConfigFromRow', () => {
     expect(smtpConfigFromRow({ ...row, password: 'abcd efgh ijkl mnop' })).toMatchObject({
       pass: 'abcdefghijklmnop',
       fromEmail: 'a@gmail.com',
-      fromName: 'Bytaren',
+      fromName: 'Hyresvägen',
       source: 'database',
     })
   })
@@ -70,7 +70,7 @@ describe('validateSmtpInput', () => {
     secure: true,
     username: 'anna@gmail.com',
     password: '',
-    fromName: 'Bytaren',
+    fromName: 'Hyresvägen',
     fromEmail: '',
   }
 
@@ -113,13 +113,13 @@ describe('templates', () => {
     const mail = householdInviteEmail({
       householdName: '<script>alert(1)</script>',
       inviterName: 'Anna & Bo',
-      link: 'https://bytaren.se/familj/acceptera?token=abc',
+      link: 'https://xn--hyresvgen-02a.se/familj/acceptera?token=abc',
     })
     expect(mail.html).not.toContain('<script>')
     expect(mail.html).toContain('&lt;script&gt;')
     expect(mail.html).toContain('Anna &amp; Bo')
-    expect(mail.html).toContain('href="https://bytaren.se/familj/acceptera?token=abc"')
-    expect(mail.text).toContain('https://bytaren.se/familj/acceptera?token=abc')
+    expect(mail.html).toContain('href="https://xn--hyresvgen-02a.se/familj/acceptera?token=abc"')
+    expect(mail.text).toContain('https://xn--hyresvgen-02a.se/familj/acceptera?token=abc')
   })
 
   it('keeps the subject on one line and never links to non-http URLs', () => {
@@ -172,7 +172,7 @@ describe('decideNotification', () => {
 
 describe('appBaseUrl', () => {
   it('prefers NEXT_PUBLIC_APP_URL and trims trailing slashes', () => {
-    expect(appBaseUrl('http://localhost:3000', { NEXT_PUBLIC_APP_URL: 'https://bytaren.se/' })).toBe('https://bytaren.se')
+    expect(appBaseUrl('http://localhost:3000', { NEXT_PUBLIC_APP_URL: 'https://xn--hyresvgen-02a.se/' })).toBe('https://xn--hyresvgen-02a.se')
     expect(appBaseUrl('http://localhost:3000', {})).toBe('http://localhost:3000')
   })
 })

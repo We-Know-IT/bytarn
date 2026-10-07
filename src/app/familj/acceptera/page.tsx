@@ -129,7 +129,7 @@ function AcceptInvite() {
     <Card>
       <h1 className="text-xl font-bold text-gray-900 mb-2">Gå med i {info.household_name}</h1>
       <p className="text-sm text-gray-600 mb-1">
-        <strong>{info.invited_by_name}</strong> har bjudit in dig till sitt familjekonto på Bytaren.
+        <strong>{info.invited_by_name}</strong> har bjudit in dig till sitt familjekonto på Hyresvägen.
       </p>
       <p className="text-xs text-gray-400 mb-6">Inbjudan skickades till {info.email}</p>
 

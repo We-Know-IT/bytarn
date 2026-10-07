@@ -58,7 +58,6 @@ export function rowToListing(row: ListingRow): Listing {
     expiresAt: row.expires_at ?? addDays(row.updated_at, LISTING_LIFETIME_DAYS),
     viewCount: row.view_count ?? 0,
     interestedCount: 0,
-    matchCount: 0,
     floor: row.floor ?? undefined,
     elevator: row.elevator ?? undefined,
     balcony: row.balcony ?? undefined,
@@ -297,7 +296,7 @@ export async function deleteListing(id: string): Promise<void> {
 // Counted at most once per browser session per listing.
 export async function recordListingView(id: string): Promise<void> {
   if (!supabaseConfigured) return
-  const key = `bytaren_viewed_${id}`
+  const key = `hyresvagen_viewed_${id}`
   try {
     if (sessionStorage.getItem(key)) return
     sessionStorage.setItem(key, '1')
