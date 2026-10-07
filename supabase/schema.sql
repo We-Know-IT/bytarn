@@ -972,3 +972,13 @@ end;
 $$ language plpgsql security definer set search_path = public;
 
 alter table smtp_settings alter column from_name set default 'Hyresvägen';
+-- ─── v5: account deletion ────────────────────────────────────────────────
+-- households.created_by cascaded on delete, so when the person who created
+-- a family account deleted their account, the whole household — and every
+-- other member's membership — went with it. Keep the household; ownership
+-- is handed over by leave_household() before the account is removed.
+alter table households alter column created_by drop not null;
+alter table households drop constraint if exists households_created_by_fkey;
+alter table households
+  add constraint households_created_by_fkey
+  foreign key (created_by) references profiles (id) on delete set null;

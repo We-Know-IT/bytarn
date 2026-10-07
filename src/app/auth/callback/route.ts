@@ -22,6 +22,16 @@ export async function GET(request: NextRequest) {
   const providerError = url.searchParams.get('error_description') ?? url.searchParams.get('error')
   if (providerError) return fail(providerError)
 
+  // Password-reset links come back here too; send failures to the reset
+  // page (asking for a new link), not to the Google sign-in error.
+  if (url.searchParams.get('typ') === 'aterstallning') {
+    const code = url.searchParams.get('code')
+    const supabase = supabaseConfigured && code ? await createClient() : null
+    const { error } = supabase ? await supabase.auth.exchangeCodeForSession(code!) : { error: true }
+    if (error) return NextResponse.redirect(new URL('/aterstall-losenord?fel=lank', url.origin))
+    return NextResponse.redirect(new URL('/nytt-losenord', url.origin))
+  }
+
   const code = url.searchParams.get('code')
   if (!code || !supabaseConfigured) return fail(code ? 'Backend är inte konfigurerad.' : 'Ingen inloggningskod mottogs.')
 
