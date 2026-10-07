@@ -1,3 +1,7 @@
+# Hyresvägen
+
+Bostadsbyte i Stockholm — https://hyresvägen.se (`xn--hyresvgen-02a.se`). Formerly called Hyresvägen.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
@@ -78,7 +82,7 @@ read from the `ssn` claim and only stored as a SHA-256 hash.
 
 ### Email (SMTP / Gmail)
 
-Bytaren sends household invites and new-message notifications over SMTP. Configure it either with
+Hyresvägen sends household invites and new-message notifications over SMTP. Configure it either with
 `SMTP_*` env vars (see `.env.example`; these take precedence and make the admin form read-only) or
 at `/admin/installningar` (admins only). Settings are stored in the `smtp_settings` table, which
 only the service role can read; the password is never sent back to the browser.
@@ -103,6 +107,16 @@ renew and delete every other member's listings, so a family or sambos can run th
 The owner invites members by email; invitees accept at `/familj/acceptera?token=…` and must sign in
 with the invited address. A user can be in one household at a time and can leave at any time; if
 the owner leaves, the longest-standing member takes over.
+
+### Domain (hyresvägen.se)
+
+The domain contains "ä", so DNS, Vercel, Supabase and Idura all use its punycode form
+`xn--hyresvgen-02a.se`. Set `NEXT_PUBLIC_APP_URL=https://xn--hyresvgen-02a.se` in Vercel
+(Production), add the domain in Vercel → Settings → Domains, and point DNS at Vercel from the
+registrar (one.com): an `A` record for the apex to the IP Vercel shows, and a `CNAME` for `www`
+to the target Vercel shows. Then add `https://xn--hyresvgen-02a.se/**` to Supabase → Authentication →
+URL Configuration (Site URL + redirect URLs) and register
+`https://xn--hyresvgen-02a.se/api/auth/bankid/callback` in Idura.
 
 ## Learn More
 
