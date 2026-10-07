@@ -4,6 +4,7 @@ import './globals.css'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/ui/Footer'
 import { AuthProvider } from '@/context/AuthContext'
+import PendingHouseholdSetup from '@/components/PendingHouseholdSetup'
 import Script from 'next/script'
 
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT
@@ -56,6 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </main>
           <Footer />
+          <PendingHouseholdSetup />
         </AuthProvider>
         {ADSENSE_CLIENT && (
           <Script
