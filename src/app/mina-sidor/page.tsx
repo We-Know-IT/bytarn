@@ -15,6 +15,7 @@ import { fetchMyPreferences, savePreferences } from '@/lib/preferences'
 import { describeListingError } from '@/lib/listings'
 import { hasAnyPreference } from '@/lib/matching'
 import PreferencesForm from '@/components/PreferencesForm'
+import AccountSection from '@/components/AccountSection'
 import { uploadAvatar } from '@/lib/storage'
 import { useAuth } from '@/context/AuthContext'
 import { supabaseConfigured } from '@/lib/supabase/client'
@@ -22,11 +23,11 @@ import ListingCard from '@/components/ListingCard'
 import { cn, formatDate } from '@/lib/utils'
 import { EMPTY_SWAP_PREFERENCES, type Listing, type SavedSearch, type ListingStatus, type SwapPreferencesInput } from '@/types'
 
-type Tab = 'annonser' | 'sokes' | 'favoriter' | 'intresse' | 'sparade'
+type Tab = 'annonser' | 'sokes' | 'favoriter' | 'intresse' | 'sparade' | 'konto'
 
 // /mina-sidor?flik=sokes opens "Det här söker jag" directly (linked from
 // the "Bäst match" sort and the match box on a listing).
-const TAB_PARAM: Record<string, Tab> = { sokes: 'sokes', favoriter: 'favoriter', intresse: 'intresse', sparade: 'sparade' }
+const TAB_PARAM: Record<string, Tab> = { sokes: 'sokes', favoriter: 'favoriter', intresse: 'intresse', sparade: 'sparade', konto: 'konto' }
 
 export default function MinaSidorPage() {
   return (
@@ -197,6 +198,7 @@ function MinaSidorView() {
           { key: 'favoriter', label: 'Favoriter', icon: Heart },
           { key: 'intresse', label: 'Intresseanmälningar', icon: MessageSquare },
           { key: 'sparade', label: 'Sparade sökningar', icon: Bookmark },
+          { key: 'konto', label: 'Konto', icon: Settings },
         ] as const).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -333,6 +335,16 @@ function MinaSidorView() {
       )}
 
       {tab === 'sokes' && user && <PreferencesSection userId={user.id} />}
+
+      {tab === 'konto' && user && (
+        <AccountSection
+          userId={user.id}
+          // BankID accounts get a synthetic, never-mailed address and no
+          // password (see api/auth/bankid/callback), so hide both for them.
+          email={user.email?.endsWith('@bytarn.internal') ? undefined : user.email}
+          hasPassword={!!user.email && !user.email.endsWith('@bytarn.internal') && (user.app_metadata?.providers ?? [user.app_metadata?.provider]).includes('email')}
+        />
+      )}
 
       {tab === 'favoriter' && (
         <div>

@@ -5,9 +5,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/ui/Footer'
 import { AuthProvider } from '@/context/AuthContext'
 import PendingHouseholdSetup from '@/components/PendingHouseholdSetup'
-import Script from 'next/script'
-
-const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT
+import CookieBanner from '@/components/CookieBanner'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -51,6 +49,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="sv">
       <body className={`${inter.variable} ${instrumentSerif.variable} font-sans`}>
         <a href="#innehall" className="skip-link">Hoppa till innehållet</a>
+        {/* Early in the DOM so keyboard users reach it right after the skip link. */}
+        <CookieBanner />
         <AuthProvider>
           <Navbar />
           <main id="innehall" className="min-h-[calc(100vh-var(--nav-h))]">
@@ -59,13 +59,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Footer />
           <PendingHouseholdSetup />
         </AuthProvider>
-        {ADSENSE_CLIENT && (
-          <Script
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-            strategy="afterInteractive"
-            crossOrigin="anonymous"
-          />
-        )}
       </body>
     </html>
   )

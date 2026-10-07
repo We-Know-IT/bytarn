@@ -1,11 +1,23 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { ArrowLeft, Mail } from 'lucide-react'
 import { createClient, supabaseConfigured } from '@/lib/supabase/client'
 
 export default function AterstallLosenordPage() {
+  return (
+    <Suspense>
+      <AterstallLosenord />
+    </Suspense>
+  )
+}
+
+function AterstallLosenord() {
+  // ?fel=lank: the reset link was expired, already used, or opened in a
+  // different browser than the one that requested it.
+  const linkFailed = useSearchParams().get('fel') === 'lank'
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -20,7 +32,9 @@ export default function AterstallLosenordPage() {
     setLoading(true)
     const supabase = createClient()
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/logga-in`,
+      // The link is exchanged for a session in /auth/callback, which then
+      // sends the user to /nytt-losenord to choose a new password.
+      redirectTo: `${window.location.origin}/auth/callback?typ=aterstallning`,
     })
     setLoading(false)
     if (resetError) {
@@ -63,6 +77,12 @@ export default function AterstallLosenordPage() {
               </div>
 
               <div className="space-y-4">
+                {linkFailed && (
+                  <p role="alert" className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    Länken har gått ut eller redan använts. Öppna den i samma webbläsare som du begärde den från,
+                    eller beställ en ny nedan.
+                  </p>
+                )}
                 <div>
                   <label className="label">E-post</label>
                   <input

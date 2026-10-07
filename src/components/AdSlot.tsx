@@ -1,12 +1,16 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Script from 'next/script'
 import { ExternalLink } from 'lucide-react'
 import { fetchLiveAds, recordAdClick, type Ad, type AdPlacement } from '@/lib/ads'
 import { cn } from '@/lib/utils'
+import { useConsent } from '@/lib/consent'
 
-// Google AdSense is used only where no own ad is booked, and only when
-// NEXT_PUBLIC_ADSENSE_CLIENT and a slot id for the placement are set.
+// Google AdSense is used only where no own ad is booked, only when
+// NEXT_PUBLIC_ADSENSE_CLIENT and a slot id for the placement are set, and only
+// after the visitor has consented to ads (see src/lib/consent.ts). The script
+// itself is loaded here, never before consent.
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT
 const ADSENSE_SLOTS: Record<AdPlacement, string | undefined> = {
   listing_grid: process.env.NEXT_PUBLIC_ADSENSE_SLOT_LISTING_GRID,
@@ -39,7 +43,7 @@ export default function AdSlot({ placement, index = 0, variant = 'banner', class
   if (ads === null) return null
   if (ads.length === 0) {
     const slot = ADSENSE_SLOTS[placement]
-    return ADSENSE_CLIENT && slot ? <AdSenseUnit client={ADSENSE_CLIENT} slot={slot} className={className} /> : null
+    return ADSENSE_CLIENT && slot ? <ConsentedAdSense client={ADSENSE_CLIENT} slot={slot} className={className} /> : null
   }
 
   const ad = ads[(rotationOffset + index) % ads.length]
@@ -114,6 +118,12 @@ declare global {
   }
 }
 
+/** Renders the AdSense unit only with ads consent; reacts to consent changes without reload. */
+function ConsentedAdSense(props: { client: string; slot: string; className?: string }) {
+  const consent = useConsent()
+  return consent?.ads === true ? <AdSenseUnit {...props} /> : null
+}
+
 function AdSenseUnit({ client, slot, className }: { client: string; slot: string; className?: string }) {
   const pushed = useRef(false)
   useEffect(() => {
@@ -127,6 +137,13 @@ function AdSenseUnit({ client, slot, className }: { client: string; slot: string
   }, [])
   return (
     <div className={className}>
+      {/* next/script dedupes by id, so several units load the script once. */}
+      <Script
+        id="adsbygoogle-js"
+        src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`}
+        strategy="afterInteractive"
+        crossOrigin="anonymous"
+      />
       <p className="mb-1 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[#8A8F88]">Sponsrat</p>
       <ins
         className="adsbygoogle block"
