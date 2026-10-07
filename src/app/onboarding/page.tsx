@@ -7,7 +7,7 @@ import { STOCKHOLM_DISTRICTS, AMENITIES, type AmenityKey } from '@/types'
 import { cn } from '@/lib/utils'
 import AddressInput from '@/components/AddressInput'
 
-const DRAFT_KEY = 'bytaren_my_listing_draft'
+const DRAFT_KEY = 'hyresvagen_my_listing_draft'
 
 type Step = 0 | 1 | 2 | 3
 
@@ -96,9 +96,9 @@ export default function OnboardingPage() {
               <div className="w-20 h-20 bg-[#E3EBE2] rounded-3xl flex items-center justify-center mx-auto mb-6">
                 <Home size={36} className="text-emerald-600" strokeWidth={1.75} />
               </div>
-              <h1 className="font-display text-[36px] italic leading-[1.08] tracking-[-0.02em] text-gray-900 mb-3">Välkommen till Bytaren!</h1>
+              <h1 className="font-display text-[36px] italic leading-[1.08] tracking-[-0.02em] text-gray-900 mb-3">Välkommen till Hyresvägen!</h1>
               <p className="text-gray-500 mb-6 leading-relaxed">
-                Bytaren är Stockholms enklaste sätt att byta bostad direkt — utan mäklare och utan kö.
+                Hyresvägen är Stockholms enklaste sätt att byta bostad direkt — utan mäklare och utan kö.
                 Vi hjälper dig hitta rätt match på bara några minuter.
               </p>
               <div className="space-y-3 text-left mb-8">

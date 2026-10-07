@@ -2,8 +2,8 @@ import LegalPage from '@/components/ui/LegalPage'
 
 const SECTIONS = [
   {
-    title: '1. Vad Bytaren är',
-    body: 'Bytaren är en förmedlingsplattform där användare kan annonsera sin bostad och komma i kontakt med andra som vill byta. Bytaren är inte part i något bostadsbyte — avtal om byte, besiktning och tillstånd (t.ex. hyresvärdens godkännande) är alltid en sak mellan de användare som byter med varandra.',
+    title: '1. Vad Hyresvägen är',
+    body: 'Hyresvägen är en förmedlingsplattform där användare kan annonsera sin bostad och komma i kontakt med andra som vill byta. Hyresvägen är inte part i något bostadsbyte — avtal om byte, besiktning och tillstånd (t.ex. hyresvärdens godkännande) är alltid en sak mellan de användare som byter med varandra.',
   },
   {
     title: '2. Ditt konto',
@@ -15,7 +15,7 @@ const SECTIONS = [
   },
   {
     title: '4. Ansvar',
-    body: 'Bytaren tillhandahålls i befintligt skick. Vi gör vårt bästa för att plattformen ska fungera och vara trygg att använda, men kan inte garantera att ett byte blir av eller att en motpart är den de utger sig för att vara — se vår trygghetssida för konkreta råd.',
+    body: 'Hyresvägen tillhandahålls i befintligt skick. Vi gör vårt bästa för att plattformen ska fungera och vara trygg att använda, men kan inte garantera att ett byte blir av eller att en motpart är den de utger sig för att vara — se vår trygghetssida för konkreta råd.',
   },
   {
     title: '5. Ändringar',

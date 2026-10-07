@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Mail, ArrowUpRight, Shield, BookOpen } from 'lucide-react'
 import PageHeader from '@/components/ui/PageHeader'
 
-const CONTACT_EMAIL = 'hej@bytaren.se'
+const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'hej@hyresvägen.se'
 
 export default function KontaktPage() {
   return (

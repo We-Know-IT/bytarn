@@ -13,7 +13,7 @@ export const BRAND = '#153F32'
 const BRAND_DARK = '#0D2F26'
 const TEXT = '#15211E'
 const MUTED = '#6D716C'
-const STYLE_ID = 'bytaren-map-style'
+const STYLE_ID = 'hyresvagen-map-style'
 
 // Listing titles, addresses and districts are user-provided and end up in
 // raw HTML strings (divIcon/popup content), so everything interpolated into
@@ -203,7 +203,7 @@ export function buildListingPopupHtml(listing: Listing, home: HomeLocation | nul
         }
         <div style="display:flex; align-items:center; justify-content:space-between; padding-top:8px; border-top:1px solid rgba(21,63,50,0.08); margin-bottom:10px;">
           <span style="color:#9EA69D; font-size:11px;">${escapeHtml(formatDate(listing.createdAt))}</span>
-          <span style="color:#A8B9A4; font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase;">Bytaren</span>
+          <span style="color:#A8B9A4; font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase;">Hyresvägen</span>
         </div>
         <a href="/annonser/${encodeURIComponent(listing.id)}" style="display:block; background:${BRAND}; color:white; text-align:center; padding:9px; border-radius:10px; font-size:12.5px; font-weight:600; text-decoration:none;">
           Visa annons

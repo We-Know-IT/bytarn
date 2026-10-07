@@ -297,7 +297,7 @@ export async function deleteListing(id: string): Promise<void> {
 // Counted at most once per browser session per listing.
 export async function recordListingView(id: string): Promise<void> {
   if (!supabaseConfigured) return
-  const key = `bytaren_viewed_${id}`
+  const key = `hyresvagen_viewed_${id}`
   try {
     if (sessionStorage.getItem(key)) return
     sessionStorage.setItem(key, '1')

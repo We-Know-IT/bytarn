@@ -21,7 +21,7 @@ const STEPS = [
   {
     step: '04',
     title: 'Byt bostad',
-    desc: 'Ni bestämmer villkor och datum er emellan. Bytaren är plattformen — ni är de som gör affären.',
+    desc: 'Ni bestämmer villkor och datum er emellan. Hyresvägen är plattformen — ni är de som gör affären.',
   },
 ]
 
@@ -50,12 +50,12 @@ const MATCH_CRITERIA = [
 
 const FAQS = [
   {
-    q: 'Kostar det något att använda Bytaren?',
+    q: 'Kostar det något att använda Hyresvägen?',
     a: 'Nej, det är helt gratis att söka, annonsera och kontakta andra användare.',
   },
   {
     q: 'Behöver jag en mäklare?',
-    a: 'Nej. Bytaren är byggt för att ni ska kunna byta direkt med varandra, utan mellanhänder.',
+    a: 'Nej. Hyresvägen är byggd för att ni ska kunna byta direkt med varandra, utan mellanhänder.',
   },
   {
     q: 'Hur säkert är det?',
@@ -77,7 +77,7 @@ export default function HurDetFungerar() {
             eyebrow="Så fungerar det"
             title="Byt bostad —"
             accent="i fyra steg."
-            lead="Bytaren gör det enkelt att hitta rätt byte. Inget krångel, inga mellanhänder."
+            lead="Hyresvägen gör det enkelt att hitta rätt byte. Inget krångel, inga mellanhänder."
           />
         </div>
       </section>

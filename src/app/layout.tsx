@@ -22,14 +22,22 @@ const instrumentSerif = Instrument_Serif({
   display: 'swap',
 })
 
+// The canonical site address (punycode for hyresvägen.se). Used to build
+// absolute URLs for social previews; override with NEXT_PUBLIC_APP_URL.
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://xn--hyresvgen-02a.se'
+
 export const metadata: Metadata = {
-  title: 'Bytaren — Bostadsbyte i Stockholm',
+  metadataBase: new URL(SITE_URL),
+  applicationName: 'Hyresvägen',
+  title: 'Hyresvägen — Bostadsbyte i Stockholm',
   description: 'Hitta ditt nästa hem genom bostadsbyte. Byt din lägenhet med någon annan i Stockholm.',
   keywords: 'bostadsbyte, lägenhetsbyte, hyreslägenhet, stockholm, andrahand',
   openGraph: {
-    title: 'Bytaren — Bostadsbyte i Stockholm',
+    title: 'Hyresvägen — Bostadsbyte i Stockholm',
     description: 'Hitta ditt nästa hem genom bostadsbyte i Stockholm.',
     type: 'website',
+    siteName: 'Hyresvägen',
+    locale: 'sv_SE',
   },
 }
 

@@ -65,8 +65,8 @@ export default function SearchFiltersComponent({
       filters: { districts: filters.districts, rooms: filters.rooms, maxRent: filters.maxRent, amenities: filters.amenities ?? [] },
       createdAt: new Date().toISOString(),
     }
-    const existing: SavedSearch[] = JSON.parse(localStorage.getItem('bytaren_saved_searches') || '[]')
-    localStorage.setItem('bytaren_saved_searches', JSON.stringify([...existing, saved]))
+    const existing: SavedSearch[] = JSON.parse(localStorage.getItem('hyresvagen_saved_searches') || '[]')
+    localStorage.setItem('hyresvagen_saved_searches', JSON.stringify([...existing, saved]))
     setSearchSaved(true)
     setTimeout(() => setSearchSaved(false), 2000)
   }

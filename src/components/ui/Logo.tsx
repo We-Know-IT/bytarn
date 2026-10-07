@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
-/** The Bytaren house-with-arrows mark. */
+/** The Hyresvägen house-with-arrows mark. */
 export function LogoMark({ size = 36, className }: { size?: number; className?: string }) {
   const icon = Math.round(size * 0.6)
   return (
@@ -37,7 +37,7 @@ export default function Logo({
     <Link
       href="/"
       onClick={onClick}
-      aria-label="Bytaren — till startsidan"
+      aria-label="Hyresvägen — till startsidan"
       className={cn('group inline-flex items-center gap-2.5 rounded-lg flex-shrink-0', className)}
     >
       <LogoMark size={size} className="transition-transform duration-200 group-hover:scale-[0.96]" />
@@ -47,7 +47,7 @@ export default function Logo({
           inverse ? 'text-white' : 'text-gray-900'
         )}
       >
-        Bytaren
+        Hyresvägen
       </span>
     </Link>
   )

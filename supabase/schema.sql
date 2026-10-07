@@ -1,4 +1,4 @@
--- Bytaren database schema
+-- Hyresvägen database schema
 -- Run this once against a Supabase project (SQL editor, or `supabase db push`).
 
 create extension if not exists "pgcrypto";
@@ -238,7 +238,7 @@ create policy "Users can view their own reports"
 -- Lets a listing's owner share management of it with someone else (e.g. a
 -- partner) — collaborators can edit/pause/delete the listing alongside the
 -- owner. Invited by email via invite_collaborator_by_email() below; the
--- invitee must already have a Bytaren account (no email-sending
+-- invitee must already have a Hyresvägen account (no email-sending
 -- infrastructure exists to invite someone who doesn't).
 create table if not exists listing_collaborators (
   listing_id uuid not null references listings (id) on delete cascade,
@@ -302,7 +302,7 @@ begin
 
   select id into v_user_id from auth.users where email = p_email;
   if v_user_id is null then
-    raise exception 'Ingen användare med den e-postadressen hittades. Personen måste skapa ett konto på Bytaren först.';
+    raise exception 'Ingen användare med den e-postadressen hittades. Personen måste skapa ett konto på Hyresvägen först.';
   end if;
 
   insert into listing_collaborators (listing_id, user_id)
@@ -764,7 +764,7 @@ create table if not exists smtp_settings (
   secure boolean not null default true,
   username text not null default '',
   password text not null default '',
-  from_name text not null default 'Bytaren',
+  from_name text not null default 'Hyresvägen',
   from_email text not null default '',
   updated_at timestamptz not null default now(),
   updated_by uuid references profiles (id) on delete set null

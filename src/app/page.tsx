@@ -26,7 +26,7 @@ const STEPS = [
   },
   {
     title: 'Prata ihop er och ansök',
-    desc: 'Skriv till varandra här på Bytaren. Ett byte måste godkännas av era hyresvärdar innan ni flyttar.',
+    desc: 'Skriv till varandra här på Hyresvägen. Ett byte måste godkännas av era hyresvärdar innan ni flyttar.',
   },
 ]
 

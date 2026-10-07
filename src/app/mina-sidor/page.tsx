@@ -29,7 +29,7 @@ export default function MinaSidorPage() {
   const [editingProfile, setEditingProfile] = useState(false)
 
   useEffect(() => {
-    const stored = localStorage.getItem('bytaren_saved_searches')
+    const stored = localStorage.getItem('hyresvagen_saved_searches')
     if (stored) setSavedSearches(JSON.parse(stored))
   }, [])
 
@@ -48,7 +48,7 @@ export default function MinaSidorPage() {
   function deleteSavedSearch(id: string) {
     const updated = savedSearches.filter((s) => s.id !== id)
     setSavedSearches(updated)
-    localStorage.setItem('bytaren_saved_searches', JSON.stringify(updated))
+    localStorage.setItem('hyresvagen_saved_searches', JSON.stringify(updated))
   }
 
   async function cycleStatus(listing: Listing) {
@@ -213,7 +213,7 @@ export default function MinaSidorPage() {
             <div className="border border-emerald-100 rounded-2xl p-5 mb-6 bg-emerald-50/40">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h3 className="font-semibold text-gray-900 text-sm">Kom igång med Bytaren</h3>
+                  <h3 className="font-semibold text-gray-900 text-sm">Kom igång med Hyresvägen</h3>
                   <p className="text-xs text-gray-500 mt-0.5">{doneCount} av {onboardingSteps.length} klart</p>
                 </div>
                 <div className="h-1.5 w-28 bg-gray-200 rounded-full overflow-hidden">
