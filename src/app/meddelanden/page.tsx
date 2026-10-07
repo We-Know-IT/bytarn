@@ -158,7 +158,7 @@ export default function MeddelandenPage() {
               {conv.mutualInterest && (
                 <span className="flex-shrink-0 inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 font-medium px-2 py-1 rounded-full">
                   <Handshake size={12} strokeWidth={2} />
-                  Match
+                  Ömsesidigt intresse
                 </span>
               )}
             </Link>

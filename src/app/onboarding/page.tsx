@@ -1,11 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, CheckCircle, MapPin, Home, Users, Bell, Map, Handshake, MessageSquare } from 'lucide-react'
-import { STOCKHOLM_DISTRICTS, AMENITIES, type AmenityKey } from '@/types'
+import { ArrowRight, CheckCircle, MapPin, Home, Users, Bell, Map, Handshake, MessageSquare, Info } from 'lucide-react'
+import { STOCKHOLM_DISTRICTS, AMENITIES, EMPTY_SWAP_PREFERENCES, type AmenityKey, type SwapPreferencesInput } from '@/types'
 import { cn } from '@/lib/utils'
 import AddressInput from '@/components/AddressInput'
+import PreferencesForm from '@/components/PreferencesForm'
+import { useAuth } from '@/context/AuthContext'
+import { supabaseConfigured } from '@/lib/supabase/client'
+import { describeListingError } from '@/lib/listings'
+import { formatRoomBuckets } from '@/lib/matching'
+import {
+  fetchMyPreferences,
+  readPendingPreferences,
+  savePendingPreferences,
+  savePreferences,
+  saveNotifyEmail,
+} from '@/lib/preferences'
 
 const DRAFT_KEY = 'hyresvagen_my_listing_draft'
 
@@ -19,6 +31,8 @@ const STEPS = [
 ]
 
 export default function OnboardingPage() {
+  const { user, profile } = useAuth()
+  const signedIn = supabaseConfigured && !!user
   const [step, setStep] = useState<Step>(0)
 
   // Step 1 — current home
@@ -34,12 +48,67 @@ export default function OnboardingPage() {
     wheelchairAccessible: false,
   })
 
-  // Step 2 — desired
-  const [wantDistricts, setWantDistricts] = useState<string[]>([])
-  const [wantRooms, setWantRooms] = useState<string[]>([])
+  // Step 2 — desired. Saved to swap_preferences (used for matching) when
+  // signed in; otherwise kept in localStorage and saved after sign-in.
+  const [prefs, setPrefs] = useState<SwapPreferencesInput>(
+    () => (typeof window !== 'undefined' && readPendingPreferences()?.preferences) || EMPTY_SWAP_PREFERENCES
+  )
+  const prefsTouched = useRef(false)
+  const [savingPrefs, setSavingPrefs] = useState(false)
+  const [prefsError, setPrefsError] = useState<string | null>(null)
 
-  // Step 3 — notifications
-  const [notifications, setNotifications] = useState({ email: true, matches: true })
+  // Step 3 — e-mail on new message (profiles.notify_email). null = not
+  // changed here yet, show what the profile says.
+  const [notifyEmailChoice, setNotifyEmailChoice] = useState<boolean | null>(null)
+  const notifyEmail = notifyEmailChoice ?? profile?.notifyEmail ?? true
+  const [notifyError, setNotifyError] = useState<string | null>(null)
+
+  // Signed in: start from what's already saved.
+  useEffect(() => {
+    if (!signedIn || !user) return
+    fetchMyPreferences(user.id).then((saved) => {
+      if (saved && !prefsTouched.current) setPrefs(saved)
+    })
+  }, [signedIn, user])
+
+  function changePrefs(next: SwapPreferencesInput) {
+    prefsTouched.current = true
+    setPrefs(next)
+  }
+
+  async function savePrefsAndContinue() {
+    setPrefsError(null)
+    if (!signedIn || !user) {
+      savePendingPreferences({ preferences: prefs })
+      setStep(3)
+      return
+    }
+    setSavingPrefs(true)
+    try {
+      await savePreferences(user.id, prefs)
+      setStep(3)
+    } catch (err) {
+      setPrefsError(describeListingError(err))
+    } finally {
+      setSavingPrefs(false)
+    }
+  }
+
+  async function toggleNotifyEmail() {
+    const next = !notifyEmail
+    setNotifyEmailChoice(next)
+    setNotifyError(null)
+    if (!signedIn || !user) {
+      savePendingPreferences({ notifyEmail: next })
+      return
+    }
+    try {
+      await saveNotifyEmail(user.id, next)
+    } catch (err) {
+      setNotifyEmailChoice(!next)
+      setNotifyError(describeListingError(err))
+    }
+  }
 
   function handleAddressChange(value: string, guessedDistrict?: string) {
     setAddress(value)
@@ -51,14 +120,6 @@ export default function OnboardingPage() {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({ district, address, rooms, area, floor, rent, ...amenities }))
     } catch {}
     setStep(2)
-  }
-
-  function toggleWantDistrict(d: string) {
-    setWantDistricts((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d])
-  }
-
-  function toggleWantRoom(r: string) {
-    setWantRooms((prev) => prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r])
   }
 
   return (
@@ -233,38 +294,25 @@ export default function OnboardingPage() {
           {step === 2 && (
             <div>
               <h2 className="font-display text-[30px] italic leading-[1.1] tracking-[-0.02em] text-gray-900 mb-1.5">Vad söker du?</h2>
-              <p className="text-gray-500 text-sm mb-6">Välj de stadsdelar och rum du är intresserad av.</p>
-              <div className="space-y-5">
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Önskad stadsdel</p>
-                  <div className="flex flex-wrap gap-2">
-                    {STOCKHOLM_DISTRICTS.map((d) => (
-                      <button key={d} onClick={() => toggleWantDistrict(d)}
-                        className={cn('px-3 py-1.5 rounded-full text-[13px] font-medium border transition-colors',
-                          wantDistricts.includes(d) ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:border-emerald-600 hover:text-emerald-600'
-                        )}>
-                        {d}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Önskat antal rum</p>
-                  <div className="flex gap-2">
-                    {['1', '2', '3', '4', '5+'].map((r) => (
-                      <button key={r} onClick={() => toggleWantRoom(r)}
-                        className={cn('flex-1 min-h-[44px] rounded-xl text-sm font-medium border transition-colors',
-                          wantRooms.includes(r) ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:border-emerald-600 hover:text-emerald-600'
-                        )}>
-                        {r}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <p className="text-gray-500 text-sm mb-6">
+                Berätta vad du letar efter. Vi använder det för att räkna ut hur väl varje annons passar dig — och
+                hur väl din bostad passar den som annonserar.
+              </p>
+              <PreferencesForm value={prefs} onChange={changePrefs} disabled={savingPrefs} />
+              {!signedIn && (
+                <p className="flex items-start gap-1.5 mt-5 text-xs text-gray-500">
+                  <Info size={13} className="mt-px flex-shrink-0 text-emerald-700" />
+                  <span>Du är inte inloggad. Vi sparar dina val i webbläsaren och kopplar dem till ditt konto när du loggar in.</span>
+                </p>
+              )}
+              {prefsError && (
+                <p role="alert" className="mt-4 px-3 py-2 rounded-xl bg-red-50 text-red-700 text-sm break-words">{prefsError}</p>
+              )}
               <div className="flex gap-3 mt-8">
-                <button onClick={() => setStep(1)} className="btn btn-secondary flex-1">Tillbaka</button>
-                <button onClick={() => setStep(3)} className="btn btn-primary flex-1">Nästa</button>
+                <button onClick={() => setStep(1)} className="btn btn-secondary flex-1" disabled={savingPrefs}>Tillbaka</button>
+                <button onClick={savePrefsAndContinue} className="btn btn-primary flex-1" disabled={savingPrefs}>
+                  {savingPrefs ? 'Sparar…' : 'Nästa'}
+                </button>
               </div>
             </div>
           )}
@@ -273,35 +321,43 @@ export default function OnboardingPage() {
           {step === 3 && (
             <div>
               <h2 className="font-display text-[30px] italic leading-[1.1] tracking-[-0.02em] text-gray-900 mb-1.5">Notifikationer</h2>
-              <p className="text-gray-500 text-sm mb-6">Vi meddelar dig när något händer med dina annonser.</p>
+              <p className="text-gray-500 text-sm mb-6">Välj om vi ska mejla dig när någon skriver till dig.</p>
               <div className="space-y-3">
-                {[
-                  { key: 'email', label: 'E-postnotiser vid nytt meddelande', desc: 'Vi skickar ett mail när du får ett nytt meddelande.' },
-                  { key: 'matches', label: 'Notiser vid ny match', desc: 'Få reda på det direkt när du och en annan bytare visat ömsesidigt intresse.' },
-                ].map((item) => (
-                  <label key={item.key} className="flex items-start gap-4 p-4 border border-gray-200 rounded-[14px] cursor-pointer hover:bg-gray-50 transition-colors">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{item.label}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
-                    </div>
-                    <div
-                      onClick={() => setNotifications((prev) => ({ ...prev, [item.key]: !prev[item.key as keyof typeof prev] }))}
-                      className={cn('relative w-10 h-6 rounded-full transition-colors flex-shrink-0 mt-0.5 cursor-pointer',
-                        notifications[item.key as keyof typeof notifications] ? 'bg-emerald-600' : 'bg-gray-200')}
-                    >
-                      <div className={cn('absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform',
-                        notifications[item.key as keyof typeof notifications] ? 'translate-x-5' : 'translate-x-1')} />
-                    </div>
-                  </label>
-                ))}
+                <label className="flex items-start gap-4 p-4 border border-gray-200 rounded-[14px] cursor-pointer hover:bg-gray-50 transition-colors">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">E-postnotiser vid nytt meddelande</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Vi skickar ett mejl när du får ett nytt meddelande.</p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={notifyEmail}
+                    aria-label="E-postnotiser vid nytt meddelande"
+                    onClick={toggleNotifyEmail}
+                    className={cn('relative w-10 h-6 rounded-full transition-colors flex-shrink-0 mt-0.5 cursor-pointer',
+                      notifyEmail ? 'bg-emerald-600' : 'bg-gray-200')}
+                  >
+                    <span className={cn('absolute top-1 left-0 w-4 h-4 bg-white rounded-full shadow transition-transform',
+                      notifyEmail ? 'translate-x-5' : 'translate-x-1')} />
+                  </button>
+                </label>
+                {notifyError && (
+                  <p role="alert" className="px-3 py-2 rounded-xl bg-red-50 text-red-700 text-sm break-words">{notifyError}</p>
+                )}
+                <p className="text-xs text-gray-500">
+                  {signedIn
+                    ? 'Sparas direkt. Du hittar dina matchningar under Annonser — sortera på “Bäst match”.'
+                    : 'Sparas när du loggar in. Du hittar dina matchningar under Annonser — sortera på “Bäst match”.'}
+                </p>
               </div>
 
               <div className="mt-6 p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
                 <h3 className="text-sm font-semibold text-emerald-800 mb-1">Din bostad</h3>
                 <div className="text-xs text-emerald-700 space-y-0.5">
                   <p>{rooms} rum i {district}{address ? ` — ${address.split(',')[0]}` : ''}</p>
-                  {wantDistricts.length > 0 && <p>Söker i: {wantDistricts.join(', ')}</p>}
-                  {wantRooms.length > 0 && <p>Vill ha: {wantRooms.join(', ')} rum</p>}
+                  {prefs.districts.length > 0 && <p>Söker i: {prefs.districts.join(', ')}</p>}
+                  {prefs.rooms.length > 0 && <p>Vill ha: {formatRoomBuckets(prefs.rooms)} rum</p>}
+                  {prefs.maxRent != null && <p>Högst {new Intl.NumberFormat('sv-SE').format(prefs.maxRent)} kr/mån</p>}
                 </div>
               </div>
 

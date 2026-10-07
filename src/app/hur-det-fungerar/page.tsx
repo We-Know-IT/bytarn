@@ -11,7 +11,7 @@ const STEPS = [
   {
     step: '02',
     title: 'Sök och filtrera',
-    desc: 'Filtrera på stadsdel, antal rum och hyra, eller utforska annonser direkt på kartan. En smartare matchning som analyserar ömsesidig önskan och hyresbalans åt dig är på väg.',
+    desc: 'Filtrera på stadsdel, antal rum och hyra, eller utforska annonser direkt på kartan. Fyll i vad du söker så räknar vi ut hur väl varje annons passar dig — och hur väl din bostad passar dem — och kan sortera på bäst match.',
   },
   {
     step: '03',
@@ -28,23 +28,23 @@ const STEPS = [
 const MATCH_CRITERIA = [
   {
     icon: ArrowLeftRight,
-    title: 'Ömsesidig önskan',
-    desc: 'Du vill dit de bor — de vill dit du bor. Matchningen kräver att båda parter pekar på varandra. Inga halvdana byten.',
+    title: 'Åt båda hållen',
+    desc: 'Vi jämför deras bostad med det du söker, och din bostad med det de söker. Passar det åt båda hållen (minst 70 %) märks annonsen som en ömsesidig match.',
   },
   {
     icon: BedDouble,
-    title: 'Rumspassning',
-    desc: 'Ditt antal rum matchar mot vad motparten söker, och vice versa. En 3 rok möter en som faktiskt vill ha 3 rok.',
+    title: 'Stadsdel och rum',
+    desc: 'De viktigaste kraven. Ligger bostaden i fel stadsdel eller har fel antal rum hamnar matchningen lågt, oavsett resten.',
   },
   {
     icon: Scale,
-    title: 'Hyresbalans',
-    desc: 'Motorn väger hyrornas nivåer mot varandra. Byten med rimliga skillnader lyfts — extrema obalanser sållas bort.',
+    title: 'Hyra och yta',
+    desc: 'Hyran jämförs med din maxhyra och ytan med din minsta yta. Lite över eller under ger delpoäng i stället för att sållas bort direkt.',
   },
   {
     icon: ListChecks,
     title: 'Extrakrav matchas',
-    desc: 'Balkong, hiss, husdjur tillåtet. Dina måsten vägs mot motpartens bostad — så du aldrig behöver kompromissa i onödan.',
+    desc: 'Hiss, balkong, husdjur, rullstols- och barnvagnsvänligt. Det du markerat som måste vägs mot motpartens bostad.',
   },
 ]
 

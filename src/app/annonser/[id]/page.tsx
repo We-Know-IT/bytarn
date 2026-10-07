@@ -19,12 +19,17 @@ import {
   Pencil,
   Eye,
   Clock,
+  Sparkles,
+  MinusCircle,
+  XCircle,
 } from 'lucide-react'
 import { fetchListingById, fetchListings, fetchMyListings, reportListing, recordListingView, isExpired, describeListingError } from '@/lib/listings'
 import { addFavorite, removeFavorite, fetchFavoriteListingIds } from '@/lib/favorites'
 import { expressInterest, removeInterest, fetchMyInterestListingIds, fetchInterestCount, fetchMutualMatchUserIds } from '@/lib/interests'
 import { getOrCreateConversation } from '@/lib/messages'
-import { AMENITIES, type Listing } from '@/types'
+import { fetchMyPreferences, fetchPreferencesFor } from '@/lib/preferences'
+import { scoreMatch, MUTUAL_THRESHOLD, type CriterionResult, type FitResult, type MatchResult } from '@/lib/matching'
+import { AMENITIES, type Listing, type SwapPreferences } from '@/types'
 import AmenityIcon from '@/components/AmenityIcon'
 import AdSlot from '@/components/AdSlot'
 import { formatRent, formatDate, cn } from '@/lib/utils'
@@ -48,7 +53,12 @@ export default function ListingDetailPage() {
   const [copied, setCopied] = useState(false)
   const [reported, setReported] = useState(false)
   const [interestCount, setInterestCount] = useState(0)
+  // Both users showed interest in each other's listings (lib/interests).
   const [mutualMatch, setMutualMatch] = useState(false)
+  // Matching (lib/matching). undefined = not loaded yet.
+  const [myListings, setMyListings] = useState<Listing[] | undefined>(undefined)
+  const [myPrefs, setMyPrefs] = useState<SwapPreferences | null | undefined>(undefined)
+  const [ownerPrefs, setOwnerPrefs] = useState<SwapPreferences | null | undefined>(undefined)
   const [messaging, setMessaging] = useState(false)
   const [canManage, setCanManage] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -72,8 +82,19 @@ export default function ListingDetailPage() {
   useEffect(() => {
     if (!user) return
     const id = params.id as string
-    fetchMyListings(user.id).then((mine) => setCanManage(mine.some((l) => l.id === id)))
+    fetchMyListings(user.id).then((mine) => {
+      setCanManage(mine.some((l) => l.id === id))
+      setMyListings(mine)
+    })
   }, [user, params.id])
+
+  // Matching: my wishes and the owner's wishes.
+  const ownerId = listing?.userId
+  useEffect(() => {
+    if (!user || !ownerId || ownerId === user.id) return
+    fetchMyPreferences(user.id).then(setMyPrefs)
+    fetchPreferencesFor([ownerId]).then((m) => setOwnerPrefs(m.get(ownerId) ?? null))
+  }, [user, ownerId])
 
   useEffect(() => {
     if (!user) return
@@ -99,6 +120,18 @@ export default function ListingDetailPage() {
 
   // Stable reference — prevents ListingMap from reinitializing on every auto-rotate tick
   const mapListings = useMemo(() => (listing ? [listing] : []), [listing?.id])
+
+  const matchLoaded = myListings !== undefined && myPrefs !== undefined && ownerPrefs !== undefined
+  const match = useMemo(() => {
+    if (!listing || !matchLoaded) return null
+    const offered = myListings.filter((l) => l.status === 'aktiv' && !isExpired(l) && l.id !== listing.id)
+    return {
+      result: scoreMatch({ candidate: listing, viewerPrefs: myPrefs, ownerPrefs, viewerListings: offered }),
+      offered,
+      hasPrefs: myPrefs != null,
+      ownerHasPrefs: ownerPrefs != null,
+    }
+  }, [listing, matchLoaded, myListings, myPrefs, ownerPrefs])
 
   if (listing === undefined) {
     return (
@@ -455,6 +488,11 @@ export default function ListingDetailPage() {
             ))}
           </div>
 
+          {/* Matching — not shown on your own (or co-managed) listing */}
+          {supabaseConfigured && !canManage && user?.id !== listing.userId && (
+            <MatchBox signedIn={!!user} match={match} />
+          )}
+
           {/* Description */}
           <div className="mb-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-3">Om bostaden</h2>
@@ -528,7 +566,7 @@ export default function ListingDetailPage() {
                   <Handshake size={18} className="text-emerald-600 flex-shrink-0" strokeWidth={1.75} />
                   <div>
                     <p className="text-xs font-semibold text-emerald-700">Ömsesidigt intresse!</p>
-                    <p className="text-xs text-emerald-600">Ni har båda visat intresse.</p>
+                    <p className="text-xs text-emerald-600">Ni har visat intresse för varandras annonser.</p>
                   </div>
                 </div>
               )}
@@ -599,5 +637,160 @@ export default function ListingDetailPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// ─── Matching box ─────────────────────────────────────────────────────
+
+interface MatchBoxData {
+  result: MatchResult
+  offered: Listing[]
+  hasPrefs: boolean
+  ownerHasPrefs: boolean
+}
+
+function MatchBox({ signedIn, match }: { signedIn: boolean; match: MatchBoxData | null }) {
+  if (!signedIn) {
+    return (
+      <div className="mb-6 rounded-2xl border border-gray-100 p-5">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-1">
+          <Sparkles size={18} className="text-emerald-600" /> Matchning
+        </h2>
+        <p className="text-sm text-gray-500">
+          <Link href="/logga-in" className="font-semibold text-emerald-700 hover:underline">Logga in</Link> för att se hur väl
+          bostaden passar det du söker — och hur väl din bostad passar annonsören.
+        </p>
+      </div>
+    )
+  }
+  if (!match) {
+    return <div className="mb-6 h-40 rounded-2xl bg-gray-50 animate-pulse" aria-label="Laddar matchning" />
+  }
+
+  const { result, offered, hasPrefs, ownerHasPrefs } = match
+  const ownListing = offered.find((l) => l.id === result.viewerListingId)
+  const headline =
+    result.score == null
+      ? 'Matchning okänd'
+      : result.mutual
+        ? 'Ömsesidig match'
+        : result.oneSided
+          ? 'Matchning åt ett håll'
+          : result.score >= MUTUAL_THRESHOLD
+            ? 'Bra match'
+            : 'Svag match'
+
+  return (
+    <div className="mb-6 rounded-2xl border border-gray-100 p-5">
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div>
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+            <Sparkles size={18} className="text-emerald-600" /> Matchning
+          </h2>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {headline}
+            {result.oneSided === 'viewer' && ' — bygger bara på vad du söker'}
+            {result.oneSided === 'owner' && ' — bygger bara på vad annonsören söker'}
+          </p>
+        </div>
+        {result.score != null && (
+          <div
+            className={cn(
+              'flex-shrink-0 rounded-2xl px-3 py-2 text-center',
+              result.mutual ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-800'
+            )}
+          >
+            <div className="text-2xl font-bold leading-none tabular-nums">{result.score} %</div>
+            <div className={cn('text-[11px] mt-1', result.mutual ? 'text-white/80' : 'text-emerald-700')}>
+              {result.oneSided ? 'ena hållet' : 'båda hållen'}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <MatchSide
+          title="Passar dig"
+          subtitle="Bostaden mot det du söker"
+          fit={result.forViewer}
+          empty={
+            !hasPrefs ? (
+              <>
+                Du har inte berättat vad du söker.{' '}
+                <Link href="/mina-sidor?flik=sokes" className="font-semibold text-emerald-700 hover:underline">
+                  Fyll i vad du söker
+                </Link>
+              </>
+            ) : (
+              'Du har inte angett några krav — alla bostäder går bra.'
+            )
+          }
+        />
+        <MatchSide
+          title="Du passar dem"
+          subtitle={ownListing ? `Din annons ”${ownListing.title}” mot det annonsören söker` : 'Din bostad mot det annonsören söker'}
+          fit={result.forOwner}
+          empty={
+            !ownerHasPrefs ? (
+              'Annonsören har inte angett vad hen söker.'
+            ) : offered.length === 0 ? (
+              <>
+                Du har ingen aktiv annons att byta med.{' '}
+                <Link href="/annonser/ny" className="font-semibold text-emerald-700 hover:underline">
+                  Lägg upp din bostad
+                </Link>
+              </>
+            ) : (
+              'Annonsören har inte angett några krav.'
+            )
+          }
+        />
+      </div>
+      <p className="text-[11px] text-gray-400 mt-4">
+        En uppskattning utifrån stadsdel, rum, hyra, yta och tillgänglighet. Stadsdel och antal rum väger tyngst.
+      </p>
+    </div>
+  )
+}
+
+function MatchSide({ title, subtitle, fit, empty }: { title: string; subtitle: string; fit: FitResult | null; empty: React.ReactNode }) {
+  const specified = fit?.criteria.filter((c) => c.status !== 'any') ?? []
+  return (
+    <div className="rounded-xl bg-gray-50 p-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+        {fit?.score != null && <span className="text-sm font-semibold tabular-nums text-gray-700">{fit.score} %</span>}
+      </div>
+      <p className="text-xs text-gray-500 mb-3 line-clamp-2">{subtitle}</p>
+      {fit && specified.length > 0 ? (
+        <ul className="space-y-1.5">
+          {specified.map((c) => (
+            <CriterionRow key={c.key} c={c} />
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-gray-500">{empty}</p>
+      )}
+    </div>
+  )
+}
+
+function CriterionRow({ c }: { c: CriterionResult }) {
+  const Icon = c.status === 'ok' ? CheckCircle : c.status === 'partial' ? MinusCircle : XCircle
+  return (
+    <li className="flex items-start gap-2 text-sm">
+      <Icon
+        size={15}
+        className={cn(
+          'mt-0.5 flex-shrink-0',
+          c.status === 'ok' ? 'text-emerald-600' : c.status === 'partial' ? 'text-amber-500' : 'text-red-500'
+        )}
+        aria-label={c.status === 'ok' ? 'Uppfyllt' : c.status === 'partial' ? 'Delvis' : 'Ej uppfyllt'}
+      />
+      <span className="min-w-0">
+        <span className="font-medium text-gray-800">{c.label}</span>
+        <span className="text-gray-500"> · {c.detail}</span>
+      </span>
+    </li>
   )
 }

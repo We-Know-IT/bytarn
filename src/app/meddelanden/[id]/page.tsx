@@ -175,7 +175,7 @@ export default function ConversationPage() {
         {conv.mutualInterest && (
           <span className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 font-medium px-2 py-1 rounded-full">
             <Handshake size={12} strokeWidth={2} />
-            Match!
+            Ömsesidigt intresse
           </span>
         )}
         {conv.listingId && (

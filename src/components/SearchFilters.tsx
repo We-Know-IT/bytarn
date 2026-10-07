@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Search, SlidersHorizontal, X, Map, List, Bookmark, Info } from 'lucide-react'
 import { STOCKHOLM_DISTRICTS, AMENITIES, type AmenityKey } from '@/types'
 import { cn } from '@/lib/utils'
@@ -12,6 +13,11 @@ interface SearchFiltersProps {
   resultCount: number
   /** False when the user has no home location — "Närmast" can't be computed then. */
   nearestAvailable?: boolean
+  /**
+   * Why "Bäst match" can't be fully computed, if it can't: signed out, or
+   * no "Det här söker jag" saved (then only the other side is scored).
+   */
+  bestMatchHint?: 'signed_out' | 'no_preferences' | null
 }
 
 const ROOM_OPTIONS = [1, 2, 3, 4, 5]
@@ -29,6 +35,7 @@ export default function SearchFiltersComponent({
   onFiltersChange,
   resultCount,
   nearestAvailable = true,
+  bestMatchHint = null,
 }: SearchFiltersProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [districtSearch, setDistrictSearch] = useState('')
@@ -213,6 +220,27 @@ export default function SearchFiltersComponent({
               Sortering efter avstånd kräver att din bostad är angiven. Logga in och lägg upp din bostad —
               tills dess visas de nyaste först.
             </span>
+          </p>
+        )}
+
+        {filters.sort === 'best_match' && bestMatchHint && (
+          <p className="flex items-start gap-1.5 pb-3 text-xs text-gray-500">
+            <Info size={13} className="mt-px flex-shrink-0 text-emerald-700" />
+            {bestMatchHint === 'signed_out' ? (
+              <span>
+                Matchning bygger på vad du söker och vad din bostad erbjuder.{' '}
+                <Link href="/logga-in" className="font-semibold text-emerald-700 underline underline-offset-2">Logga in</Link>
+                {' '}för att se hur väl annonserna passar dig — tills dess visas de nyaste först.
+              </span>
+            ) : (
+              <span>
+                Du har inte berättat vad du söker, så vi kan bara räkna på hur väl din bostad passar andra.{' '}
+                <Link href="/mina-sidor?flik=sokes" className="font-semibold text-emerald-700 underline underline-offset-2">
+                  Fyll i vad du söker
+                </Link>
+                {' '}för att få en riktig matchning.
+              </span>
+            )}
           </p>
         )}
 

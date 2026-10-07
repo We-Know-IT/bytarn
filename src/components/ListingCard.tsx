@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Heart, Home, MapPin, Handshake, Video, BedDouble, Ruler, Images } from 'lucide-react'
+import { Heart, Home, MapPin, Handshake, Video, BedDouble, Ruler, Images, Sparkles } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { AMENITIES, type Listing } from '@/types'
 import AmenityIcon from './AmenityIcon'
@@ -10,17 +10,28 @@ import { useHomeLocation } from '@/lib/useHomeLocation'
 import { useAuth } from '@/context/AuthContext'
 import { supabaseConfigured } from '@/lib/supabase/client'
 import { addFavorite, removeFavorite } from '@/lib/favorites'
+import type { MatchResult } from '@/lib/matching'
 
 interface ListingCardProps {
   listing: Listing
   compact?: boolean
   favorited?: boolean
+  /** Both users have shown interest in each other's listings (lib/interests). */
   mutualMatch?: boolean
+  /** Computed match score (lib/matching). Shows "92 % match" when known. */
+  match?: MatchResult | null
+}
+
+function matchTitle(match: MatchResult): string {
+  if (match.mutual) return 'Passar det du söker, och din bostad passar det annonsören söker'
+  if (match.oneSided === 'viewer') return 'Hur väl bostaden passar det du söker (annonsören har inte angett vad hen söker)'
+  if (match.oneSided === 'owner') return 'Hur väl din bostad passar det annonsören söker (fyll i vad du söker för en ömsesidig bedömning)'
+  return 'Sammanvägd matchning åt båda hållen'
 }
 
 const NEW_MS = 7 * 24 * 60 * 60 * 1000
 
-export default function ListingCard({ listing, compact = false, favorited: initialFavorited = false, mutualMatch = false }: ListingCardProps) {
+export default function ListingCard({ listing, compact = false, favorited: initialFavorited = false, mutualMatch = false, match = null }: ListingCardProps) {
   const { user } = useAuth()
   const home = useHomeLocation()
   const [favorited, setFavorited] = useState(initialFavorited)
@@ -132,10 +143,19 @@ export default function ListingCard({ listing, compact = false, favorited: initi
 
           {/* Badges — top left */}
           <div className="absolute left-3 top-3 flex max-w-[calc(100%-64px)] flex-wrap gap-1.5">
+            {match?.score != null && (
+              <span
+                className={cn('badge shadow-sm', match.mutual ? 'badge-solid' : 'badge-overlay text-emerald-700')}
+                title={matchTitle(match)}
+              >
+                <Sparkles size={12} strokeWidth={2} />
+                {match.score} % match{match.mutual ? ' · Ömsesidig' : ''}
+              </span>
+            )}
             {mutualMatch && (
-              <span className="badge badge-solid shadow-sm">
+              <span className="badge badge-solid shadow-sm" title="Ni har visat intresse för varandras annonser">
                 <Handshake size={12} strokeWidth={2} />
-                Match
+                Ömsesidigt intresse
               </span>
             )}
             {inactive && (

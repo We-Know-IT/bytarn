@@ -1,27 +1,45 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import {
   Settings, Heart, Home, MessageSquare, Plus, Edit2, Trash2, Eye, EyeOff,
-  Bookmark, LogOut, CheckCircle2, Circle, Handshake, Loader2, X, CheckCircle,
+  Bookmark, LogOut, CheckCircle2, Circle, Handshake, Loader2, X, CheckCircle, Search,
 } from 'lucide-react'
 import { fetchMyListings, setListingStatus, deleteListing } from '@/lib/listings'
 import { fetchFavoriteListings } from '@/lib/favorites'
 import { fetchIncomingInterests, type IncomingInterest } from '@/lib/interests'
 import { updateProfile } from '@/lib/profile'
+import { fetchMyPreferences, savePreferences } from '@/lib/preferences'
+import { describeListingError } from '@/lib/listings'
+import { hasAnyPreference } from '@/lib/matching'
+import PreferencesForm from '@/components/PreferencesForm'
 import { uploadAvatar } from '@/lib/storage'
 import { useAuth } from '@/context/AuthContext'
 import { supabaseConfigured } from '@/lib/supabase/client'
 import ListingCard from '@/components/ListingCard'
 import { cn, formatDate } from '@/lib/utils'
-import type { Listing, SavedSearch, ListingStatus } from '@/types'
+import { EMPTY_SWAP_PREFERENCES, type Listing, type SavedSearch, type ListingStatus, type SwapPreferencesInput } from '@/types'
 
-type Tab = 'annonser' | 'favoriter' | 'intresse' | 'sparade'
+type Tab = 'annonser' | 'sokes' | 'favoriter' | 'intresse' | 'sparade'
+
+// /mina-sidor?flik=sokes opens "Det här söker jag" directly (linked from
+// the "Bäst match" sort and the match box on a listing).
+const TAB_PARAM: Record<string, Tab> = { sokes: 'sokes', favoriter: 'favoriter', intresse: 'intresse', sparade: 'sparade' }
 
 export default function MinaSidorPage() {
+  return (
+    <Suspense>
+      <MinaSidorView />
+    </Suspense>
+  )
+}
+
+function MinaSidorView() {
   const { user, profile, loading, signOut, refreshProfile } = useAuth()
-  const [tab, setTab] = useState<Tab>('annonser')
+  const searchParams = useSearchParams()
+  const [tab, setTab] = useState<Tab>(() => TAB_PARAM[searchParams.get('flik') ?? ''] ?? 'annonser')
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([])
   const [myListingsReal, setMyListingsReal] = useState<Listing[]>([])
   const [favoriteListings, setFavoriteListings] = useState<Listing[]>([])
@@ -175,6 +193,7 @@ export default function MinaSidorPage() {
       <div className="flex border-b border-gray-100 mb-6 overflow-x-auto">
         {([
           { key: 'annonser', label: 'Mina annonser', icon: Home },
+          { key: 'sokes', label: 'Det här söker jag', icon: Search },
           { key: 'favoriter', label: 'Favoriter', icon: Heart },
           { key: 'intresse', label: 'Intresseanmälningar', icon: MessageSquare },
           { key: 'sparade', label: 'Sparade sökningar', icon: Bookmark },
@@ -183,7 +202,7 @@ export default function MinaSidorPage() {
             key={key}
             onClick={() => setTab(key)}
             className={cn(
-              'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
+              'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
               tab === key ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-500 hover:text-gray-700'
             )}
           >
@@ -313,6 +332,8 @@ export default function MinaSidorPage() {
         </div>
       )}
 
+      {tab === 'sokes' && user && <PreferencesSection userId={user.id} />}
+
       {tab === 'favoriter' && (
         <div>
           <p className="text-sm text-gray-500 mb-4">{favorites.length} sparade annonser</p>
@@ -409,7 +430,7 @@ export default function MinaSidorPage() {
                   {ii.mutual && (
                     <span className="flex-shrink-0 inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 font-medium px-2 py-1 rounded-full">
                       <Handshake size={12} strokeWidth={2} />
-                      Match
+                      Ömsesidigt intresse
                     </span>
                   )}
                 </div>
@@ -418,6 +439,80 @@ export default function MinaSidorPage() {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+// "Det här söker jag" — the user's swap_preferences, used for matching.
+function PreferencesSection({ userId }: { userId: string }) {
+  const [value, setValue] = useState<SwapPreferencesInput | null>(null)
+  const [saved, setSaved] = useState<SwapPreferencesInput | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [justSaved, setJustSaved] = useState(false)
+
+  useEffect(() => {
+    if (!supabaseConfigured) return
+    let cancelled = false
+    fetchMyPreferences(userId).then((p) => {
+      if (cancelled) return
+      setValue(p ?? EMPTY_SWAP_PREFERENCES)
+      setSaved(p)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [userId])
+
+  async function handleSave() {
+    if (!value) return
+    setSaving(true)
+    setError(null)
+    try {
+      const stored = await savePreferences(userId, value)
+      setSaved(stored)
+      setJustSaved(true)
+      setTimeout(() => setJustSaved(false), 2500)
+    } catch (err) {
+      setError(describeListingError(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!value) {
+    return (
+      <div className="py-12 flex justify-center">
+        <Loader2 className="animate-spin text-gray-400" size={24} />
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-2xl">
+      <h2 className="text-lg font-semibold text-gray-900 mb-1">Det här söker jag</h2>
+      <p className="text-sm text-gray-500 mb-6">
+        Vi räknar ut hur väl varje annons passar det du söker, och hur väl din bostad passar den som annonserar.
+        {' '}
+        {!hasAnyPreference(saved) && 'Du har inte fyllt i något ännu — då kan vi bara visa hur din bostad passar andra.'}
+      </p>
+      <PreferencesForm value={value} onChange={(next) => { setValue(next); setJustSaved(false) }} disabled={saving} />
+      {error && (
+        <p role="alert" className="mt-5 px-3 py-2 rounded-xl bg-red-50 text-red-700 text-sm break-words">{error}</p>
+      )}
+      <div className="flex flex-wrap items-center gap-3 mt-6">
+        <button onClick={handleSave} disabled={saving} className="btn btn-primary">
+          {saving ? 'Sparar…' : 'Spara'}
+        </button>
+        {justSaved && (
+          <span className="inline-flex items-center gap-1 text-sm text-emerald-700">
+            <CheckCircle size={15} /> Sparat
+          </span>
+        )}
+        <Link href="/annonser?sortera=match" className="text-sm font-medium text-emerald-700 hover:underline ml-auto">
+          Visa bästa matchningar
+        </Link>
+      </div>
     </div>
   )
 }

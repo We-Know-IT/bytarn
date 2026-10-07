@@ -58,7 +58,6 @@ export function rowToListing(row: ListingRow): Listing {
     expiresAt: row.expires_at ?? addDays(row.updated_at, LISTING_LIFETIME_DAYS),
     viewCount: row.view_count ?? 0,
     interestedCount: 0,
-    matchCount: 0,
     floor: row.floor ?? undefined,
     elevator: row.elevator ?? undefined,
     balcony: row.balcony ?? undefined,

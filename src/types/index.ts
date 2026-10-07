@@ -22,7 +22,6 @@ export interface Listing {
   expiresAt: string
   viewCount: number
   interestedCount: number
-  matchCount: number
   floor?: number
   elevator?: boolean
   balcony?: boolean
@@ -39,6 +38,38 @@ export const AMENITIES: { key: AmenityKey; label: string; query: string }[] = [
   { key: 'strollerFriendly', label: 'Barnvagnsanpassat', query: 'barnvagn' },
   { key: 'wheelchairAccessible', label: 'Rullstolsanpassat', query: 'rullstol' },
 ]
+
+// What a user is looking for in a swap (table swap_preferences). Scored
+// against listings in src/lib/matching.ts. Empty arrays / null = any.
+export interface SwapPreferences {
+  userId: string
+  /** Acceptable districts; empty = any. */
+  districts: string[]
+  /** Acceptable room counts, 5 = "5 or more"; empty = any. */
+  rooms: number[]
+  maxRent: number | null
+  minArea: number | null
+  needsElevator: boolean
+  needsBalcony: boolean
+  needsPets: boolean
+  needsWheelchair: boolean
+  needsStroller: boolean
+  updatedAt?: string
+}
+
+export type SwapPreferencesInput = Omit<SwapPreferences, 'userId' | 'updatedAt'>
+
+export const EMPTY_SWAP_PREFERENCES: SwapPreferencesInput = {
+  districts: [],
+  rooms: [],
+  maxRent: null,
+  minArea: null,
+  needsElevator: false,
+  needsBalcony: false,
+  needsPets: false,
+  needsWheelchair: false,
+  needsStroller: false,
+}
 
 export interface User {
   id: string
