@@ -11,7 +11,7 @@ export default function LegalPage({
 }: {
   eyebrow: string
   title: string
-  sections: { title: string; body: string }[]
+  sections: { title: string; body: string; id?: string }[]
   contactLabel: string
 }) {
   return (
@@ -26,7 +26,7 @@ export default function LegalPage({
               {sections.map((s, i) => (
                 <li key={s.title}>
                   <a
-                    href={`#avsnitt-${i + 1}`}
+                    href={`#${s.id ?? `avsnitt-${i + 1}`}`}
                     className="-ml-px block border-l-2 border-transparent py-0.5 pl-4 text-[13.5px] text-gray-600 transition-colors hover:border-emerald-600 hover:text-emerald-600"
                   >
                     {s.title.replace(/^\d+\.\s*/, '')}
@@ -46,7 +46,7 @@ export default function LegalPage({
           <div className="card p-6 sm:p-10">
             <div className="prose-page">
               {sections.map((s, i) => (
-                <section key={s.title} id={`avsnitt-${i + 1}`} className="first:[&>h2]:mt-0">
+                <section key={s.title} id={s.id ?? `avsnitt-${i + 1}`} className="first:[&>h2]:mt-0">
                   <h2>{s.title}</h2>
                   <p>{s.body}</p>
                 </section>

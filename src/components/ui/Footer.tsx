@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Logo from '@/components/ui/Logo'
+import { openConsentSettings } from '@/lib/consent'
 
 const COLUMNS = [
   {
@@ -101,6 +102,15 @@ export default function Footer() {
                 </Link>
               </li>
             ))}
+            <li>
+              <button
+                type="button"
+                onClick={openConsentSettings}
+                className="transition-colors hover:text-white focus-visible:outline-white"
+              >
+                Cookieinställningar
+              </button>
+            </li>
           </ul>
         </div>
       </div>
