@@ -1,26 +1,76 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { MessageSquare, Handshake } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { fetchConversations, type ConversationSummary } from '@/lib/messages'
+import {
+  applyMessageToConversations,
+  fetchConversations,
+  type ConversationSummary,
+} from '@/lib/messages'
+import { subscribeToMyMessages } from '@/lib/realtime'
 import { formatMessageTime, cn } from '@/lib/utils'
+
+const REFETCH_DEBOUNCE_MS = 300
 
 export default function MeddelandenPage() {
   const { user, loading } = useAuth()
-  const [conversations, setConversations] = useState<ConversationSummary[]>([])
-  const [loadingConvs, setLoadingConvs] = useState(true)
+  const userId = user?.id
+  const [inbox, setInbox] = useState<{ userId: string; conversations: ConversationSummary[] } | null>(null)
+  const conversations = userId && inbox?.userId === userId ? inbox.conversations : EMPTY
+  const loadingConvs = userId ? inbox?.userId !== userId : loading
 
+  const conversationsRef = useRef(conversations)
   useEffect(() => {
-    if (!user) {
-      setLoadingConvs(false)
-      return
+    conversationsRef.current = conversations
+  })
+
+  // Initial load + live updates: one shared Realtime feed of my messages
+  // (RLS limits it to my conversations) updates last message, order and
+  // unread counts in place; anything unknown triggers a refetch.
+  useEffect(() => {
+    if (!userId) return
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let seq = 0
+
+    const load = () => {
+      const mine = ++seq
+      fetchConversations(userId).then((list) => {
+        if (!cancelled && mine === seq) setInbox({ userId, conversations: list })
+      })
     }
-    fetchConversations(user.id)
-      .then(setConversations)
-      .finally(() => setLoadingConvs(false))
-  }, [user])
+    const scheduleLoad = () => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(load, REFETCH_DEBOUNCE_MS)
+    }
+
+    load()
+    const unsubscribe = subscribeToMyMessages(userId, (event) => {
+      if (event.type === 'insert' || event.type === 'update') {
+        const { message } = event
+        if (!conversationsRef.current.some((c) => c.id === message.conversationId)) {
+          // A brand-new conversation (or the list hasn't loaded yet).
+          scheduleLoad()
+          return
+        }
+        setInbox((prev) => {
+          if (!prev || prev.userId !== userId) return prev
+          const next = applyMessageToConversations(prev.conversations, message, userId)
+          return next ? { userId, conversations: next } : prev
+        })
+      } else if (event.type === 'subscribed' && event.reconnect) {
+        scheduleLoad()
+      }
+    })
+
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+      unsubscribe()
+    }
+  }, [userId])
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
@@ -50,10 +100,10 @@ export default function MeddelandenPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-1">
+        <ul className="space-y-1" aria-label="Konversationer">
           {conversations.map((conv) => (
+            <li key={conv.id}>
             <Link
-              key={conv.id}
               href={`/meddelanden/${conv.id}`}
               className="flex items-center gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-colors"
             >
@@ -70,26 +120,37 @@ export default function MeddelandenPage() {
                   </div>
                 )}
                 {conv.unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                    {conv.unreadCount}
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold"
+                  >
+                    {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
                   </span>
                 )}
               </div>
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
-                  <span className={cn('text-sm font-semibold', conv.unreadCount > 0 ? 'text-gray-900' : 'text-gray-700')}>
+                  <span className={cn('text-sm', conv.unreadCount > 0 ? 'font-bold text-gray-900' : 'font-semibold text-gray-700')}>
                     {conv.other?.name ?? 'Okänd användare'}
+                    {conv.unreadCount > 0 && (
+                      <span className="sr-only">
+                        {` – ${conv.unreadCount} ${conv.unreadCount === 1 ? 'oläst meddelande' : 'olästa meddelanden'}`}
+                      </span>
+                    )}
                   </span>
-                  <span className="text-xs text-gray-400">
+                  <span className="flex items-center gap-1.5 text-xs text-gray-400">
                     {conv.lastMessage ? formatMessageTime(conv.lastMessage.createdAt) : ''}
+                    {conv.unreadCount > 0 && (
+                      <span aria-hidden="true" className="w-2 h-2 rounded-full bg-emerald-600" />
+                    )}
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 truncate mb-1">re: {conv.listingTitle}</p>
                 {conv.lastMessage && (
-                  <p className={cn('text-sm truncate', conv.unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500')}>
+                  <p className={cn('text-sm truncate', conv.unreadCount > 0 ? 'text-gray-900 font-semibold' : 'text-gray-500')}>
                     {conv.lastMessage.senderId === user?.id ? 'Du: ' : ''}
-                    {conv.lastMessage.content}
+                    {conv.lastMessage.content || (conv.lastMessage.imageUrl ? 'Bild' : '')}
                   </p>
                 )}
               </div>
@@ -101,9 +162,12 @@ export default function MeddelandenPage() {
                 </span>
               )}
             </Link>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   )
 }
+
+const EMPTY: ConversationSummary[] = []
