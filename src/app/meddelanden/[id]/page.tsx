@@ -274,10 +274,12 @@ export default function ConversationPage() {
               onClick={() => setMenuOpen((o) => !o)}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
-              aria-label="Fler val"
-              className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+              aria-label={`Fler val: blockera eller anmäl ${other.name}`}
+              title="Blockera eller anmäl"
+              className="h-9 px-2.5 rounded-full border border-gray-200 flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
             >
-              <MoreHorizontal size={20} />
+              <MoreHorizontal size={18} />
+              <span className="hidden sm:inline">Mer</span>
             </button>
             {menuOpen && (
               <div
