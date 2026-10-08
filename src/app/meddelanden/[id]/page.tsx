@@ -3,13 +3,15 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Send, Image as ImageIcon, Handshake, Loader2, ArrowDown, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Send, Image as ImageIcon, Handshake, Loader2, ArrowDown, AlertCircle, MoreHorizontal, Ban, Flag, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { supabaseConfigured } from '@/lib/supabase/client'
 import { fetchConversations, lastOwnConfirmed, type ConversationSummary } from '@/lib/messages'
 import { useConversationMessages } from '@/hooks/useConversationMessages'
 import { uploadListingImage } from '@/lib/storage'
 import { formatMessageTime, cn } from '@/lib/utils'
+import { BLOCKED_MESSAGE, fetchMyBlockedIds, isConversationBlocked, unblockUser } from '@/lib/blocks'
+import { BlockUserDialog, ReportUserDialog } from '@/components/BlockReportDialogs'
 
 /** Within this many px of the bottom counts as "at the bottom". */
 const NEAR_BOTTOM_PX = 120
@@ -22,6 +24,15 @@ export default function ConversationPage() {
   const [input, setInput] = useState('')
   const [uploading, setUploading] = useState(false)
   const [newBelow, setNewBelow] = useState(false)
+  // Blocking: iBlocked = I've blocked the other person (I can see my own
+  // blocks); sendBlocked = a send failed and the server says a block (either
+  // direction) stops this conversation. Both are keyed by conversation id.
+  const [iBlocked, setIBlocked] = useState<{ key: string; value: boolean } | null>(null)
+  const [sendBlocked, setSendBlocked] = useState<string | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [dialog, setDialog] = useState<'block' | 'report' | null>(null)
+  const [unblocking, setUnblocking] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const scrollRef = useRef<HTMLDivElement>(null)
   // Whether the user is (close to) the bottom of the list. Updated from
@@ -51,6 +62,55 @@ export default function ConversationPage() {
   }, [user, conversationId])
 
   const conv = convState?.id === conversationId ? convState.conv : undefined
+  const otherId = conv?.other?.id
+
+  useEffect(() => {
+    if (!user || !otherId) return
+    let cancelled = false
+    const key = `${conversationId}:${otherId}`
+    fetchMyBlockedIds(user.id).then((ids) => {
+      if (!cancelled) setIBlocked({ key, value: ids.has(otherId) })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [user, conversationId, otherId])
+
+  const blockedByMe = iBlocked?.key === `${conversationId}:${otherId}` && iBlocked.value
+  const blockedOnSend = sendBlocked === conversationId
+  const composerBlocked = blockedByMe || blockedOnSend
+
+  // A failed send may be a block (RLS refuses the insert when either side
+  // has blocked the other). The hook doesn't expose the error, so ask the
+  // server once per newly failed message.
+  const failedCount = messages.filter((m) => m.status === 'failed').length
+  useEffect(() => {
+    if (failedCount === 0 || blockedOnSend) return
+    let cancelled = false
+    isConversationBlocked(conversationId).then((blocked) => {
+      if (!cancelled && blocked) setSendBlocked(conversationId)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [failedCount, conversationId, blockedOnSend])
+
+  // Close the "…" menu on outside click / Escape.
+  useEffect(() => {
+    if (!menuOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpen])
 
   const scrollToBottom = useCallback((smooth: boolean) => {
     const el = scrollRef.current
@@ -121,7 +181,23 @@ export default function ConversationPage() {
   const other = conv.other
   const lastOwn = lastOwnConfirmed(messages, user.id)
 
+  async function handleUnblock() {
+    if (!user || !other) return
+    setUnblocking(true)
+    try {
+      await unblockUser(user.id, other.id)
+      setIBlocked({ key: `${conversationId}:${other.id}`, value: false })
+      // Re-check: the other side may still have blocked me.
+      setSendBlocked(null)
+    } catch {
+      alert('Kunde inte avblockera. Försök igen.')
+    } finally {
+      setUnblocking(false)
+    }
+  }
+
   function sendText() {
+    if (composerBlocked) return
     const content = input.trim()
     if (!content) return
     setInput('')
@@ -191,7 +267,84 @@ export default function ConversationPage() {
             )}
           </Link>
         )}
+        {other && (
+          <div ref={menuRef} className="relative flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              aria-label="Fler val"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            >
+              <MoreHorizontal size={20} />
+            </button>
+            {menuOpen && (
+              <div
+                role="menu"
+                className="animate-menu-in absolute right-0 top-full mt-1 z-20 w-56 rounded-xl border border-gray-100 bg-white py-1 shadow-lg"
+              >
+                {blockedByMe ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      handleUnblock()
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <ShieldCheck size={15} /> Avblockera {other.name}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      setDialog('block')
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <Ban size={15} /> Blockera {other.name}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    setDialog('report')
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
+                >
+                  <Flag size={15} /> Anmäl {other.name}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {dialog === 'block' && other && (
+        <BlockUserDialog
+          userId={user.id}
+          other={other}
+          onClose={() => setDialog(null)}
+          onBlocked={() => {
+            setIBlocked({ key: `${conversationId}:${other.id}`, value: true })
+            setDialog(null)
+          }}
+        />
+      )}
+      {dialog === 'report' && other && (
+        <ReportUserDialog
+          userId={user.id}
+          other={other}
+          conversationId={conversationId}
+          onClose={() => setDialog(null)}
+        />
+      )}
 
       {/* Messages */}
       <div className="relative flex-1 min-h-0">
@@ -251,6 +404,8 @@ export default function ConversationPage() {
                   <div className={cn('flex items-center gap-1 mt-1 px-1', isMe ? 'justify-end' : '')}>
                     {msg.status === 'pending' ? (
                       <p className="text-xs text-gray-400">Skickar…</p>
+                    ) : msg.status === 'failed' && composerBlocked ? (
+                      <p className="text-xs text-gray-400">Inte skickat</p>
                     ) : msg.status === 'failed' ? (
                       <p className="flex items-center gap-1 text-xs text-red-600">
                         <AlertCircle size={12} aria-hidden="true" />
@@ -295,6 +450,29 @@ export default function ConversationPage() {
       </div>
 
       {/* Input */}
+      {composerBlocked ? (
+        <div role="status" className="bg-white border-t border-gray-100 px-4 py-4 text-center text-sm text-gray-600">
+          {blockedByMe ? (
+            <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+              <Ban size={15} className="text-gray-400" aria-hidden="true" />
+              <span>Du har blockerat {other?.name ?? 'användaren'}.</span>
+              <button
+                type="button"
+                onClick={handleUnblock}
+                disabled={unblocking}
+                className="font-medium text-emerald-700 underline hover:no-underline disabled:opacity-50"
+              >
+                {unblocking ? 'Avblockerar…' : 'Avblockera'}
+              </button>
+            </p>
+          ) : (
+            <p className="flex items-center justify-center gap-2">
+              <Ban size={15} className="text-gray-400" aria-hidden="true" />
+              {BLOCKED_MESSAGE}
+            </p>
+          )}
+        </div>
+      ) : (
       <div className="bg-white border-t border-gray-100 px-4 py-3">
         <div className="flex items-end gap-2">
           <label className="p-2 text-gray-400 hover:text-gray-600 cursor-pointer flex-shrink-0">
@@ -330,6 +508,7 @@ export default function ConversationPage() {
         </div>
         <p className="text-xs text-gray-400 mt-2 text-center">Enter för att skicka · Shift+Enter för ny rad</p>
       </div>
+      )}
     </div>
   )
 }

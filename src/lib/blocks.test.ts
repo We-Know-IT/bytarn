@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isBlockedError, rowToBlockedUser, sortBlockedLast, validateReportReason } from './blocks'
+import { isBlockedError, rowToBlockedUser, rowToUserReport, sortBlockedLast, validateReportReason } from './blocks'
 
 describe('rowToBlockedUser', () => {
   it('maps the embedded profile', () => {
@@ -60,5 +60,39 @@ describe('sortBlockedLast', () => {
   it('returns the same array when nothing is blocked', () => {
     expect(sortBlockedLast(list, new Set())).toBe(list)
     expect(sortBlockedLast(list, new Set(['zzz']))).toBe(list)
+  })
+})
+
+describe('rowToUserReport', () => {
+  it('maps both disambiguated profile embeds', () => {
+    expect(
+      rowToUserReport({
+        id: 'r1',
+        reporter_id: 'u1',
+        reported_id: 'u2',
+        conversation_id: 'c1',
+        reason: 'Spam',
+        created_at: '2026-10-08T10:00:00Z',
+        reporter: { name: 'Anna' },
+        reported: [{ name: ' Bo ' }],
+      })
+    ).toEqual({
+      id: 'r1',
+      reporterId: 'u1',
+      reporterName: 'Anna',
+      reportedId: 'u2',
+      reportedName: 'Bo',
+      conversationId: 'c1',
+      reason: 'Spam',
+      createdAt: '2026-10-08T10:00:00Z',
+    })
+  })
+
+  it('falls back when a profile is missing', () => {
+    const r = rowToUserReport({
+      id: 'r2', reporter_id: 'u1', reported_id: 'u2', conversation_id: null, reason: 'x', created_at: 't', reporter: null, reported: { name: null },
+    })
+    expect(r.reporterName).toBe('Okänd användare')
+    expect(r.reportedName).toBe('Okänd användare')
   })
 })

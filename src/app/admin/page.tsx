@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
-  Users, Home, MessageSquare, Flag, Mail, Megaphone, Loader2, Sparkles, Trash2, Archive, Search, ImageOff, CheckSquare, Square,
+  Users, Home, MessageSquare, Flag, Mail, Megaphone, Loader2, Sparkles, Trash2, Archive, Search, ImageOff, CheckSquare, Square, UserX,
 } from 'lucide-react'
 import { createClient, supabaseConfigured } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { LISTING_SELECT, rowToListing, isExpired, setListingStatus, deleteListing, describeListingError, type ListingRow } from '@/lib/listings'
 import { cn, formatDate } from '@/lib/utils'
+import { fetchUserReports, dismissUserReport, type UserReport } from '@/lib/blocks'
 import type { Listing } from '@/types'
 
 interface Counts {
@@ -38,6 +39,7 @@ export default function AdminPage() {
   const [counts, setCounts] = useState<Counts | null>(null)
   const [listings, setListings] = useState<Listing[] | null>(null)
   const [reports, setReports] = useState<Report[]>([])
+  const [userReports, setUserReports] = useState<UserReport[]>([])
   const [filter, setFilter] = useState<Filter>('alla')
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -79,6 +81,7 @@ export default function AdminPage() {
           }))
         )
       )
+    fetchUserReports().then(setUserReports)
   }, [isAdmin])
 
   const reportedIds = useMemo(() => new Set(reports.map((r) => r.listingId)), [reports])
@@ -137,6 +140,15 @@ export default function AdminPage() {
   async function dismissReport(id: string) {
     await createClient().from('reports').delete().eq('id', id)
     setReports((prev) => prev.filter((r) => r.id !== id))
+  }
+
+  async function dismissUserReportById(id: string) {
+    try {
+      await dismissUserReport(id)
+      setUserReports((prev) => prev.filter((r) => r.id !== id))
+    } catch (err) {
+      setMessage({ ok: false, text: describeListingError(err) })
+    }
   }
 
   function toggle(id: string) {
@@ -206,7 +218,7 @@ export default function AdminPage() {
           { label: 'Registrerade användare', value: counts?.users, Icon: Users },
           { label: 'Aktiva annonser', value: counts?.activeListings, Icon: Home },
           { label: 'Konversationer', value: counts?.conversations, Icon: MessageSquare },
-          { label: 'Öppna anmälningar', value: reports.length, Icon: Flag },
+          { label: 'Öppna anmälningar', value: reports.length + userReports.length, Icon: Flag },
         ].map(({ label, value, Icon }) => (
           <div key={label} className="bg-white border border-gray-100 rounded-2xl p-4">
             <Icon size={18} className="text-emerald-600" />
@@ -227,6 +239,26 @@ export default function AdminPage() {
                 <span className="text-gray-500 flex-1 min-w-[12rem]">”{r.reason}”</span>
                 <span className="text-xs text-gray-400">{formatDate(r.createdAt)}</span>
                 <button onClick={() => dismissReport(r.id)} className="text-xs text-gray-500 hover:text-gray-800">Avfärda</button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {userReports.length > 0 && (
+        <section className="mb-10">
+          <h2 className="font-semibold text-gray-900 mb-3">Anmälda användare</h2>
+          <div className="space-y-2">
+            {userReports.map((r) => (
+              <div key={r.id} className="flex flex-wrap items-center gap-3 p-3 bg-white border border-red-100 rounded-xl text-sm">
+                <UserX size={14} className="text-red-500" />
+                <Link href={`/profil/${r.reportedId}`} className="font-medium text-gray-900 hover:underline">{r.reportedName}</Link>
+                <span className="text-gray-500 flex-1 min-w-[12rem] whitespace-pre-wrap break-words">”{r.reason}”</span>
+                <span className="text-xs text-gray-400">
+                  av <Link href={`/profil/${r.reporterId}`} className="hover:underline">{r.reporterName}</Link>
+                  {r.conversationId ? ' · från en chatt' : ''} · {formatDate(r.createdAt)}
+                </span>
+                <button onClick={() => dismissUserReportById(r.id)} className="text-xs text-gray-500 hover:text-gray-800">Avfärda</button>
               </div>
             ))}
           </div>

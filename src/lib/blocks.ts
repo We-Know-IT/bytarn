@@ -18,6 +18,31 @@ export interface BlockRow {
   profiles: { name: string | null; avatar_url: string | null } | { name: string | null; avatar_url: string | null }[] | null
 }
 
+type NameEmbed = { name: string | null } | { name: string | null }[] | null
+
+export interface UserReportRow {
+  id: string
+  reporter_id: string
+  reported_id: string
+  conversation_id: string | null
+  reason: string
+  created_at: string
+  reporter: NameEmbed
+  reported: NameEmbed
+}
+
+/** A report about a user, as shown to admins. */
+export interface UserReport {
+  id: string
+  reporterId: string
+  reporterName: string
+  reportedId: string
+  reportedName: string
+  conversationId: string | null
+  reason: string
+  createdAt: string
+}
+
 /** Shown instead of a raw database error when a block stops a message. */
 export const BLOCKED_MESSAGE = 'Du kan inte skicka meddelanden i den här konversationen.'
 /** Shown when starting a conversation is refused because of a block. */
@@ -35,6 +60,24 @@ export function rowToBlockedUser(row: BlockRow): BlockedUser {
     name: p?.name?.trim() || 'Okänd användare',
     avatarUrl: p?.avatar_url ?? undefined,
     blockedAt: row.created_at,
+  }
+}
+
+function embedName(embed: NameEmbed): string {
+  const p = Array.isArray(embed) ? embed[0] : embed
+  return p?.name?.trim() || 'Okänd användare'
+}
+
+export function rowToUserReport(row: UserReportRow): UserReport {
+  return {
+    id: row.id,
+    reporterId: row.reporter_id,
+    reporterName: embedName(row.reporter),
+    reportedId: row.reported_id,
+    reportedName: embedName(row.reported),
+    conversationId: row.conversation_id,
+    reason: row.reason,
+    createdAt: row.created_at,
   }
 }
 
@@ -123,6 +166,30 @@ export async function reportUser(
   const { error } = await createClient()
     .from('user_reports')
     .insert({ reporter_id: userId, reported_id: reportedId, reason: reason.trim(), conversation_id: conversationId ?? null })
+  if (error) throw error
+}
+
+// user_reports has two foreign keys to profiles, so each embed names its column.
+const USER_REPORT_SELECT =
+  'id, reporter_id, reported_id, conversation_id, reason, created_at, reporter:profiles!reporter_id ( name ), reported:profiles!reported_id ( name )'
+
+/** All user reports, newest first (admins only — RLS shows others just their own). */
+export async function fetchUserReports(): Promise<UserReport[]> {
+  if (!supabaseConfigured) return []
+  const { data, error } = await createClient()
+    .from('user_reports')
+    .select(USER_REPORT_SELECT)
+    .order('created_at', { ascending: false })
+  if (error) {
+    console.error('Kunde inte hämta anmälda användare', error)
+    return []
+  }
+  return ((data ?? []) as unknown as UserReportRow[]).map(rowToUserReport)
+}
+
+/** Dismisses (deletes) a user report. Admins only. */
+export async function dismissUserReport(id: string): Promise<void> {
+  const { error } = await createClient().from('user_reports').delete().eq('id', id)
   if (error) throw error
 }
 

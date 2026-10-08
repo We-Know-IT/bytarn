@@ -8,6 +8,7 @@ import { fetchMyPreferences, fetchPreferencesFor } from '@/lib/preferences'
 import { scoreMatch, compareMatch, hasAnyPreference, roomBucket, type MatchResult } from '@/lib/matching'
 import { fetchFavoriteListingIds } from '@/lib/favorites'
 import { fetchMutualMatchUserIds } from '@/lib/interests'
+import { fetchMyBlockedIds } from '@/lib/blocks'
 import { useAuth } from '@/context/AuthContext'
 import { useHomeLocation } from '@/lib/useHomeLocation'
 import SearchFiltersComponent from '@/components/SearchFilters'
@@ -90,6 +91,8 @@ function AnnonserView() {
   // by a floating button (there's no room for a side-by-side split).
   const [mobileListOpen, setMobileListOpen] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  // Owners I've blocked — their listings are hidden (keyed by my user id).
+  const [blocks, setBlocks] = useState<{ userId: string; ids: Set<string> } | null>(null)
   const cardRefs = useRef(new Map<string, HTMLDivElement>())
   const { user } = useAuth()
   const home = useHomeLocation()
@@ -109,10 +112,13 @@ function AnnonserView() {
     fetchMutualMatchUserIds(user.id).then(setInterestMatchOwnerIds)
     fetchMyPreferences(user.id).then(setMyPrefs)
     fetchMyListings(user.id).then(setMyListings)
+    const uid = user.id
+    fetchMyBlockedIds(uid).then((ids) => setBlocks({ userId: uid, ids }))
   }, [user])
 
   // One query for the wishes of every listing owner in the feed.
   const userId = user?.id
+  const blockedOwnerIds = userId && blocks?.userId === userId ? blocks.ids : null
   const ownerIdsKey = useMemo(
     () => [...new Set(listings.map((l) => l.userId))].filter((id) => id !== userId).sort().join(','),
     [listings, userId]
@@ -146,6 +152,7 @@ function AnnonserView() {
   const filtered = useMemo(() => {
     const results = listings.filter((l) => {
       if (l.status !== 'aktiv') return false
+      if (blockedOwnerIds?.has(l.userId)) return false
       if (filters.districts.length > 0 && !filters.districts.includes(l.district)) return false
       // 5 = "5 or more"; 2.5 rooms counts as 2.
       if (filters.rooms.length > 0 && !filters.rooms.includes(roomBucket(l.rooms))) return false
@@ -169,7 +176,7 @@ function AnnonserView() {
         default: return newest(a, b)
       }
     })
-  }, [filters, listings, homeLat, homeLng, matches])
+  }, [filters, listings, homeLat, homeLng, matches, blockedOwnerIds])
 
   // The map always gets every filtered listing; only the sidebar is narrowed
   // to what's currently visible when "Sök när kartan flyttas" is on.
