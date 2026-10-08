@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Download, Loader2, Trash2, KeyRound } from 'lucide-react'
+import { Download, Loader2, Trash2, KeyRound, Ban } from 'lucide-react'
 import { exportMyData, deleteMyAccount, DELETE_CONFIRMATION } from '@/lib/account'
+import { fetchMyBlocks, unblockUser, type BlockedUser } from '@/lib/blocks'
+import { formatDate } from '@/lib/utils'
 
 interface AccountSectionProps {
   userId: string
@@ -11,7 +13,7 @@ interface AccountSectionProps {
   hasPassword: boolean
 }
 
-// "Konto" on Mina sidor: password, data export and account deletion.
+// "Konto" on Mina sidor: password, blocked users, data export and account deletion.
 export default function AccountSection({ userId, email, hasPassword }: AccountSectionProps) {
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
@@ -64,6 +66,8 @@ export default function AccountSection({ userId, email, hasPassword }: AccountSe
         </section>
       )}
 
+      <BlockedUsersCard userId={userId} />
+
       <section className="card p-5">
         <h3 className="font-semibold text-gray-900 flex items-center gap-2"><Download size={16} /> Ladda ner mina uppgifter</h3>
         <p className="text-sm text-gray-600 mt-1 mb-4">
@@ -106,5 +110,79 @@ export default function AccountSection({ userId, email, hasPassword }: AccountSe
         {deleteError && <p role="alert" className="text-sm text-red-600 mt-3">{deleteError}</p>}
       </section>
     </div>
+  )
+}
+
+function BlockedUsersCard({ userId }: { userId: string }) {
+  const [state, setState] = useState<{ userId: string; blocks: BlockedUser[] } | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchMyBlocks(userId).then((blocks) => {
+      if (!cancelled) setState({ userId, blocks })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [userId])
+  const blocks = state?.userId === userId ? state.blocks : null
+
+  async function handleUnblock(id: string) {
+    setBusyId(id)
+    setError(null)
+    try {
+      await unblockUser(userId, id)
+      setState((prev) => (prev ? { ...prev, blocks: prev.blocks.filter((b) => b.id !== id) } : prev))
+    } catch {
+      setError('Kunde inte avblockera. Försök igen.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  return (
+    <section className="card p-5">
+      <h3 className="font-semibold text-gray-900 flex items-center gap-2"><Ban size={16} /> Blockerade användare</h3>
+      <p className="text-sm text-gray-600 mt-1 mb-4">
+        Ni kan inte skriva till varandra och deras annonser döljs för dig. De får inte veta att du blockerat dem.
+      </p>
+      {blocks === null ? (
+        <p className="text-sm text-gray-400">Laddar…</p>
+      ) : blocks.length === 0 ? (
+        <p className="text-sm text-gray-500">Du har inte blockerat någon.</p>
+      ) : (
+        <ul className="divide-y divide-gray-100">
+          {blocks.map((b) => (
+            <li key={b.id} className="flex items-center gap-3 py-3">
+              {b.avatarUrl ? (
+                <img src={b.avatarUrl} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+              ) : (
+                <div aria-hidden="true" className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-semibold text-sm flex-shrink-0">
+                  {b.name[0]}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <Link href={`/profil/${b.id}`} className="text-sm font-medium text-gray-900 hover:underline truncate block">
+                  {b.name}
+                </Link>
+                <p className="text-xs text-gray-500">Blockerad {formatDate(b.blockedAt)}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleUnblock(b.id)}
+                disabled={busyId === b.id}
+                className="btn btn-secondary btn-sm"
+              >
+                {busyId === b.id ? <Loader2 size={14} className="animate-spin" /> : null}
+                {busyId === b.id ? 'Avblockerar…' : 'Avblockera'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {error && <p role="alert" className="text-sm text-red-600 mt-3">{error}</p>}
+    </section>
   )
 }

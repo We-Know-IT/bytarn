@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { MessageSquare, Handshake } from 'lucide-react'
+import { MessageSquare, Handshake, Ban } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import {
   applyMessageToConversations,
@@ -11,6 +11,7 @@ import {
 } from '@/lib/messages'
 import { subscribeToMyMessages } from '@/lib/realtime'
 import { formatMessageTime, cn } from '@/lib/utils'
+import { fetchMyBlockedIds, sortBlockedLast } from '@/lib/blocks'
 
 const REFETCH_DEBOUNCE_MS = 300
 
@@ -20,6 +21,21 @@ export default function MeddelandenPage() {
   const [inbox, setInbox] = useState<{ userId: string; conversations: ConversationSummary[] } | null>(null)
   const conversations = userId && inbox?.userId === userId ? inbox.conversations : EMPTY
   const loadingConvs = userId ? inbox?.userId !== userId : loading
+
+  // People I've blocked: their conversations are tagged, greyed and last.
+  const [blocks, setBlocks] = useState<{ userId: string; ids: Set<string> } | null>(null)
+  useEffect(() => {
+    if (!userId) return
+    let cancelled = false
+    fetchMyBlockedIds(userId).then((ids) => {
+      if (!cancelled) setBlocks({ userId, ids })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [userId])
+  const blockedIds = blocks && blocks.userId === userId ? blocks.ids : NO_BLOCKS
+  const sorted = useMemo(() => sortBlockedLast(conversations, blockedIds), [conversations, blockedIds])
 
   const conversationsRef = useRef(conversations)
   useEffect(() => {
@@ -101,11 +117,16 @@ export default function MeddelandenPage() {
         </div>
       ) : (
         <ul className="space-y-1" aria-label="Konversationer">
-          {conversations.map((conv) => (
+          {sorted.map((conv) => {
+            const blocked = !!conv.other && blockedIds.has(conv.other.id)
+            return (
             <li key={conv.id}>
             <Link
               href={`/meddelanden/${conv.id}`}
-              className="flex items-center gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-colors"
+              className={cn(
+                'flex items-center gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-colors',
+                blocked && 'opacity-60 grayscale'
+              )}
             >
               <div className="relative flex-shrink-0">
                 {conv.other?.avatarUrl ? (
@@ -133,6 +154,12 @@ export default function MeddelandenPage() {
                 <div className="flex items-center justify-between mb-0.5">
                   <span className={cn('text-sm', conv.unreadCount > 0 ? 'font-bold text-gray-900' : 'font-semibold text-gray-700')}>
                     {conv.other?.name ?? 'Okänd användare'}
+                    {blocked && (
+                      <span className="ml-2 inline-flex items-center gap-1 align-middle text-[11px] font-medium text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                        <Ban size={10} aria-hidden="true" />
+                        Blockerad
+                      </span>
+                    )}
                     {conv.unreadCount > 0 && (
                       <span className="sr-only">
                         {` – ${conv.unreadCount} ${conv.unreadCount === 1 ? 'oläst meddelande' : 'olästa meddelanden'}`}
@@ -163,7 +190,8 @@ export default function MeddelandenPage() {
               )}
             </Link>
             </li>
-          ))}
+            )
+          })}
         </ul>
       )}
     </div>
@@ -171,3 +199,4 @@ export default function MeddelandenPage() {
 }
 
 const EMPTY: ConversationSummary[] = []
+const NO_BLOCKS: ReadonlySet<string> = new Set()

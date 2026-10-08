@@ -25,6 +25,13 @@ export async function expressInterest(userId: string, listingId: string): Promis
   const supabase = createClient()
   const { error } = await supabase.from('interests').insert({ user_id: userId, listing_id: listingId })
   if (error) throw error
+  // E-mail the listing owner (or both, on mutual interest). Fire-and-forget.
+  fetch('/api/notify/interest', {
+    method: 'POST',
+    keepalive: true,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ listingId }),
+  }).catch(() => {})
 }
 
 export async function removeInterest(userId: string, listingId: string): Promise<void> {

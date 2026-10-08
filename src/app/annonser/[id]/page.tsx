@@ -22,11 +22,14 @@ import {
   Sparkles,
   MinusCircle,
   XCircle,
+  Ban,
 } from 'lucide-react'
 import { fetchListingById, fetchListings, fetchMyListings, reportListing, recordListingView, isExpired, describeListingError } from '@/lib/listings'
 import { addFavorite, removeFavorite, fetchFavoriteListingIds } from '@/lib/favorites'
 import { expressInterest, removeInterest, fetchMyInterestListingIds, fetchInterestCount, fetchMutualMatchUserIds } from '@/lib/interests'
 import { getOrCreateConversation } from '@/lib/messages'
+import { fetchMyBlockedIds, isBlockedError, BLOCKED_CONVERSATION_MESSAGE } from '@/lib/blocks'
+import { ReportUserDialog } from '@/components/BlockReportDialogs'
 import { fetchMyPreferences, fetchPreferencesFor } from '@/lib/preferences'
 import { scoreMatch, MUTUAL_THRESHOLD, type CriterionResult, type FitResult, type MatchResult } from '@/lib/matching'
 import { AMENITIES, type Listing, type SwapPreferences } from '@/types'
@@ -60,6 +63,9 @@ export default function ListingDetailPage() {
   const [myPrefs, setMyPrefs] = useState<SwapPreferences | null | undefined>(undefined)
   const [ownerPrefs, setOwnerPrefs] = useState<SwapPreferences | null | undefined>(undefined)
   const [messaging, setMessaging] = useState(false)
+  // Whether I've blocked the owner (keyed by owner id) and the report dialog.
+  const [ownerBlocked, setOwnerBlocked] = useState<{ ownerId: string; value: boolean } | null>(null)
+  const [reportingOwner, setReportingOwner] = useState(false)
   const [canManage, setCanManage] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const resetAutoPlay = useRef(0)
@@ -95,6 +101,18 @@ export default function ListingDetailPage() {
     fetchMyPreferences(user.id).then(setMyPrefs)
     fetchPreferencesFor([ownerId]).then((m) => setOwnerPrefs(m.get(ownerId) ?? null))
   }, [user, ownerId])
+
+  useEffect(() => {
+    if (!user || !ownerId || ownerId === user.id) return
+    let cancelled = false
+    fetchMyBlockedIds(user.id).then((ids) => {
+      if (!cancelled) setOwnerBlocked({ ownerId, value: ids.has(ownerId) })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [user, ownerId])
+  const blockedOwner = !!ownerId && ownerBlocked?.ownerId === ownerId && ownerBlocked.value
 
   useEffect(() => {
     if (!user) return
@@ -208,7 +226,7 @@ export default function ListingDetailPage() {
       const conversationId = await getOrCreateConversation(listing.id, user.id, listing.userId)
       router.push(`/meddelanden/${conversationId}`)
     } catch (err) {
-      alert(`Kunde inte starta konversationen: ${describeListingError(err)}`)
+      alert(isBlockedError(err) ? BLOCKED_CONVERSATION_MESSAGE : `Kunde inte starta konversationen: ${describeListingError(err)}`)
       setMessaging(false)
     }
   }
@@ -591,6 +609,18 @@ export default function ListingDetailPage() {
                   )}
                 </button>
 
+                {blockedOwner ? (
+                  <div role="status" className="w-full py-3 px-4 rounded-xl bg-gray-50 border border-gray-100 text-sm text-gray-600 text-center">
+                    <p className="inline-flex items-center gap-1.5 font-medium text-gray-700">
+                      <Ban size={15} aria-hidden="true" /> Du har blockerat annonsören
+                    </p>
+                    <p className="text-xs mt-1">
+                      <Link href="/mina-sidor?flik=konto" className="text-emerald-700 font-medium hover:underline">
+                        Hantera blockeringar
+                      </Link>
+                    </p>
+                  </div>
+                ) : (
                 <button
                   onClick={handleMessage}
                   disabled={messaging}
@@ -599,6 +629,7 @@ export default function ListingDetailPage() {
                   <MessageSquare size={16} />
                   {messaging ? 'Öppnar…' : 'Skicka meddelande'}
                 </button>
+                )}
               </div>
             </div>
 
@@ -633,6 +664,23 @@ export default function ListingDetailPage() {
               <Flag size={12} />
               {reported ? 'Rapport skickad' : 'Rapportera annons'}
             </button>
+            {user && supabaseConfigured && user.id !== listing.userId && (
+              <button
+                type="button"
+                onClick={() => setReportingOwner(true)}
+                className="w-full text-xs text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1 py-1"
+              >
+                <Flag size={12} />
+                Anmäl annonsör
+              </button>
+            )}
+            {reportingOwner && user && (
+              <ReportUserDialog
+                userId={user.id}
+                other={{ id: listing.userId, name: listing.userName || 'annonsören' }}
+                onClose={() => setReportingOwner(false)}
+              />
+            )}
           </div>
         </div>
       </div>
