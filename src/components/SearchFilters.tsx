@@ -5,7 +5,9 @@ import Link from 'next/link'
 import { Search, SlidersHorizontal, X, Map, List, Bookmark, Info } from 'lucide-react'
 import { STOCKHOLM_DISTRICTS, AMENITIES, type AmenityKey } from '@/types'
 import { cn } from '@/lib/utils'
-import type { SearchFilters, SavedSearch } from '@/types'
+import type { SearchFilters } from '@/types'
+import { useAuth } from '@/context/AuthContext'
+import { saveSearch as storeSavedSearch } from '@/lib/savedSearches'
 
 interface SearchFiltersProps {
   filters: SearchFilters
@@ -40,6 +42,9 @@ export default function SearchFiltersComponent({
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [districtSearch, setDistrictSearch] = useState('')
   const [searchSaved, setSearchSaved] = useState(false)
+  const [savingSearch, setSavingSearch] = useState(false)
+  const [saveSearchError, setSaveSearchError] = useState(false)
+  const { user } = useAuth()
 
   function toggleDistrict(d: string) {
     const next = filters.districts.includes(d)
@@ -65,17 +70,26 @@ export default function SearchFiltersComponent({
     onFiltersChange({ districts: [], rooms: [], maxRent: null, amenities: [], view: filters.view, sort: filters.sort })
   }
 
-  function saveSearch() {
-    const saved: SavedSearch = {
-      id: Date.now().toString(),
-      name: `Sökning ${new Date().toLocaleDateString('sv-SE')}`,
-      filters: { districts: filters.districts, rooms: filters.rooms, maxRent: filters.maxRent, amenities: filters.amenities ?? [] },
-      createdAt: new Date().toISOString(),
+  async function saveSearch() {
+    if (savingSearch) return
+    setSavingSearch(true)
+    setSaveSearchError(false)
+    try {
+      await storeSavedSearch(user?.id ?? null, {
+        districts: filters.districts,
+        rooms: filters.rooms,
+        maxRent: filters.maxRent,
+        amenities: filters.amenities ?? [],
+      })
+      setSearchSaved(true)
+      setTimeout(() => setSearchSaved(false), 2500)
+    } catch (err) {
+      console.error('Kunde inte spara sökningen', err)
+      setSaveSearchError(true)
+      setTimeout(() => setSaveSearchError(false), 3000)
+    } finally {
+      setSavingSearch(false)
     }
-    const existing: SavedSearch[] = JSON.parse(localStorage.getItem('hyresvagen_saved_searches') || '[]')
-    localStorage.setItem('hyresvagen_saved_searches', JSON.stringify([...existing, saved]))
-    setSearchSaved(true)
-    setTimeout(() => setSearchSaved(false), 2000)
   }
 
   const activeCount =
@@ -393,11 +407,21 @@ export default function SearchFiltersComponent({
             </button>
             <button
               onClick={saveSearch}
-              className="flex items-center gap-1 text-xs font-medium ml-auto transition-colors"
-              style={{ color: searchSaved ? '#059669' : '#153F32' }}
+              disabled={savingSearch}
+              className="flex items-center gap-1 text-xs font-medium ml-auto transition-colors disabled:opacity-60"
+              style={{ color: saveSearchError ? '#dc2626' : searchSaved ? '#059669' : '#153F32' }}
+              title={user ? 'Vi mejlar dig när nya annonser matchar sökningen' : 'Logga in för att få mejl om nya annonser'}
             >
               <Bookmark size={12} />
-              {searchSaved ? 'Sökning sparad!' : 'Spara sökning'}
+              {saveSearchError
+                ? 'Kunde inte spara'
+                : searchSaved
+                  ? user
+                    ? 'Sparad – vi mejlar om nya annonser'
+                    : 'Sökning sparad!'
+                  : savingSearch
+                    ? 'Sparar…'
+                    : 'Spara sökning'}
             </button>
           </div>
         )}

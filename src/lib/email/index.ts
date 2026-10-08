@@ -20,8 +20,22 @@ export {
   snippet,
   householdInviteEmail,
   newMessageEmail,
+  newMatchingListingEmail,
+  interestEmail,
+  settingsUrl,
+  NOTIFICATION_SETTINGS_PATH,
   testEmail,
   type EmailContent,
 } from './templates'
 export { isValidEmail, validateSmtpInput, type SmtpSettingsInput } from './validate'
 export { appBaseUrl } from './url'
+export {
+  isDeliverableEmail,
+  savedSearchMatches,
+  selectListingRecipients,
+  MAX_LISTING_RECIPIENTS,
+  type AlertListing,
+  type AlertSavedSearch,
+  type AlertPreferences,
+  type ListingRecipient,
+} from './alerts'

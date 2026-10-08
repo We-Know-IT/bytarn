@@ -368,6 +368,13 @@ function NyAnnonsForm() {
       } else {
         const id = await createListing(input, user.id, profile?.name ?? user.email?.split('@')[0] ?? 'Användare')
         try { localStorage.removeItem(DRAFT_KEY) } catch {}
+        // E-mail people whose saved searches / swap preferences match. Fire-and-forget.
+        fetch('/api/notify/listing', {
+          method: 'POST',
+          keepalive: true,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ listingId: id }),
+        }).catch(() => {})
         // The first listing doubles as the user's home location (used for
         // distances and the home marker on the map) if they haven't set one.
         if (profile && profile.homeLat == null) {

@@ -32,11 +32,14 @@ export default function OpengraphImage() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 40,
-              fontWeight: 700,
             }}
           >
-            ⇄
+            {/* Swap arrows drawn as SVG: a text glyph would make ImageResponse
+                download a fallback font at render time. */}
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#F5F0E8" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 8h14l-4-4" />
+              <path d="M20 16H6l4 4" />
+            </svg>
           </div>
           <div style={{ fontSize: 34, fontWeight: 700, letterSpacing: 6, textTransform: 'uppercase' }}>Hyresvägen</div>
         </div>

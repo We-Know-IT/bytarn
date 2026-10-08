@@ -16,12 +16,20 @@ import { describeListingError } from '@/lib/listings'
 import { hasAnyPreference } from '@/lib/matching'
 import PreferencesForm from '@/components/PreferencesForm'
 import AccountSection from '@/components/AccountSection'
+import NotificationSettings, { Switch } from '@/components/NotificationSettings'
+import {
+  fetchSavedSearches,
+  setSavedSearchNotify,
+  deleteSavedSearch,
+  savedSearchHref,
+  type StoredSavedSearch,
+} from '@/lib/savedSearches'
 import { uploadAvatar } from '@/lib/storage'
 import { useAuth } from '@/context/AuthContext'
 import { supabaseConfigured } from '@/lib/supabase/client'
 import ListingCard from '@/components/ListingCard'
 import { cn, formatDate } from '@/lib/utils'
-import { EMPTY_SWAP_PREFERENCES, type Listing, type SavedSearch, type ListingStatus, type SwapPreferencesInput } from '@/types'
+import { EMPTY_SWAP_PREFERENCES, type Listing, type ListingStatus, type SwapPreferencesInput } from '@/types'
 
 type Tab = 'annonser' | 'sokes' | 'favoriter' | 'intresse' | 'sparade' | 'konto'
 
@@ -41,16 +49,10 @@ function MinaSidorView() {
   const { user, profile, loading, signOut, refreshProfile } = useAuth()
   const searchParams = useSearchParams()
   const [tab, setTab] = useState<Tab>(() => TAB_PARAM[searchParams.get('flik') ?? ''] ?? 'annonser')
-  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([])
   const [myListingsReal, setMyListingsReal] = useState<Listing[]>([])
   const [favoriteListings, setFavoriteListings] = useState<Listing[]>([])
   const [incomingInterests, setIncomingInterests] = useState<IncomingInterest[]>([])
   const [editingProfile, setEditingProfile] = useState(false)
-
-  useEffect(() => {
-    const stored = localStorage.getItem('hyresvagen_saved_searches')
-    if (stored) setSavedSearches(JSON.parse(stored))
-  }, [])
 
   useEffect(() => {
     if (!supabaseConfigured || !user) return
@@ -63,12 +65,6 @@ function MinaSidorView() {
 
   const myListings = myListingsReal
   const favorites = favoriteListings
-
-  function deleteSavedSearch(id: string) {
-    const updated = savedSearches.filter((s) => s.id !== id)
-    setSavedSearches(updated)
-    localStorage.setItem('hyresvagen_saved_searches', JSON.stringify(updated))
-  }
 
   async function cycleStatus(listing: Listing) {
     if (!supabaseConfigured) return
@@ -336,6 +332,8 @@ function MinaSidorView() {
 
       {tab === 'sokes' && user && <PreferencesSection userId={user.id} />}
 
+      {tab === 'konto' && user && <NotificationSettings userId={user.id} />}
+
       {tab === 'konto' && user && (
         <AccountSection
           userId={user.id}
@@ -364,49 +362,7 @@ function MinaSidorView() {
         </div>
       )}
 
-      {tab === 'sparade' && (
-        <div>
-          <p className="text-sm text-gray-500 mb-4">{savedSearches.length} sparade sökningar</p>
-          {savedSearches.length === 0 ? (
-            <div className="text-center py-12">
-              <Bookmark size={40} className="text-gray-300 mx-auto mb-3" />
-              <h3 className="font-semibold text-gray-900 mb-2">Inga sparade sökningar</h3>
-              <p className="text-gray-500 text-sm mb-4">Filtrera på /annonser och tryck &quot;Spara sökning&quot; för att spara ett sökfilter.</p>
-              <Link href="/annonser" className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700">
-                Utforska annonser
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {savedSearches.map((search) => (
-                <div key={search.id} className="flex items-center gap-4 p-4 border border-gray-100 rounded-2xl">
-                  <div className="w-9 h-9 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Bookmark size={16} className="text-emerald-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 text-sm">{search.name}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {[
-                        search.filters.districts.length > 0 && search.filters.districts.join(', '),
-                        search.filters.rooms.length > 0 && `${search.filters.rooms.join(', ')} rum`,
-                        search.filters.maxRent && `max ${new Intl.NumberFormat('sv-SE').format(search.filters.maxRent)} kr`,
-                      ].filter(Boolean).join(' · ') || 'Alla annonser'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Link href="/annonser" className="text-xs font-medium text-emerald-600 hover:text-emerald-700 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 transition-colors">
-                      Visa
-                    </Link>
-                    <button onClick={() => deleteSavedSearch(search.id)} className="text-xs text-gray-400 hover:text-red-500 px-2 py-1.5 transition-colors">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {tab === 'sparade' && <SavedSearchesSection userId={supabaseConfigured ? user?.id ?? null : null} />}
 
       {tab === 'intresse' && (
         <div>
@@ -633,6 +589,115 @@ function ProfileEditModal({
           Spara
         </button>
       </div>
+    </div>
+  )
+}
+
+// "Sparade sökningar" — from the database when signed in (searches saved
+// while signed out are moved there by fetchSavedSearches), else localStorage.
+function SavedSearchesSection({ userId }: { userId: string | null }) {
+  const [searches, setSearches] = useState<StoredSavedSearch[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchSavedSearches(userId)
+      .then((list) => { if (!cancelled) setSearches(list) })
+      .catch(() => { if (!cancelled) { setSearches([]); setError('Kunde inte hämta dina sparade sökningar.') } })
+    return () => { cancelled = true }
+  }, [userId])
+
+  async function toggleNotify(search: StoredSavedSearch, notify: boolean) {
+    setError(null)
+    setSearches((prev) => prev?.map((s) => (s.id === search.id ? { ...s, notify } : s)) ?? prev)
+    try {
+      await setSavedSearchNotify(search.id, notify)
+    } catch {
+      setSearches((prev) => prev?.map((s) => (s.id === search.id ? { ...s, notify: !notify } : s)) ?? prev)
+      setError('Kunde inte spara. Försök igen.')
+    }
+  }
+
+  async function remove(search: StoredSavedSearch) {
+    setError(null)
+    const before = searches
+    setSearches((prev) => prev?.filter((s) => s.id !== search.id) ?? prev)
+    try {
+      await deleteSavedSearch(search)
+    } catch {
+      setSearches(before)
+      setError('Kunde inte ta bort sökningen. Försök igen.')
+    }
+  }
+
+  if (searches === null) {
+    return (
+      <p className="flex items-center gap-2 text-sm text-gray-500 py-8 justify-center">
+        <Loader2 size={14} className="animate-spin" /> Hämtar sparade sökningar…
+      </p>
+    )
+  }
+
+  return (
+    <div>
+      <p className="text-sm text-gray-500 mb-4">{searches.length} sparade sökningar</p>
+      {error && <p role="alert" className="mb-4 px-3 py-2 rounded-xl bg-red-50 text-red-700 text-sm break-words">{error}</p>}
+      {searches.length === 0 ? (
+        <div className="text-center py-12">
+          <Bookmark size={40} className="text-gray-300 mx-auto mb-3" />
+          <h3 className="font-semibold text-gray-900 mb-2">Inga sparade sökningar</h3>
+          <p className="text-gray-500 text-sm mb-4">Filtrera på /annonser och tryck &quot;Spara sökning&quot; för att spara ett sökfilter.</p>
+          <Link href="/annonser" className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700">
+            Utforska annonser
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {searches.map((search) => (
+            <div key={search.id} className="flex flex-wrap sm:flex-nowrap items-center gap-x-4 gap-y-3 p-4 border border-gray-100 rounded-2xl">
+              <div className="w-9 h-9 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Bookmark size={16} className="text-emerald-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-900 text-sm break-words">{search.name}</p>
+                <p className="text-xs text-gray-400 mt-0.5 break-words">
+                  {[
+                    search.filters.districts.length > 0 && search.filters.districts.join(', '),
+                    search.filters.rooms.length > 0 && `${search.filters.rooms.map((r) => (r >= 5 ? '5+' : r)).join(', ')} rum`,
+                    search.filters.maxRent && `max ${new Intl.NumberFormat('sv-SE').format(search.filters.maxRent)} kr`,
+                  ].filter(Boolean).join(' · ') || 'Alla annonser'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+                {search.local ? (
+                  <span className="text-xs text-gray-500">Logga in för mejl</span>
+                ) : (
+                  <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+                    <span>Mejla mig om nya annonser</span>
+                    <Switch
+                      checked={search.notify}
+                      onChange={(next) => toggleNotify(search, next)}
+                      label={`Mejla mig om nya annonser för ${search.name}`}
+                    />
+                  </label>
+                )}
+                <Link href={savedSearchHref(search.filters)} className="text-xs font-medium text-emerald-600 hover:text-emerald-700 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 transition-colors">
+                  Visa
+                </Link>
+                <button onClick={() => remove(search)} aria-label={`Ta bort ${search.name}`} className="text-xs text-gray-400 hover:text-red-500 px-2 py-1.5 transition-colors">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {userId && searches.some((s) => !s.local) && (
+        <p className="text-xs text-gray-500 mt-4">
+          Mejlen kräver också att ”Nya annonser som matchar mina sökningar och önskemål” är påslaget under{' '}
+          <Link href="/mina-sidor?flik=konto" className="font-semibold text-emerald-700 underline underline-offset-2">Konto</Link>.
+        </p>
+      )}
     </div>
   )
 }

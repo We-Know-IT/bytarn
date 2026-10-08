@@ -34,6 +34,30 @@ export function snippet(content: string, max = 200): string {
   return (lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd() + '…'
 }
 
+/** Where e-mail alerts are turned on and off. */
+export const NOTIFICATION_SETTINGS_PATH = '/mina-sidor?flik=konto'
+
+/**
+ * Absolute link to the notification settings. Uses `settingsLink` when
+ * given, else the origin of the e-mail's main link.
+ */
+export function settingsUrl(link: string, settingsLink?: string): string {
+  if (settingsLink) return settingsLink
+  try {
+    return new URL(NOTIFICATION_SETTINGS_PATH, link).toString()
+  } catch {
+    return NOTIFICATION_SETTINGS_PATH
+  }
+}
+
+/** The "how to turn this off" footer every alert e-mail carries. */
+function optOutFooter(url: string): { html: string; text: string } {
+  return {
+    html: `Vill du inte få de här mejlen? <a href="${safeUrl(url)}" style="color:#6b7280">Stäng av dem under Mina sidor → Konto</a>.`,
+    text: `Vill du inte få de här mejlen? Stäng av dem under Mina sidor → Konto: ${url}`,
+  }
+}
+
 interface LayoutOptions {
   preheader: string
   heading: string
@@ -113,7 +137,9 @@ export function newMessageEmail(opts: {
   hasImage?: boolean
   listingTitle?: string | null
   link: string
+  settingsLink?: string
 }): EmailContent {
+  const optOut = optOutFooter(settingsUrl(opts.link, opts.settingsLink))
   const sender = opts.senderName || 'Någon'
   const preview = snippet(opts.content) || (opts.hasImage ? '[Bild]' : '')
   const about = opts.listingTitle ? ` om ”${opts.listingTitle}”` : ''
@@ -125,13 +151,16 @@ export function newMessageEmail(opts: {
       <div style="margin-top:12px;padding:12px 14px;background:#f9fafb;border-left:3px solid #059669;border-radius:8px;color:#111827">${escapeHtml(preview)}</div>`,
     cta: { label: 'Svara på Hyresvägen', url: opts.link },
     footerHtml:
-      'Du får det här mejlet eftersom du har e-postaviseringar påslagna. Vi mejlar bara om det första olästa meddelandet i varje konversation.',
+      'Du får det här mejlet eftersom du har e-postaviseringar påslagna. Vi mejlar bara om det första olästa meddelandet i varje konversation.<br>' +
+      optOut.html,
   })
   const text = `${sender} har skickat ett meddelande till dig${about}:
 
 "${preview}"
 
-Svara: ${opts.link}`
+Svara: ${opts.link}
+
+${optOut.text}`
   return { subject, html, text }
 }
 
@@ -147,5 +176,128 @@ export function testEmail(opts: { host: string; source: string }): EmailContent 
   const text = `Det här är ett testmejl från Hyresvägen. Om du läser det här är e-postinställningarna korrekta.
 
 Server: ${opts.host} · Källa: ${opts.source} · Skickat: ${when}`
+  return { subject, html, text }
+}
+
+const sek = new Intl.NumberFormat('sv-SE')
+
+function formatRooms(rooms: number): string {
+  return `${String(rooms).replace('.', ',')} rum`
+}
+
+export function newMatchingListingEmail(opts: {
+  title: string
+  district: string
+  rooms: number
+  rent: number
+  area?: number | null
+  imageUrl?: string | null
+  /** Names of the recipient's saved searches the listing matched. */
+  searchNames?: string[]
+  /** Match % against the recipient's swap preferences, if that's why. */
+  matchScore?: number | null
+  link: string
+  settingsLink?: string
+}): EmailContent {
+  const optOut = optOutFooter(settingsUrl(opts.link, opts.settingsLink))
+  const title = opts.title || 'Ny annons'
+  const facts = [
+    opts.district,
+    formatRooms(opts.rooms),
+    opts.area ? `${sek.format(opts.area)} m²` : null,
+    `${sek.format(opts.rent)} kr/mån`,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+  const searches = (opts.searchNames ?? []).filter(Boolean)
+  const reasons: string[] = []
+  if (searches.length > 0) {
+    reasons.push(
+      searches.length === 1
+        ? `Den matchar din sparade sökning ”${searches[0]}”.`
+        : `Den matchar dina sparade sökningar ${searches.map((n) => `”${n}”`).join(', ')}.`
+    )
+  }
+  if (opts.matchScore != null) {
+    reasons.push(`Den passar ${Math.round(opts.matchScore)} % av det du har sagt att du söker.`)
+  }
+
+  const subject = headerSafe(`Ny annons som matchar: ${title}`)
+  const image =
+    opts.imageUrl && /^https?:\/\//i.test(opts.imageUrl)
+      ? `<img src="${safeUrl(opts.imageUrl)}" alt="" width="464" style="display:block;width:100%;max-width:464px;height:auto;border-radius:12px;margin-bottom:14px">`
+      : ''
+  const html = layout({
+    preheader: `${title} – ${facts}`,
+    heading: 'En ny annons matchar det du söker',
+    bodyHtml: `${image}<strong style="color:#111827;font-size:16px">${escapeHtml(title)}</strong><br>
+      <span style="color:#6b7280">${escapeHtml(facts)}</span>
+      ${reasons.length > 0 ? `<div style="margin-top:12px;padding:12px 14px;background:#ecfdf5;border-radius:8px;color:#065f46">${reasons.map(escapeHtml).join('<br>')}</div>` : ''}`,
+    cta: { label: 'Visa annonsen', url: opts.link },
+    footerHtml: optOut.html,
+  })
+  const text = `En ny annons matchar det du söker:
+
+${title}
+${facts}
+${reasons.length > 0 ? `\n${reasons.join('\n')}\n` : ''}
+Visa annonsen: ${opts.link}
+
+${optOut.text}`
+  return { subject, html, text }
+}
+
+export function interestEmail(opts: {
+  /** Who showed interest (for the mutual variant: the other person). */
+  interesterName: string
+  /** The listing the interest is about (for the mutual variant: the recipient's own listing). */
+  listingTitle: string
+  /** Mutual: both have shown interest in each other's listings. */
+  mutual?: boolean
+  /** Mutual: the other person's listing. */
+  otherListingTitle?: string | null
+  link: string
+  settingsLink?: string
+}): EmailContent {
+  const optOut = optOutFooter(settingsUrl(opts.link, opts.settingsLink))
+  const name = opts.interesterName || 'Någon'
+  const listing = opts.listingTitle || 'din annons'
+
+  if (opts.mutual) {
+    const other = opts.otherListingTitle ? ` och du är intresserad av ”${opts.otherListingTitle}”` : ''
+    const subject = headerSafe(`Ni har visat intresse för varandra – ${name}`)
+    const body = `${name} är intresserad av ”${listing}”${other}. Ni har visat intresse för varandra – hör av dig och se om bytet kan bli av!`
+    const html = layout({
+      preheader: body,
+      heading: 'Ni har visat intresse för varandra',
+      bodyHtml: escapeHtml(body),
+      cta: { label: 'Visa på Hyresvägen', url: opts.link },
+      footerHtml: optOut.html,
+    })
+    const text = `Ni har visat intresse för varandra!
+
+${body}
+
+Visa på Hyresvägen: ${opts.link}
+
+${optOut.text}`
+    return { subject, html, text }
+  }
+
+  const subject = headerSafe(`${name} är intresserad av din annons`)
+  const body = `${name} har visat intresse för din annons ”${listing}”. Titta på deras bostad och hör av dig om bytet verkar intressant.`
+  const html = layout({
+    preheader: body,
+    heading: 'Någon är intresserad av din annons',
+    bodyHtml: escapeHtml(body),
+    cta: { label: 'Se vem som är intresserad', url: opts.link },
+    footerHtml: optOut.html,
+  })
+  const text = `${body}
+
+Se vem som är intresserad: ${opts.link}
+
+${optOut.text}`
   return { subject, html, text }
 }
