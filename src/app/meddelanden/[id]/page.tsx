@@ -237,17 +237,36 @@ export default function ConversationPage() {
         <Link href="/meddelanden" className="text-gray-400 hover:text-gray-600" aria-label="Tillbaka till meddelanden">
           <ArrowLeft size={20} />
         </Link>
-        {other?.avatarUrl ? (
-          <img src={other.avatarUrl} alt={other.name} className="w-9 h-9 rounded-full object-cover" />
-        ) : (
-          <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-semibold text-sm">
-            {other?.name[0] ?? '?'}
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-900 text-sm">{other?.name ?? 'Okänd användare'}</p>
-          <p className="text-xs text-gray-400 truncate">{conv.listingTitle}</p>
-        </div>
+        {/* Name and avatar lead to the other person's profile, where they
+            can also be blocked or reported. */}
+        {(() => {
+          const identity = (
+            <>
+              {other?.avatarUrl ? (
+                <img src={other.avatarUrl} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-semibold text-sm flex-shrink-0">
+                  {other?.name[0] ?? '?'}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-900 text-sm group-hover:underline">{other?.name ?? 'Okänd användare'}</p>
+                <p className="text-xs text-gray-400 truncate">{conv.listingTitle}</p>
+              </div>
+            </>
+          )
+          return other ? (
+            <Link
+              href={`/profil/${other.id}`}
+              className="group flex flex-1 min-w-0 items-center gap-3 rounded-lg"
+              title={`Visa ${other.name}s profil`}
+            >
+              {identity}
+            </Link>
+          ) : (
+            <div className="flex flex-1 min-w-0 items-center gap-3">{identity}</div>
+          )
+        })()}
         {conv.mutualInterest && (
           <span className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 font-medium px-2 py-1 rounded-full">
             <Handshake size={12} strokeWidth={2} />
