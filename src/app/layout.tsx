@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, Instrument_Serif } from 'next/font/google'
 import './globals.css'
+import { SITE_URL } from '@/lib/site'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/ui/Footer'
 import { AuthProvider } from '@/context/AuthContext'
@@ -21,9 +22,6 @@ const instrumentSerif = Instrument_Serif({
   display: 'swap',
 })
 
-// The canonical site address (punycode for hyresvägen.se). Used to build
-// absolute URLs for social previews; override with NEXT_PUBLIC_APP_URL.
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://xn--hyresvgen-02a.se'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
