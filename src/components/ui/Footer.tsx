@@ -12,6 +12,7 @@ const COLUMNS = [
       { label: 'Hitta byte', href: '/annonser' },
       { label: 'Lägg upp annons', href: '/annonser/ny' },
       { label: 'Så fungerar det', href: '/hur-det-fungerar' },
+      { label: 'Ansöka om byte', href: '/ansokan-om-byte' },
     ],
   },
   {
@@ -48,7 +49,7 @@ export default function Footer() {
   if (hideOn(pathname)) return null
 
   return (
-    <footer className="bg-[#0F1C18] text-white/60" aria-labelledby="footer-heading">
+    <footer className="print-hidden bg-[#0F1C18] text-white/60" aria-labelledby="footer-heading">
       <h2 id="footer-heading" className="sr-only">Sidfot</h2>
       <div className="container-page pt-14 pb-10 sm:pt-16">
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">

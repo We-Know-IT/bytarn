@@ -80,7 +80,7 @@ export default function CookieBanner() {
           close()
         }
       }}
-      className="animate-fade-up fixed inset-x-4 bottom-4 z-[70] mx-auto max-w-[560px] rounded-[20px] border border-[rgba(21,63,50,0.12)] bg-white p-5 shadow-[0_12px_40px_rgba(13,45,38,0.18)] sm:p-6"
+      className="print-hidden animate-fade-up fixed inset-x-4 bottom-4 z-[70] mx-auto max-w-[560px] rounded-[20px] border border-[rgba(21,63,50,0.12)] bg-white p-5 shadow-[0_12px_40px_rgba(13,45,38,0.18)] sm:p-6"
     >
       <div className="flex items-start justify-between gap-4">
         <h2 id="cookie-banner-title" className="text-[16px] font-semibold leading-snug text-gray-900">

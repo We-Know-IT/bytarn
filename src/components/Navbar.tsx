@@ -136,7 +136,7 @@ export default function Navbar() {
     <>
     <header
       className={cn(
-        'sticky top-0 z-50 h-[var(--nav-h)] border-b transition-[background-color,border-color,box-shadow] duration-300',
+        'print-hidden sticky top-0 z-50 h-[var(--nav-h)] border-b transition-[background-color,border-color,box-shadow] duration-300',
         scrolled || mobileOpen
           ? 'border-[rgba(21,63,50,0.08)] bg-[rgba(251,250,247,0.92)] shadow-[0_4px_20px_rgba(21,63,50,0.05)]'
           : 'border-transparent bg-[rgba(251,250,247,0.75)]'
@@ -306,7 +306,7 @@ export default function Navbar() {
       {mobileOpen && (
         <div
           id="mobilmeny"
-          className="animate-fade-up fixed inset-x-0 bottom-0 top-[var(--nav-h)] z-40 overflow-y-auto border-t border-[rgba(21,63,50,0.08)] bg-[#FBFAF7] lg:hidden"
+          className="print-hidden animate-fade-up fixed inset-x-0 bottom-0 top-[var(--nav-h)] z-40 overflow-y-auto border-t border-[rgba(21,63,50,0.08)] bg-[#FBFAF7] lg:hidden"
         >
           <div className="mx-auto max-w-lg px-4 pb-10 pt-4 sm:px-6">
             <ul className="space-y-0.5">

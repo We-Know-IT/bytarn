@@ -558,3 +558,25 @@ textarea:focus-visible { outline-offset: 0; }
   .card-lift:hover, .card-hover:hover { transform: none; }
   .group:hover .img-zoom { transform: none; }
 }
+
+/* ─── Printable documents (e.g. the swap application) ─── */
+.doc-input {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #d1d5db;
+  border-radius: 0;
+  padding: 4px 0;
+  font-size: 14px;
+  line-height: 1.5;
+  background: transparent;
+  color: var(--text);
+}
+.doc-input:focus { outline: none; border-bottom-color: var(--green); }
+
+@media print {
+  @page { margin: 16mm; }
+  .print-hidden { display: none !important; }
+  body { background: #fff !important; }
+  main { min-height: 0 !important; }
+  .doc-input::placeholder { color: transparent; }
+}

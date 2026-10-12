@@ -20,8 +20,8 @@ const STEPS = [
   },
   {
     step: '04',
-    title: 'Byt bostad',
-    desc: 'Ni bestämmer villkor och datum er emellan. Hyresvägen är plattformen — ni är de som gör affären.',
+    title: 'Ansök hos hyresvärdarna',
+    desc: 'Ett byte måste godkännas av båda hyresvärdarna. Vår guide "Så ansöker du om byte" visar hur det går till, och i chatten kan ni skapa en ifylld bytesansökan.',
   },
 ]
 
@@ -48,7 +48,7 @@ const MATCH_CRITERIA = [
   },
 ]
 
-const FAQS = [
+const FAQS: { q: string; a: string; link?: { href: string; label: string } }[] = [
   {
     q: 'Kostar det något att använda Hyresvägen?',
     a: 'Nej, det är helt gratis att söka, annonsera och kontakta andra användare.',
@@ -58,12 +58,17 @@ const FAQS = [
     a: 'Nej. Hyresvägen är byggd för att ni ska kunna byta direkt med varandra, utan mellanhänder.',
   },
   {
+    q: 'Måste hyresvärden godkänna bytet?',
+    a: 'Ja. Båda hyresvärdarna måste säga ja innan ni flyttar. Säger en hyresvärd nej kan du ansöka om tillstånd hos hyresnämnden.',
+    link: { href: '/ansokan-om-byte', label: 'Så ansöker du om byte' },
+  },
+  {
     q: 'Hur säkert är det?',
-    a: 'Alla användare verifieras. Du kan läsa mer om våra säkerhetsfunktioner på vår trygghetssida.',
+    a: 'All kontakt kan ske i chatten utan att du lämnar ut ditt nummer, och du kan blockera och anmäla användare och annonser. Läs mer på vår trygghetssida.',
   },
   {
     q: 'Fungerar det utanför Stockholm?',
-    a: 'Just nu fokuserar vi på Stockholm, men vi expanderar snart till fler städer.',
+    a: 'Nej, just nu finns bara bostäder i Stockholmsområdet.',
   },
 ]
 
@@ -101,14 +106,12 @@ export default function HurDetFungerar() {
       <section className="section">
         <div className="container-page">
           <div className="mb-12 max-w-xl">
-            <div className="mb-3 flex items-center gap-2">
-              <p className="eyebrow mb-0">Matchningsmotorn</p>
-              <span className="badge badge-green">Kommer snart</span>
-            </div>
-            <h2 className="display-md mb-4">Vad kommer avgöra om det är ett bra byte?</h2>
+            <p className="eyebrow">Matchningen</p>
+            <h2 className="display-md mb-4">Så räknar vi ut om ett byte passar.</h2>
             <p className="text-[15.5px] leading-[1.7] text-gray-600">
-              Idag söker och filtrerar du själv bland annonserna. Vi bygger en algoritm som istället
-              ska väga fyra faktorer mot varandra och bara visa dig byten som faktiskt kan fungera — för båda.
+              Fyll i vad du söker under{' '}
+              <Link href="/mina-sidor" className="font-medium text-emerald-600 underline underline-offset-[3px]">Mina sidor</Link>{' '}
+              så får varje annons en matchning i procent, och du kan sortera på bäst match. Det här vägs in:
             </p>
           </div>
 
@@ -144,7 +147,17 @@ export default function HurDetFungerar() {
                     {faq.q}
                     <ChevronDown size={18} className="flex-shrink-0 text-gray-400 transition-transform group-open:rotate-180" />
                   </summary>
-                  <p className="pb-5 text-[14.5px] leading-[1.65] text-gray-600">{faq.a}</p>
+                  <p className="pb-5 text-[14.5px] leading-[1.65] text-gray-600">
+                    {faq.a}
+                    {faq.link && (
+                      <>
+                        {' '}
+                        <Link href={faq.link.href} className="font-medium text-emerald-600 underline underline-offset-[3px]">
+                          {faq.link.label}
+                        </Link>
+                      </>
+                    )}
+                  </p>
                 </details>
               ))}
             </div>

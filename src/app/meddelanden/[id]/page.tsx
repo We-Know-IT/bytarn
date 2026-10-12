@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Send, Image as ImageIcon, Handshake, Loader2, ArrowDown, AlertCircle, MoreHorizontal, Ban, Flag, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, Send, Image as ImageIcon, Handshake, Loader2, ArrowDown, AlertCircle, MoreHorizontal, Ban, Flag, ShieldCheck, FileText } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { supabaseConfigured } from '@/lib/supabase/client'
 import { fetchConversations, lastOwnConfirmed, type ConversationSummary } from '@/lib/messages'
@@ -305,6 +305,15 @@ export default function ConversationPage() {
                 role="menu"
                 className="animate-menu-in absolute right-0 top-full mt-1 z-20 w-56 rounded-xl border border-gray-100 bg-white py-1 shadow-lg"
               >
+                <Link
+                  href={`/meddelanden/${conversationId}/ansokan`}
+                  role="menuitem"
+                  onClick={() => setMenuOpen(false)}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  <FileText size={15} /> Skapa bytesansökan
+                </Link>
+                <div className="my-1 border-t border-gray-100" />
                 {blockedByMe ? (
                   <button
                     type="button"
@@ -365,6 +374,17 @@ export default function ConversationPage() {
           conversationId={conversationId}
           onClose={() => setDialog(null)}
         />
+      )}
+
+      {/* Both have shown interest: point them at the landlord application. */}
+      {conv.mutualInterest && !composerBlocked && (
+        <div className="flex items-center gap-3 border-b border-emerald-100 bg-emerald-50 px-4 py-2.5 text-[13.5px] text-emerald-900">
+          <FileText size={16} className="flex-shrink-0" />
+          <p className="min-w-0 flex-1">Har ni bestämt er? Båda hyresvärdarna måste godkänna bytet.</p>
+          <Link href={`/meddelanden/${conversationId}/ansokan`} className="flex-shrink-0 font-semibold underline underline-offset-2">
+            Skapa bytesansökan
+          </Link>
+        </div>
       )}
 
       {/* Messages */}

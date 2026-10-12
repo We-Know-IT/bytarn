@@ -8,6 +8,7 @@ const STATIC_PAGES: { path: string; priority: number; changeFrequency: 'daily' |
   { path: '/', priority: 1, changeFrequency: 'daily' },
   { path: '/annonser', priority: 0.9, changeFrequency: 'daily' },
   { path: '/hur-det-fungerar', priority: 0.6, changeFrequency: 'monthly' },
+  { path: '/ansokan-om-byte', priority: 0.6, changeFrequency: 'monthly' },
   { path: '/trygghet', priority: 0.5, changeFrequency: 'monthly' },
   { path: '/om-oss', priority: 0.4, changeFrequency: 'yearly' },
   { path: '/kontakt', priority: 0.4, changeFrequency: 'yearly' },
