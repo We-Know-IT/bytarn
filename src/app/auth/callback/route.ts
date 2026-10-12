@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient, supabaseConfigured } from '@/lib/supabase/server'
+import { isNewAccount } from '@/lib/accountAge'
 
 // Google sign-in and email confirmation links land here with ?code=…
 // (PKCE). The code is exchanged for a session server-side so the auth
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
   if (!code || !supabaseConfigured) return fail(code ? 'Backend är inte konfigurerad.' : 'Ingen inloggningskod mottogs.')
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.exchangeCodeForSession(code)
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
   if (error) {
     // A confirmation link opened on another device can't finish the sign-in
     // (the PKCE verifier lives in the browser that signed up), but Supabase
@@ -48,6 +49,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(to)
     }
     return fail(error.message)
+  }
+
+  // "Registrera med Google" with an email that already has an account signs
+  // into that account (Supabase links Google to it) — send them to their
+  // page and say so, instead of through onboarding as if they were new.
+  // And "Logga in med Google" without an account creates one: onboard it.
+  if (url.searchParams.get('typ') !== 'bekraftelse' && data.user) {
+    const isNew = isNewAccount(data.user.created_at)
+    if (!isNew && next === '/onboarding') {
+      return NextResponse.redirect(new URL('/mina-sidor?info=befintligt-konto', url.origin))
+    }
+    if (isNew && next === '/mina-sidor') {
+      return NextResponse.redirect(new URL('/onboarding', url.origin))
+    }
   }
 
   return NextResponse.redirect(new URL(next, url.origin))

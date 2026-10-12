@@ -4,9 +4,10 @@ import Link from 'next/link'
 import { LogoMark } from '@/components/ui/Logo'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Eye, EyeOff, CheckCircle, Fingerprint, Mail, User, Users } from 'lucide-react'
+import { Eye, EyeOff, CheckCircle, Mail, User, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient, supabaseConfigured } from '@/lib/supabase/client'
+import BankIdButton from '@/components/BankIdButton'
 import { pendingHouseholdMetadata, savePendingHousehold, type PendingHousehold } from '@/lib/pendingHousehold'
 
 export default function RegistreraPage() {
@@ -199,14 +200,7 @@ export default function RegistreraPage() {
           </fieldset>
 
           {/* BankID */}
-          <a
-            href="/api/auth/bankid/start"
-            onClick={rememberHousehold}
-            className="btn btn-block mb-3 bg-[#0e5c9e] text-white hover:bg-[#0a4a80]"
-          >
-            <Fingerprint size={18} strokeWidth={2} />
-            Skapa konto med BankID
-          </a>
+          <BankIdButton label="Skapa konto med BankID" onClick={rememberHousehold} />
 
           {/* Google */}
           <button

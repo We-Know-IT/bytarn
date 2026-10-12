@@ -1,5 +1,6 @@
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import { isNewAccount } from '@/lib/accountAge'
 
 // "Hela hushållet" chosen at sign-up. The household can only be created once
 // the user is signed in, which happens after email confirmation or an
@@ -35,7 +36,15 @@ export function readPendingHousehold(user: User): PendingHousehold | null {
   try {
     const raw = localStorage.getItem(KEY)
     const parsed = raw ? JSON.parse(raw) : null
-    return isPending(parsed) ? parsed : null
+    if (!isPending(parsed)) return null
+    // Saved before a Google/BankID redirect. If that sign-in landed in an
+    // account that already existed, the "Hela hushållet" choice was made
+    // for a new account that never got created — drop it.
+    if (!isNewAccount(user.created_at)) {
+      localStorage.removeItem(KEY)
+      return null
+    }
+    return parsed
   } catch {
     return null
   }
