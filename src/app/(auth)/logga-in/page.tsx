@@ -4,8 +4,9 @@ import Link from 'next/link'
 import { LogoMark } from '@/components/ui/Logo'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useState } from 'react'
-import { Eye, EyeOff, Fingerprint, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { createClient, supabaseConfigured } from '@/lib/supabase/client'
+import BankIdButton from '@/components/BankIdButton'
 
 const BANKID_ERRORS: Record<string, string> = {
   google: 'Inloggningen med Google misslyckades. Försök igen.',
@@ -110,13 +111,7 @@ function LoggaInForm() {
           )}
 
           {/* BankID */}
-          <a
-            href="/api/auth/bankid/start"
-            className="btn btn-block mb-3 bg-[#0e5c9e] text-white hover:bg-[#0a4a80]"
-          >
-            <Fingerprint size={18} strokeWidth={2} />
-            Logga in med BankID
-          </a>
+          <BankIdButton label="Logga in med BankID" />
 
           {/* Google */}
           <button

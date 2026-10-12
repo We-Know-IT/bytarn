@@ -7,7 +7,7 @@ const FEATURES = [
   {
     icon: MailCheck,
     title: 'E-postverifierade profiler',
-    desc: 'Alla konton bekräftas via e-post innan de är aktiva. Vill du logga in med BankID är det verifierad legitimation.',
+    desc: 'Alla konton bekräftas via e-post innan de är aktiva. Inloggning med BankID kommer snart.',
   },
   {
     icon: MessageSquare,

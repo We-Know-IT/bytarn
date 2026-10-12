@@ -57,6 +57,7 @@ function MinaSidorView() {
     setLastFlik(flik)
     if (TAB_PARAM[flik]) setTab(TAB_PARAM[flik])
   }
+  const [existingAccountNotice, setExistingAccountNotice] = useState(searchParams.get('info') === 'befintligt-konto')
   const [myListingsReal, setMyListingsReal] = useState<Listing[]>([])
   const [favoriteListings, setFavoriteListings] = useState<Listing[]>([])
   const [incomingInterests, setIncomingInterests] = useState<IncomingInterest[]>([])
@@ -124,6 +125,17 @@ function MinaSidorView() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+      {existingAccountNotice && (
+        <div role="status" className="mb-6 flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <p className="flex-1">
+            Du hade redan ett konto med den här e-postadressen, så vi loggade in dig på det. Google är nu kopplat till
+            kontot och du kan logga in med det framöver.
+          </p>
+          <button onClick={() => setExistingAccountNotice(false)} className="text-emerald-700 hover:text-emerald-900" aria-label="Stäng">
+            <X size={16} />
+          </button>
+        </div>
+      )}
       {editingProfile && (
         <ProfileEditModal
           initialName={me.name}
