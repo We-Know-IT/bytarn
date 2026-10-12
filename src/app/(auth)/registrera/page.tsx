@@ -17,6 +17,7 @@ export default function RegistreraPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [confirmSent, setConfirmSent] = useState(false)
+  const [existingAccount, setExistingAccount] = useState(false)
   const [accountType, setAccountType] = useState<'single' | 'family'>('single')
   const [household, setHousehold] = useState({ name: '', inviteEmail: '' })
 
@@ -40,6 +41,7 @@ export default function RegistreraPage() {
 
   async function handleSignUp() {
     setError(null)
+    setExistingAccount(false)
     if (!supabaseConfigured) {
       setError('Backend är inte konfigurerad i den här miljön ännu (saknar Supabase-uppgifter).')
       return
@@ -47,7 +49,6 @@ export default function RegistreraPage() {
     setLoading(true)
     const supabase = createClient()
     const pending = pendingHousehold()
-    if (pending) savePendingHousehold(pending)
     const { data, error: authError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
@@ -57,10 +58,22 @@ export default function RegistreraPage() {
       },
     })
     setLoading(false)
+    // The email already has an account. With email confirmation on, Supabase
+    // doesn't say so (to not reveal which emails are registered): it returns
+    // a user with no identities and sends nothing. Without confirmation it
+    // returns "User already registered".
+    const alreadyRegistered =
+      (authError && /already registered|already exists/i.test(authError.message)) ||
+      (!authError && data.user && (data.user.identities?.length ?? 0) === 0)
+    if (alreadyRegistered) {
+      setExistingAccount(true)
+      return
+    }
     if (authError) {
       setError(authError.message)
       return
     }
+    if (pending) savePendingHousehold(pending)
     if (!data.session) {
       // E-postbekräftelse krävs i Supabase-projektet — det finns ännu ingen
       // inloggad session, så vi ska inte låtsas att kontot redan är aktivt.
@@ -215,6 +228,15 @@ export default function RegistreraPage() {
             <span className="text-xs text-gray-500">eller med lösenord</span>
             <div className="flex-1 h-px bg-gray-200" />
           </div>
+
+          {existingAccount && (
+            <div role="alert" className="mb-4 rounded-[12px] border border-amber-200 bg-amber-50 px-3.5 py-3 text-[14px] text-amber-900">
+              Det finns redan ett konto med <strong>{form.email}</strong>.{' '}
+              <Link href="/logga-in" className="font-semibold underline">Logga in</Link> eller{' '}
+              <Link href="/aterstall-losenord" className="font-semibold underline">återställ lösenordet</Link> om du har
+              glömt det. Har du skapat kontot med Google, välj &quot;Fortsätt med Google&quot; när du loggar in.
+            </div>
+          )}
 
           {error && (
             <div role="alert" className="mb-4 rounded-[12px] border border-red-100 bg-red-50 px-3.5 py-3 text-[14px] text-red-700">{error}</div>
