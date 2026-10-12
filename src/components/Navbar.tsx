@@ -28,7 +28,7 @@ interface MenuLink {
 const ACCOUNT_LINKS: MenuLink[] = [
   { href: '/mina-sidor', label: 'Mina sidor', icon: User },
   { href: '/meddelanden', label: 'Meddelanden', icon: MessageSquare },
-  { href: '/annonshanterare', label: 'Annonshanteraren', icon: LayoutGrid },
+  { href: '/annonshanterare', label: 'Mina annonser och statistik', icon: LayoutGrid },
   { href: '/familj', label: 'Familjekonto', icon: Users },
   { href: '/mina-sidor?flik=konto', label: 'Konto och inställningar', icon: Settings },
 ]

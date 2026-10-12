@@ -1101,3 +1101,36 @@ create policy "Reporters and admins can view user reports"
 drop policy if exists "Admins can delete user reports" on user_reports;
 create policy "Admins can delete user reports"
   on user_reports for delete using (is_admin());
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- v7 (supabase/migrations/20261012_v7.sql): owner views not counted, listing_stats
+-- ═══════════════════════════════════════════════════════════════════════
+
+create or replace function increment_listing_view(p_listing_id uuid)
+returns void as $$
+  update listings set view_count = view_count + 1
+  where id = p_listing_id
+    and status = 'aktiv'
+    and (auth.uid() is null or user_id <> auth.uid());
+$$ language sql security definer set search_path = public;
+
+grant execute on function increment_listing_view(uuid) to anon, authenticated;
+
+create or replace function listing_stats(p_listing_ids uuid[])
+returns table (listing_id uuid, favorites integer, interests integer, conversations integer) as $$
+  select
+    l.id,
+    (select count(*) from favorites f where f.listing_id = l.id)::integer,
+    (select count(*) from interests i where i.listing_id = l.id)::integer,
+    (select count(*) from conversations c where c.listing_id = l.id)::integer
+  from listings l
+  where l.id = any(p_listing_ids)
+    and (
+      l.user_id = auth.uid()
+      or shares_household(l.user_id)
+      or exists (select 1 from listing_collaborators lc where lc.listing_id = l.id and lc.user_id = auth.uid())
+    );
+$$ language sql stable security definer set search_path = public;
+
+grant execute on function listing_stats(uuid[]) to authenticated;
+

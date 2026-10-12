@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import {
   Settings, Heart, Home, MessageSquare, Plus, Edit2, Trash2, Eye, EyeOff,
-  Bookmark, LogOut, CheckCircle2, Circle, Handshake, Loader2, X, CheckCircle, Search,
+  Bookmark, LogOut, CheckCircle2, Circle, Handshake, Loader2, X, CheckCircle, Search, ChartColumn,
 } from 'lucide-react'
 import { fetchMyListings, setListingStatus, deleteListing } from '@/lib/listings'
 import { fetchFavoriteListings } from '@/lib/favorites'
@@ -240,7 +240,7 @@ function MinaSidorView() {
         <div>
           <div className="flex flex-wrap gap-2 mb-6">
             <Link href="/annonshanterare" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              <Settings size={14} /> Öppna Annonshanteraren
+              <ChartColumn size={14} /> Statistik och hantering
             </Link>
             <Link href="/familj" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
               <Home size={14} /> Familjekonto

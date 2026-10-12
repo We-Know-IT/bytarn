@@ -4,18 +4,26 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   Plus, Eye, Heart, Pencil, Pause, Play, RefreshCw, Archive, Trash2, Search, Loader2,
-  Home, Clock, Users, Video, ImageOff, CheckSquare, Square, ExternalLink,
+  Home, Clock, Users, Video, ImageOff, CheckSquare, Square, ExternalLink, Bookmark, MessageSquare,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { supabaseConfigured } from '@/lib/supabase/client'
 import {
   fetchMyListings, setListingStatus, renewListing, deleteListing, isExpired,
-  describeListingError, LISTING_LIFETIME_DAYS,
+  describeListingError, LISTING_LIFETIME_DAYS, fetchListingStats, type ListingStats,
 } from '@/lib/listings'
 import { fetchInterestCount } from '@/lib/interests'
 import { fetchMyHousehold, type Household } from '@/lib/household'
 import { cn, formatRent } from '@/lib/utils'
 import type { Listing } from '@/types'
+
+
+function sumStat(stats: Map<string, ListingStats>, key: keyof ListingStats): number {
+  if (stats.size === 0) return NaN
+  return [...stats.values()].reduce((sum, s) => sum + s[key], 0)
+}
+
+const statText = (n: number | undefined) => (n === undefined || Number.isNaN(n) ? '–' : String(n))
 
 type Filter = 'alla' | 'aktiva' | 'pausade' | 'avslutade'
 
@@ -35,7 +43,7 @@ function daysLeft(l: Listing): number {
 export default function AnnonshanterarePage() {
   const { user, loading: authLoading } = useAuth()
   const [listings, setListings] = useState<Listing[] | null>(null)
-  const [interests, setInterests] = useState<Record<string, number>>({})
+  const [stats, setStats] = useState<Map<string, ListingStats>>(new Map())
   const [household, setHousehold] = useState<Household | null>(null)
   const [filter, setFilter] = useState<Filter>('alla')
   const [query, setQuery] = useState('')
@@ -45,11 +53,17 @@ export default function AnnonshanterarePage() {
 
   useEffect(() => {
     if (!user) return
-    fetchMyListings(user.id).then((rows) => {
+    fetchMyListings(user.id).then(async (rows) => {
       setListings(rows)
-      Promise.all(rows.map(async (l) => [l.id, await fetchInterestCount(l.id)] as const)).then((pairs) =>
-        setInterests(Object.fromEntries(pairs))
-      )
+      const ids = rows.map((l) => l.id)
+      const fetched = await fetchListingStats(ids)
+      if (fetched.size > 0 || ids.length === 0) {
+        setStats(fetched)
+        return
+      }
+      // Migration v7 not run yet: interest counts are still readable directly.
+      const pairs = await Promise.all(rows.map(async (l) => [l.id, await fetchInterestCount(l.id)] as const))
+      setStats(new Map(pairs.map(([id, n]) => [id, { interests: n, favorites: NaN, conversations: NaN }])))
     })
     fetchMyHousehold().then(setHousehold)
   }, [user])
@@ -62,10 +76,12 @@ export default function AnnonshanterarePage() {
       pausade: all.filter((l) => effectiveState(l) === 'pausad').length,
       avslutade: all.filter((l) => effectiveState(l) === 'avslutad').length,
       views: all.reduce((sum, l) => sum + l.viewCount, 0),
-      interests: Object.values(interests).reduce((a, b) => a + b, 0),
+      interests: sumStat(stats, 'interests'),
+      favorites: sumStat(stats, 'favorites'),
+      conversations: sumStat(stats, 'conversations'),
       expiringSoon: all.filter((l) => effectiveState(l) === 'aktiv' && daysLeft(l) <= 7).length,
     }
-  }, [listings, interests])
+  }, [listings, stats])
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -194,16 +210,18 @@ export default function AnnonshanterarePage() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
         {[
           { label: 'Aktiva annonser', value: counts.aktiva, Icon: Home },
           { label: 'Visningar totalt', value: counts.views, Icon: Eye },
+          { label: 'Sparad som favorit', value: counts.favorites, Icon: Bookmark },
           { label: 'Intresseanmälningar', value: counts.interests, Icon: Heart },
+          { label: 'Konversationer', value: counts.conversations, Icon: MessageSquare },
           { label: 'Går ut inom 7 dagar', value: counts.expiringSoon, Icon: Clock, warn: counts.expiringSoon > 0 },
         ].map(({ label, value, Icon, warn }) => (
           <div key={label} className={cn('rounded-2xl border p-4 bg-white', warn ? 'border-amber-200' : 'border-gray-100')}>
             <Icon size={18} className={warn ? 'text-amber-600' : 'text-emerald-600'} />
-            <div className="text-2xl font-bold text-gray-900 mt-2">{listings ? value : '—'}</div>
+            <div className="text-2xl font-bold text-gray-900 mt-2">{listings && !Number.isNaN(value) ? value : '—'}</div>
             <div className="text-xs text-gray-500">{label}</div>
           </div>
         ))}
@@ -330,7 +348,9 @@ export default function AnnonshanterarePage() {
                       <p className="text-xs text-gray-500 truncate">{l.address} · {l.district} · {l.rooms} rok · {formatRent(l.rent)}</p>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-500">
                         <span className="flex items-center gap-1"><Eye size={12} /> {l.viewCount} visningar</span>
-                        <span className="flex items-center gap-1"><Heart size={12} /> {interests[l.id] ?? '–'} intresserade</span>
+                        <span className="flex items-center gap-1"><Bookmark size={12} /> {statText(stats.get(l.id)?.favorites)} sparat</span>
+                        <span className="flex items-center gap-1"><Heart size={12} /> {statText(stats.get(l.id)?.interests)} intresserade</span>
+                        <span className="flex items-center gap-1"><MessageSquare size={12} /> {statText(stats.get(l.id)?.conversations)} konversationer</span>
                         {state === 'aktiv' && (
                           <span className={cn('flex items-center gap-1', left <= 7 && 'text-amber-600 font-medium')}>
                             <Clock size={12} /> {left} dagar kvar
