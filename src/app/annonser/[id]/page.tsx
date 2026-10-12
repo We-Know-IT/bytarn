@@ -486,7 +486,7 @@ export default function ListingDetailPage() {
           </div>
 
           {/* Amenities */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
             {AMENITIES.map((item) => (
               <div
                 key={item.key}

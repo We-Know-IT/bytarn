@@ -44,6 +44,7 @@ export default function OnboardingPage() {
   const [rent, setRent] = useState('')
   const [amenities, setAmenities] = useState<Record<AmenityKey, boolean>>({
     elevator: false,
+    balcony: false,
     strollerFriendly: false,
     wheelchairAccessible: false,
   })
@@ -255,8 +256,8 @@ export default function OnboardingPage() {
 
                 {/* Faciliteter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Tillgänglighet</label>
-                  <div className="flex flex-col sm:flex-row gap-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Bostaden har</label>
+                  <div className="grid grid-cols-2 gap-3">
                     {AMENITIES.map((item) => (
                       <button
                         key={item.key}
