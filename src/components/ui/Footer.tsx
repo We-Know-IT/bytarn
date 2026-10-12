@@ -59,7 +59,12 @@ export default function Footer() {
   ]
 
   return (
-    <footer className="print-hidden bg-[#0F1C18] text-white/60" aria-labelledby="footer-heading">
+    // The deployed commit, readable in the page source (not shown to visitors).
+    <footer
+      className="print-hidden bg-[#0F1C18] text-white/60"
+      aria-labelledby="footer-heading"
+      data-version={process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7)}
+    >
       <h2 id="footer-heading" className="sr-only">Sidfot</h2>
       <div className="container-page pt-14 pb-10 sm:pt-16">
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
@@ -100,10 +105,6 @@ export default function Footer() {
         <div className="mt-12 flex flex-col-reverse gap-4 border-t border-white/10 pt-6 text-[12.5px] text-white/40 sm:flex-row sm:items-center sm:justify-between">
           <span>
             © {new Date().getFullYear()} Hyresvägen · Bostadsbyte i Stockholm
-            {/* Vercel exposes the deployed commit; shows which build you're on. */}
-            {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA && (
-              <> · version {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA.slice(0, 7)}</>
-            )}
           </span>
           <ul className="flex flex-wrap gap-x-5 gap-y-2">
             {LEGAL.map((l) => (
