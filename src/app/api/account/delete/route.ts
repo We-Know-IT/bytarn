@@ -31,7 +31,16 @@ export async function POST(request: NextRequest) {
   try {
     admin = createAdminClient()
   } catch {
-    return NextResponse.json({ error: 'Kontoradering är inte konfigurerad på servern.' }, { status: 503 })
+    // Deleting an auth user needs the service role key; without it nothing
+    // can be deleted, so say exactly what's missing.
+    console.error('Kontoradering: SUPABASE_SERVICE_ROLE_KEY saknas i miljön')
+    return NextResponse.json(
+      {
+        error:
+          'Kontot kunde inte raderas eftersom servern saknar inställningen SUPABASE_SERVICE_ROLE_KEY. Kontakta oss så raderar vi kontot åt dig.',
+      },
+      { status: 503 }
+    )
   }
 
   // Hand a family account over to the next member (as the user, so the RPC
@@ -67,7 +76,10 @@ export async function POST(request: NextRequest) {
   const { error: deleteError } = await admin.auth.admin.deleteUser(user.id)
   if (deleteError) {
     console.error('Kunde inte radera konto', deleteError.message)
-    return NextResponse.json({ error: 'Kontot kunde inte raderas. Försök igen eller kontakta oss.' }, { status: 500 })
+    return NextResponse.json(
+      { error: `Kontot kunde inte raderas (${deleteError.message}). Försök igen eller kontakta oss.` },
+      { status: 500 }
+    )
   }
 
   // Clear the session cookies; the user no longer exists.
