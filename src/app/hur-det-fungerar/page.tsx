@@ -21,7 +21,7 @@ const STEPS = [
   {
     step: '04',
     title: 'Ansök hos hyresvärdarna',
-    desc: 'Ett byte måste godkännas av båda hyresvärdarna. Vår guide visar hur ansökan går till, och i chatten kan ni skapa en ifylld bytesansökan.',
+    desc: 'Ett byte måste godkännas av båda hyresvärdarna. Vår guide "Så ansöker du om byte" visar hur det går till, och i chatten kan ni skapa en ifylld bytesansökan.',
   },
 ]
 
@@ -48,7 +48,7 @@ const MATCH_CRITERIA = [
   },
 ]
 
-const FAQS = [
+const FAQS: { q: string; a: string; link?: { href: string; label: string } }[] = [
   {
     q: 'Kostar det något att använda Hyresvägen?',
     a: 'Nej, det är helt gratis att söka, annonsera och kontakta andra användare.',
@@ -59,7 +59,8 @@ const FAQS = [
   },
   {
     q: 'Måste hyresvärden godkänna bytet?',
-    a: 'Ja. Båda hyresvärdarna måste säga ja innan ni flyttar. Säger en hyresvärd nej kan du ansöka om tillstånd hos hyresnämnden. Läs mer i vår guide om ansökan.',
+    a: 'Ja. Båda hyresvärdarna måste säga ja innan ni flyttar. Säger en hyresvärd nej kan du ansöka om tillstånd hos hyresnämnden.',
+    link: { href: '/ansokan-om-byte', label: 'Så ansöker du om byte' },
   },
   {
     q: 'Hur säkert är det?',
@@ -146,7 +147,17 @@ export default function HurDetFungerar() {
                     {faq.q}
                     <ChevronDown size={18} className="flex-shrink-0 text-gray-400 transition-transform group-open:rotate-180" />
                   </summary>
-                  <p className="pb-5 text-[14.5px] leading-[1.65] text-gray-600">{faq.a}</p>
+                  <p className="pb-5 text-[14.5px] leading-[1.65] text-gray-600">
+                    {faq.a}
+                    {faq.link && (
+                      <>
+                        {' '}
+                        <Link href={faq.link.href} className="font-medium text-emerald-600 underline underline-offset-[3px]">
+                          {faq.link.label}
+                        </Link>
+                      </>
+                    )}
+                  </p>
                 </details>
               ))}
             </div>

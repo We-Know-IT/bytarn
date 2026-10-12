@@ -65,7 +65,7 @@ export default function PendingHouseholdSetup() {
   }
 
   return (
-    <div role="status" className="fixed inset-x-4 bottom-4 z-[60] mx-auto flex max-w-lg items-start gap-3 rounded-2xl border border-[rgba(21,63,50,0.12)] bg-white p-4 shadow-[0_12px_40px_rgba(13,45,38,0.18)]">
+    <div role="status" className="print-hidden fixed inset-x-4 bottom-4 z-[60] mx-auto flex max-w-lg items-start gap-3 rounded-2xl border border-[rgba(21,63,50,0.12)] bg-white p-4 shadow-[0_12px_40px_rgba(13,45,38,0.18)]">
       <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-[#E3EBE2] text-[#153F32]">
         <Users size={17} />
       </span>
