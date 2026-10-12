@@ -95,6 +95,7 @@ function AnnonserView() {
   const [blocks, setBlocks] = useState<{ userId: string; ids: Set<string> } | null>(null)
   const cardRefs = useRef(new Map<string, HTMLDivElement>())
   const { user } = useAuth()
+  const myId = user?.id
   const home = useHomeLocation()
   const homeLat = home?.lat
   const homeLng = home?.lng
@@ -153,6 +154,8 @@ function AnnonserView() {
     const results = listings.filter((l) => {
       if (l.status !== 'aktiv') return false
       if (blockedOwnerIds?.has(l.userId)) return false
+      // Your own listings aren't something to swap with.
+      if (myId && l.userId === myId) return false
       if (filters.districts.length > 0 && !filters.districts.includes(l.district)) return false
       // 5 = "5 or more"; 2.5 rooms counts as 2.
       if (filters.rooms.length > 0 && !filters.rooms.includes(roomBucket(l.rooms))) return false
@@ -176,7 +179,7 @@ function AnnonserView() {
         default: return newest(a, b)
       }
     })
-  }, [filters, listings, homeLat, homeLng, matches, blockedOwnerIds])
+  }, [filters, listings, homeLat, homeLng, matches, blockedOwnerIds, myId])
 
   // The map always gets every filtered listing; only the sidebar is narrowed
   // to what's currently visible when "Sök när kartan flyttas" is on.

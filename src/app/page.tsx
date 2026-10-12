@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { ArrowRight, Home, Plus } from 'lucide-react'
 import { fetchListings } from '@/lib/listings'
+import { useAuth } from '@/context/AuthContext'
 import type { Listing } from '@/types'
 import ListingCard from '@/components/ListingCard'
 import HeroSearch from '@/components/HeroSearch'
@@ -80,7 +81,7 @@ function HeroListingCard({ listing, size }: { listing: Listing; size: 'lg' | 'sm
 
 // The two newest real listings, overlapping. No placeholders or invented
 // listings: with none published yet it invites the visitor to be first.
-function HeroListings({ listings, loaded, total }: { listings: Listing[]; loaded: boolean; total: number }) {
+function HeroListings({ listings, loaded, total, hasOwn }: { listings: Listing[]; loaded: boolean; total: number; hasOwn: boolean }) {
   if (!loaded) {
     return <div className="mx-auto aspect-[4/3] w-full max-w-[520px] animate-pulse rounded-[24px] bg-[#E9EEE7]" aria-hidden />
   }
@@ -90,11 +91,21 @@ function HeroListings({ listings, loaded, total }: { listings: Listing[]; loaded
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#153F32]">
           <Home size={22} strokeWidth={1.75} />
         </span>
-        <p className="text-[18px] font-semibold text-gray-900">Bli först ut</p>
-        <p className="text-[14.5px] text-gray-600">Inga lägenheter är upplagda ännu. Lägg upp din så syns den här.</p>
-        <Link href="/annonser/ny" className="btn btn-primary">
-          <Plus size={16} strokeWidth={2.25} /> Lägg upp annons
-        </Link>
+        {hasOwn ? (
+          <>
+            <p className="text-[18px] font-semibold text-gray-900">Inga andra annonser ännu</p>
+            <p className="text-[14.5px] text-gray-600">Din annons är publicerad. När andra lägger upp sina lägenheter visas de här.</p>
+            <Link href="/mina-sidor" className="btn btn-primary">Till dina annonser</Link>
+          </>
+        ) : (
+          <>
+            <p className="text-[18px] font-semibold text-gray-900">Bli först ut</p>
+            <p className="text-[14.5px] text-gray-600">Inga lägenheter är upplagda ännu. Lägg upp din så syns den här.</p>
+            <Link href="/annonser/ny" className="btn btn-primary">
+              <Plus size={16} strokeWidth={2.25} /> Lägg upp annons
+            </Link>
+          </>
+        )}
       </div>
     )
   }
@@ -130,7 +141,14 @@ export default function HomePage() {
       .finally(() => setLoaded(true))
   }, [])
 
-  const active = useMemo(() => listings.filter((l) => l.status === 'aktiv'), [listings])
+  const { user } = useAuth()
+  const myId = user?.id
+  // Visitors browse other people's homes; your own listing isn't shown here.
+  const active = useMemo(
+    () => listings.filter((l) => l.status === 'aktiv' && (!myId || l.userId !== myId)),
+    [listings, myId]
+  )
+  const hasOwn = !!myId && listings.some((l) => l.userId === myId && l.status === 'aktiv')
   const newest = active.slice(0, 6)
 
   return (
@@ -161,7 +179,7 @@ export default function HomePage() {
           </div>
 
           <div className="min-w-0">
-            <HeroListings listings={active.slice(0, 2)} loaded={loaded} total={active.length} />
+            <HeroListings listings={active.slice(0, 2)} loaded={loaded} total={active.length} hasOwn={hasOwn} />
           </div>
         </div>
       </section>
@@ -191,8 +209,12 @@ export default function HomePage() {
                   <Home size={22} strokeWidth={1.75} />
                 </span>
                 <div>
-                  <p className="text-[16px] font-semibold text-gray-900">Inga annonser ännu</p>
-                  <p className="text-[14px] text-gray-600">Lägg upp din lägenhet så syns den här för alla som söker.</p>
+                  <p className="text-[16px] font-semibold text-gray-900">{hasOwn ? 'Inga andra annonser ännu' : 'Inga annonser ännu'}</p>
+                  <p className="text-[14px] text-gray-600">
+                    {hasOwn
+                      ? 'Din annons är publicerad. När andra lägger upp sina lägenheter visas de här.'
+                      : 'Lägg upp din lägenhet så syns den här för alla som söker.'}
+                  </p>
                 </div>
               </div>
               <Link href="/annonser/ny" className="btn btn-primary">
