@@ -1,8 +1,9 @@
-import { Accessibility, Baby, MoveVertical, type LucideProps } from 'lucide-react'
+import { Accessibility, Baby, Fence, MoveVertical, type LucideProps } from 'lucide-react'
 import type { AmenityKey } from '@/types'
 
 const ICONS: Record<AmenityKey, React.ComponentType<LucideProps>> = {
   elevator: MoveVertical,
+  balcony: Fence,
   strollerFriendly: Baby,
   wheelchairAccessible: Accessibility,
 }

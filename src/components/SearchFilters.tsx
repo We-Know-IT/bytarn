@@ -342,7 +342,7 @@ export default function SearchFiltersComponent({
 
               {/* Accessibility */}
               <div className="sm:col-span-2">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-2">Tillgänglighet</p>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-2">Bostaden har</p>
                 <div className="flex flex-wrap gap-1.5">
                   {AMENITIES.map((a) => {
                     const on = filters.amenities?.includes(a.key) ?? false

@@ -6,7 +6,9 @@ import Link from 'next/link'
 import { Upload, X, Plus, MapPin, Info, Wand2, Loader2, Users, Mail, Video, AlertTriangle, LogIn } from 'lucide-react'
 import { STOCKHOLM_DISTRICTS, AMENITIES } from '@/types'
 import AmenityIcon from '@/components/AmenityIcon'
-import { fetchNeighborhood, describeNeighborhood, titlePhrase, type Neighborhood } from '@/lib/neighborhood'
+import { fetchNeighborhood, type Neighborhood } from '@/lib/neighborhood'
+import { suggestDescription, suggestTitle } from '@/lib/listingSuggestion'
+import { fetchMyPreferences } from '@/lib/preferences'
 import { cn } from '@/lib/utils'
 import AddressInput from '@/components/AddressInput'
 import { createListing, updateListing, fetchListingById, geocodeAddress, describeListingError, LISTING_LIFETIME_DAYS } from '@/lib/listings'
@@ -18,55 +20,6 @@ import { supabaseConfigured } from '@/lib/supabase/client'
 
 const MAX_IMAGES = 10
 const DRAFT_KEY = 'hyresvagen_my_listing_draft'
-
-interface ListingFormData {
-  title: string
-  rooms: string
-  area: string
-  rent: string
-  floor: string
-  district: string
-  address: string
-  elevator: boolean
-  balcony: boolean
-  furnished: boolean
-  petsAllowed: boolean
-  strollerFriendly: boolean
-  wheelchairAccessible: boolean
-}
-
-// Builds a title/description from the fields already filled in plus, when
-// the address is known, real nearby places from OpenStreetMap — never
-// invented details.
-function amenityWords(f: ListingFormData): string[] {
-  return AMENITIES.filter((a) => f[a.key]).map((a) => a.label.toLowerCase())
-}
-
-function suggestTitle(f: ListingFormData, area: Neighborhood | null): string {
-  const base = `${f.rooms || '?'} rok på ${f.district || 'okänd stadsdel'}`
-  const place = area && titlePhrase(area)
-  if (place) return `${base} ${place}`
-  const amenities = amenityWords(f)
-  const suffix = amenities.length > 0 ? ` — ${amenities.join(', ')}` : f.area ? ` — ${f.area} m²` : ''
-  return `${base}${suffix}`
-}
-
-function suggestDescription(f: ListingFormData, area: Neighborhood | null): string {
-  const home = [
-    `${f.rooms || '?'}-rumslägenhet på ${f.area || '?'} m² i ${f.district || 'Stockholm'}${f.address ? `, ${f.address}` : ''}.`,
-  ]
-  if (f.floor) home.push(`Ligger på våning ${f.floor}${f.elevator ? ' med hiss' : ''}.`)
-  else if (f.elevator) home.push('Det finns hiss.')
-  const adapted = [f.strollerFriendly && 'barnvagnsanpassad', f.wheelchairAccessible && 'rullstolsanpassad'].filter(Boolean)
-  if (adapted.length > 0) home.push(`Bostaden är ${adapted.join(' och ')}.`)
-  if (f.rent) home.push(`Hyra ${new Intl.NumberFormat('sv-SE').format(Number(f.rent))} kr/mån.`)
-
-  const paragraphs = [home.join(' ')]
-  const areaSentences = area ? describeNeighborhood(area) : []
-  if (areaSentences.length > 0) paragraphs.push(`Området: ${areaSentences.join(' ')}`)
-  paragraphs.push('Söker byte i Stockholmsområdet.')
-  return paragraphs.join('\n\n')
-}
 
 export default function NyAnnonsPage() {
   return (
@@ -167,6 +120,7 @@ function NyAnnonsForm() {
         floor: draft.floor ?? f.floor,
         rent: draft.rent ?? f.rent,
         elevator: draft.elevator ?? f.elevator,
+        balcony: draft.balcony ?? f.balcony,
         strollerFriendly: draft.strollerFriendly ?? f.strollerFriendly,
         wheelchairAccessible: draft.wheelchairAccessible ?? f.wheelchairAccessible,
       }))
@@ -256,15 +210,17 @@ function NyAnnonsForm() {
         if (areaCache.current?.key !== key) areaCache.current = { key, area: await fetchNeighborhood(loc.lat, loc.lng) }
         area = areaCache.current.area
       } catch {
-        setSuggestNote('Kunde inte hämta information om området just nu. Förslaget bygger bara på det du fyllt i.')
+        setSuggestNote('Kunde inte hämta närmaste tunnelbana, parker och butiker just nu. Texten om området bygger på stadsdelen. Försök gärna igen om en stund.')
       }
     } else {
-      setSuggestNote('Välj en adress från förslagslistan så tar förslaget med närområdet (tunnelbana, parker, skolor).')
+      setSuggestNote('Välj en adress från förslagslistan så tar förslaget med närmaste tunnelbana, parker och skolor.')
     }
+    // What the user is looking for ("Jag söker" on Mina sidor) goes into the text.
+    const prefs = field === 'description' && user ? await fetchMyPreferences(user.id).catch(() => null) : null
     setForm((f) =>
       field === 'title'
-        ? { ...f, title: suggestTitle(f, area).slice(0, 80) }
-        : { ...f, description: suggestDescription(f, area) }
+        ? { ...f, title: suggestTitle(f, area) }
+        : { ...f, description: suggestDescription(f, area, prefs) }
     )
     setSuggesting(null)
   }
@@ -616,8 +572,8 @@ function NyAnnonsForm() {
 
           {/* Amenities */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Tillgänglighet</label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label className="block text-sm font-medium text-gray-700 mb-3">Bostaden har</label>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               {AMENITIES.map((item) => (
                 <button
                   key={item.key}

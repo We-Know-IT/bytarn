@@ -31,10 +31,11 @@ export interface Listing {
   wheelchairAccessible?: boolean
 }
 
-export type AmenityKey = 'elevator' | 'strollerFriendly' | 'wheelchairAccessible'
+export type AmenityKey = 'elevator' | 'balcony' | 'strollerFriendly' | 'wheelchairAccessible'
 
 export const AMENITIES: { key: AmenityKey; label: string; query: string }[] = [
   { key: 'elevator', label: 'Hiss', query: 'hiss' },
+  { key: 'balcony', label: 'Balkong', query: 'balkong' },
   { key: 'strollerFriendly', label: 'Barnvagnsanpassat', query: 'barnvagn' },
   { key: 'wheelchairAccessible', label: 'Rullstolsanpassat', query: 'rullstol' },
 ]

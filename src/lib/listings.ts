@@ -352,3 +352,25 @@ export async function reportListing(listingId: string, reporterId: string, reaso
     .insert({ listing_id: listingId, reporter_id: reporterId, reason })
   if (error) throw error
 }
+
+export interface ListingStats {
+  favorites: number
+  interests: number
+  conversations: number
+}
+
+// Counts for listings the signed-in user may manage (see listing_stats in
+// migration v7). Empty when the migration hasn't been run yet.
+export async function fetchListingStats(ids: string[]): Promise<Map<string, ListingStats>> {
+  const stats = new Map<string, ListingStats>()
+  if (!supabaseConfigured || ids.length === 0) return stats
+  const { data, error } = await createClient().rpc('listing_stats', { p_listing_ids: ids })
+  if (error) {
+    console.error('Kunde inte hämta statistik', error)
+    return stats
+  }
+  for (const row of (data ?? []) as { listing_id: string; favorites: number; interests: number; conversations: number }[]) {
+    stats.set(row.listing_id, { favorites: row.favorites, interests: row.interests, conversations: row.conversations })
+  }
+  return stats
+}

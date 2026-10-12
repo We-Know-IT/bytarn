@@ -27,7 +27,7 @@ export interface OverpassElement {
 
 export function buildOverpassQuery(lat: number, lng: number): string {
   const at = (r: number) => `(around:${r},${lat},${lng})`
-  return `[out:json][timeout:20];
+  return `[out:json][timeout:9];
 (
   node${at(1500)}[railway=station];
   nwr${at(900)}[leisure=park][name];
