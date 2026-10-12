@@ -48,7 +48,15 @@ export default function MinaSidorPage() {
 function MinaSidorView() {
   const { user, profile, loading, signOut, refreshProfile } = useAuth()
   const searchParams = useSearchParams()
-  const [tab, setTab] = useState<Tab>(() => TAB_PARAM[searchParams.get('flik') ?? ''] ?? 'annonser')
+  const flik = searchParams.get('flik') ?? ''
+  const [tab, setTab] = useState<Tab>(() => TAB_PARAM[flik] ?? 'annonser')
+  // Follow ?flik= when it changes while already on the page (e.g. the
+  // navbar's "Konto och inställningar" link from /mina-sidor).
+  const [lastFlik, setLastFlik] = useState(flik)
+  if (flik !== lastFlik) {
+    setLastFlik(flik)
+    if (TAB_PARAM[flik]) setTab(TAB_PARAM[flik])
+  }
   const [myListingsReal, setMyListingsReal] = useState<Listing[]>([])
   const [favoriteListings, setFavoriteListings] = useState<Listing[]>([])
   const [incomingInterests, setIncomingInterests] = useState<IncomingInterest[]>([])
@@ -171,8 +179,8 @@ function MinaSidorView() {
             onClick={() => setEditingProfile(true)}
             className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-600 text-sm rounded-xl hover:bg-gray-50"
           >
-            <Settings size={15} />
-            Inställningar
+            <Edit2 size={15} />
+            Redigera profil
           </button>
           {supabaseConfigured && user && (
             <button
@@ -190,9 +198,9 @@ function MinaSidorView() {
       <div className="flex border-b border-gray-100 mb-6 overflow-x-auto">
         {([
           { key: 'annonser', label: 'Mina annonser', icon: Home },
-          { key: 'sokes', label: 'Det här söker jag', icon: Search },
+          { key: 'sokes', label: 'Jag söker', icon: Search },
           { key: 'favoriter', label: 'Favoriter', icon: Heart },
-          { key: 'intresse', label: 'Intresseanmälningar', icon: MessageSquare },
+          { key: 'intresse', label: 'Intresse', icon: MessageSquare },
           { key: 'sparade', label: 'Sparade sökningar', icon: Bookmark },
           { key: 'konto', label: 'Konto', icon: Settings },
         ] as const).map(({ key, label, icon: Icon }) => (

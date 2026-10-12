@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { ArrowRight, Check, MailCheck, MessageSquare, Flag, Wallet, UserCheck, Lock } from 'lucide-react'
+import { Check, MailCheck, MessageSquare, Flag, Wallet, UserCheck, Lock } from 'lucide-react'
 import PageHeader from '@/components/ui/PageHeader'
+import SignupCta from '@/components/SignupCta'
 
 const FEATURES = [
   {
@@ -108,9 +109,7 @@ export default function Trygghet() {
         <div className="container-page text-center">
           <h2 className="display-md mb-8 text-white">Tryggt att byta med Hyresvägen.</h2>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link href="/registrera" className="btn btn-inverse btn-lg btn-arrow">
-              Skapa konto <ArrowRight size={15} className="arrow-icon" />
-            </Link>
+            <SignupCta className="btn btn-inverse btn-lg btn-arrow" />
             <Link href="/hur-det-fungerar" className="btn btn-outline-inverse btn-lg">
               Så fungerar det
             </Link>

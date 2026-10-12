@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Logo from '@/components/ui/Logo'
 import { openConsentSettings } from '@/lib/consent'
+import { useAuth } from '@/context/AuthContext'
 
 const COLUMNS = [
   {
@@ -16,15 +17,6 @@ const COLUMNS = [
     ],
   },
   {
-    title: 'Konto',
-    links: [
-      { label: 'Logga in', href: '/logga-in' },
-      { label: 'Skapa konto', href: '/registrera' },
-      { label: 'Mina sidor', href: '/mina-sidor' },
-      { label: 'Meddelanden', href: '/meddelanden' },
-    ],
-  },
-  {
     title: 'Hyresvägen',
     links: [
       { label: 'Om oss', href: '/om-oss' },
@@ -32,6 +24,17 @@ const COLUMNS = [
       { label: 'Kontakt', href: '/kontakt' },
     ],
   },
+]
+
+const ACCOUNT_SIGNED_IN = [
+  { label: 'Mina sidor', href: '/mina-sidor' },
+  { label: 'Meddelanden', href: '/meddelanden' },
+  { label: 'Familjekonto', href: '/familj' },
+]
+
+const ACCOUNT_SIGNED_OUT = [
+  { label: 'Logga in', href: '/logga-in' },
+  { label: 'Skapa konto', href: '/registrera' },
 ]
 
 const LEGAL = [
@@ -46,7 +49,14 @@ function hideOn(pathname: string) {
 
 export default function Footer() {
   const pathname = usePathname()
+  const { user } = useAuth()
   if (hideOn(pathname)) return null
+
+  const columns = [
+    COLUMNS[0],
+    { title: 'Konto', links: user ? ACCOUNT_SIGNED_IN : ACCOUNT_SIGNED_OUT },
+    ...COLUMNS.slice(1),
+  ]
 
   return (
     <footer className="print-hidden bg-[#0F1C18] text-white/60" aria-labelledby="footer-heading">
@@ -66,7 +76,7 @@ export default function Footer() {
             </Link>
           </div>
 
-          {COLUMNS.map((col) => (
+          {columns.map((col) => (
             <nav key={col.title} aria-label={col.title}>
               <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
                 {col.title}
