@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Menu, X, MessageSquare, Heart, Plus, ChevronDown, User, LayoutGrid, Users,
-  ShieldCheck, Mail, LogOut, Search, BookOpen, Shield,
+  ShieldCheck, Mail, LogOut, Search, BookOpen, Shield, Settings,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -30,6 +30,7 @@ const ACCOUNT_LINKS: MenuLink[] = [
   { href: '/meddelanden', label: 'Meddelanden', icon: MessageSquare },
   { href: '/annonshanterare', label: 'Annonshanteraren', icon: LayoutGrid },
   { href: '/familj', label: 'Familjekonto', icon: Users },
+  { href: '/mina-sidor?flik=konto', label: 'Konto och inställningar', icon: Settings },
 ]
 
 function unreadLabel(count: number) {

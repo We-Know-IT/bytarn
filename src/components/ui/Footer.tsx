@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Logo from '@/components/ui/Logo'
 import { openConsentSettings } from '@/lib/consent'
+import { useAuth } from '@/context/AuthContext'
 
 const COLUMNS = [
   {
@@ -16,15 +17,6 @@ const COLUMNS = [
     ],
   },
   {
-    title: 'Konto',
-    links: [
-      { label: 'Logga in', href: '/logga-in' },
-      { label: 'Skapa konto', href: '/registrera' },
-      { label: 'Mina sidor', href: '/mina-sidor' },
-      { label: 'Meddelanden', href: '/meddelanden' },
-    ],
-  },
-  {
     title: 'Hyresvägen',
     links: [
       { label: 'Om oss', href: '/om-oss' },
@@ -32,6 +24,17 @@ const COLUMNS = [
       { label: 'Kontakt', href: '/kontakt' },
     ],
   },
+]
+
+const ACCOUNT_SIGNED_IN = [
+  { label: 'Mina sidor', href: '/mina-sidor' },
+  { label: 'Meddelanden', href: '/meddelanden' },
+  { label: 'Familjekonto', href: '/familj' },
+]
+
+const ACCOUNT_SIGNED_OUT = [
+  { label: 'Logga in', href: '/logga-in' },
+  { label: 'Skapa konto', href: '/registrera' },
 ]
 
 const LEGAL = [
@@ -46,10 +49,22 @@ function hideOn(pathname: string) {
 
 export default function Footer() {
   const pathname = usePathname()
+  const { user } = useAuth()
   if (hideOn(pathname)) return null
 
+  const columns = [
+    COLUMNS[0],
+    { title: 'Konto', links: user ? ACCOUNT_SIGNED_IN : ACCOUNT_SIGNED_OUT },
+    ...COLUMNS.slice(1),
+  ]
+
   return (
-    <footer className="print-hidden bg-[#0F1C18] text-white/60" aria-labelledby="footer-heading">
+    // The deployed commit, readable in the page source (not shown to visitors).
+    <footer
+      className="print-hidden bg-[#0F1C18] text-white/60"
+      aria-labelledby="footer-heading"
+      data-version={process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7)}
+    >
       <h2 id="footer-heading" className="sr-only">Sidfot</h2>
       <div className="container-page pt-14 pb-10 sm:pt-16">
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
@@ -66,7 +81,7 @@ export default function Footer() {
             </Link>
           </div>
 
-          {COLUMNS.map((col) => (
+          {columns.map((col) => (
             <nav key={col.title} aria-label={col.title}>
               <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
                 {col.title}
@@ -90,10 +105,6 @@ export default function Footer() {
         <div className="mt-12 flex flex-col-reverse gap-4 border-t border-white/10 pt-6 text-[12.5px] text-white/40 sm:flex-row sm:items-center sm:justify-between">
           <span>
             © {new Date().getFullYear()} Hyresvägen · Bostadsbyte i Stockholm
-            {/* Vercel exposes the deployed commit; shows which build you're on. */}
-            {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA && (
-              <> · version {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA.slice(0, 7)}</>
-            )}
           </span>
           <ul className="flex flex-wrap gap-x-5 gap-y-2">
             {LEGAL.map((l) => (
