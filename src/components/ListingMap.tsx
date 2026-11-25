@@ -262,7 +262,14 @@ export default function ListingMap({
       })
       // Popup content is built lazily on open so it always reflects the
       // current home location (which loads after the listings).
-      marker.bindPopup(() => buildListingPopupHtml(listing, homeRef.current), { maxWidth: 260, minWidth: 240 })
+      // Pan so the card clears the "Sök när kartan flyttas" chip and the
+      // zoom buttons instead of opening underneath them.
+      marker.bindPopup(() => buildListingPopupHtml(listing, homeRef.current), {
+        maxWidth: 260,
+        minWidth: 240,
+        autoPanPaddingTopLeft: [16, 72],
+        autoPanPaddingBottomRight: [72, 24],
+      })
       marker.on('click', () => onSelectRef.current?.(listing.id))
       marker.on('popupclose', () => {
         if (selectedIdRef.current === listing.id) onSelectRef.current?.(null)
