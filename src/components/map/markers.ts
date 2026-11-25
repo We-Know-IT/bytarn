@@ -173,8 +173,10 @@ export function buildListingPopupHtml(listing: Listing, home: HomeLocation | nul
   const pill = (text: string) =>
     `<span style="background:rgba(21,63,50,0.08); color:${BRAND}; font-size:11px; font-weight:600; padding:3px 8px; border-radius:999px;">${escapeHtml(text)}</span>`
 
+  // The whole card is one link, so tapping the photo, address or price opens
+  // the listing too — not only the button.
   return `
-    <div style="width: 240px; overflow: hidden; font-family: inherit;">
+    <a href="/annonser/${encodeURIComponent(listing.id)}" aria-label="${escapeHtml(`Visa annonsen ${listing.address || listing.title}`)}" style="display:block; width: 240px; overflow: hidden; font-family: inherit; color: inherit; text-decoration: none;">
       <div style="position: relative;">
         ${
           img
@@ -205,11 +207,11 @@ export function buildListingPopupHtml(listing: Listing, home: HomeLocation | nul
           <span style="color:#9EA69D; font-size:11px;">${escapeHtml(formatDate(listing.createdAt))}</span>
           <span style="color:#A8B9A4; font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase;">Hyresvägen</span>
         </div>
-        <a href="/annonser/${encodeURIComponent(listing.id)}" style="display:block; background:${BRAND}; color:white; text-align:center; padding:9px; border-radius:10px; font-size:12.5px; font-weight:600; text-decoration:none;">
+        <span style="display:block; background:${BRAND}; color:white; text-align:center; padding:9px; border-radius:10px; font-size:12.5px; font-weight:600;">
           Visa annons
-        </a>
+        </span>
       </div>
-    </div>
+    </a>
   `
 }
 
