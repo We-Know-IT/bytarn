@@ -6,11 +6,15 @@ import { useRouter } from 'next/navigation'
 import { createClient, supabaseConfigured } from '@/lib/supabase/client'
 import { isNewAccount } from '@/lib/accountAge'
 
-// With NEXT_PUBLIC_GOOGLE_CLIENT_ID set, Google's own sign-in button runs on
-// our site (Google Identity Services) and hands Supabase an ID token, so
-// Google's dialog names our domain instead of "<project>.supabase.co".
-// Without it, the usual OAuth redirect through Supabase is used.
-const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
+// Google's own sign-in button runs on our site (Google Identity Services)
+// and hands Supabase an ID token, so Google's dialog names our domain
+// instead of "<project>.supabase.co". The client ID is public (it is sent
+// to every visitor); each site address must be listed under "Authorized
+// JavaScript origins" on the OAuth client in Google Cloud. An empty
+// NEXT_PUBLIC_GOOGLE_CLIENT_ID falls back to the OAuth redirect through
+// Supabase.
+const DEFAULT_CLIENT_ID = '10850044063-ftperulskk0r4qh568qftr80v0g5v9bh.apps.googleusercontent.com'
+const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? DEFAULT_CLIENT_ID
 
 interface Props {
   mode: 'login' | 'register'
